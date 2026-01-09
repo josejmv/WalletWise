@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum JobType {
+  fixed
+  freelance
+}
+
+enum JobPeriodicity {
+  biweekly
+  monthly
+  one_time
+}
+
+enum JobStatus {
+  active
+  archived
+  pending
+}
+
+enum ExpensePeriodicity {
+  weekly
+  monthly
+  yearly
+}
+
+enum BudgetType {
+  goal
+  envelope
+}
+
+enum BudgetStatus {
+  active
+  completed
+  cancelled
+}
+
+enum AccountTypeEnum {
+  bank
+  cash
+  digital_wallet
+  credit_card
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model Currency {
+  id     String  @id @default(uuid())
+  code   String  @unique // USD, COP, VES
+  name   String // Dólar estadounidense, Peso colombiano, etc.
+  symbol String // $, COP$, Bs.
+  isBase Boolean @default(false)
+
+  // Relations
+  accounts              Account[]
+  jobs                  Job[]
+  incomes               Income[]
+  expenses              Expense[]
+  transfers             Transfer[]
+  budgets               Budget[]
+  exchangeRatesFrom     ExchangeRate[] @relation("FromCurrency")
+  exchangeRatesTo       ExchangeRate[] @relation("ToCurrency")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id             String   @id @default(uuid())
+  fromCurrencyId String
+  toCurrencyId   String
+  rate           Decimal  @db.Decimal(18, 8)
+  fetchedAt      DateTime @default(now())
+
+  // Relations
+  fromCurrency Currency @relation("FromCurrency", fields: [fromCurrencyId], references: [id])
+  toCurrency   Currency @relation("ToCurrency", fields: [toCurrencyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([fromCurrencyId, toCurrencyId])
+  @@index([fetchedAt])
+  @@map("exchange_rates")
+}
+
+model AccountType {
+  id          String          @id @default(uuid())
+  name        String          @unique
+  type        AccountTypeEnum @unique
+  description String?
+
+  // Relations
+  accounts Account[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("account_types")
+}
+
+model Account {
+  id            String  @id @default(uuid())
+  name          String
+  accountTypeId String
+  currencyId    String
+  balance       Decimal @default(0) @db.Decimal(18, 2)
+  isActive      Boolean @default(true)
+
+  // Relations
+  accountType       AccountType @relation(fields: [accountTypeId], references: [id])
+  currency          Currency    @relation(fields: [currencyId], references: [id])
+  jobs              Job[]
+  incomes           Income[]
+  expenses          Expense[]
+  transfersFrom     Transfer[]  @relation("FromAccount")
+  transfersTo       Transfer[]  @relation("ToAccount")
+  budgets           Budget[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([accountTypeId])
+  @@index([currencyId])
+  @@map("accounts")
+}
+
+model Job {
+  id          String          @id @default(uuid())
+  name        String
+  type        JobType
+  salary      Decimal         @db.Decimal(18, 2)
+  currencyId  String
+  accountId   String
+  periodicity JobPeriodicity
+  payDay      Int?            // Día del mes (1-31), null para one_time
+  status      JobStatus       @default(active)
+  startDate   DateTime        @default(now())
+  endDate     DateTime?
+
+  // Relations
+  currency Currency @relation(fields: [currencyId], references: [id])
+  account  Account  @relation(fields: [accountId], references: [id])
+  incomes  Income[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([currencyId])
+  @@index([accountId])
+  @@index([status])
+  @@map("jobs")
+}
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  parentId String?
+  color    String? // Hex color for UI
+  icon     String? // Icon identifier
+
+  // Relations
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  expenses    Expense[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@map("categories")
+}
+
+model Income {
+  id          String   @id @default(uuid())
+  jobId       String
+  accountId   String
+  amount      Decimal  @db.Decimal(18, 2)
+  currencyId  String
+  date        DateTime @default(now())
+  description String?
+
+  // Relations
+  job      Job      @relation(fields: [jobId], references: [id])
+  account  Account  @relation(fields: [accountId], references: [id])
+  currency Currency @relation(fields: [currencyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([jobId])
+  @@index([accountId])
+  @@index([currencyId])
+  @@index([date])
+  @@map("incomes")
+}
+
+model Expense {
+  id           String              @id @default(uuid())
+  categoryId   String
+  accountId    String
+  amount       Decimal             @db.Decimal(18, 2)
+  currencyId   String
+  officialRate Decimal?            @db.Decimal(18, 8) // Tasa oficial de la API
+  customRate   Decimal?            @db.Decimal(18, 8) // Tasa auxiliar del comercio
+  isRecurring  Boolean             @default(false)
+  periodicity  ExpensePeriodicity?
+  nextDueDate  DateTime?           // Próxima fecha para gastos recurrentes
+  date         DateTime            @default(now())
+  description  String?
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id])
+  account  Account  @relation(fields: [accountId], references: [id])
+  currency Currency @relation(fields: [currencyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([accountId])
+  @@index([currencyId])
+  @@index([date])
+  @@index([isRecurring])
+  @@map("expenses")
+}
+
+model Transfer {
+  id            String   @id @default(uuid())
+  fromAccountId String
+  toAccountId   String
+  amount        Decimal  @db.Decimal(18, 2)
+  currencyId    String
+  exchangeRate  Decimal? @db.Decimal(18, 8) // Si las cuentas tienen diferente moneda
+  date          DateTime @default(now())
+  description   String?
+
+  // Relations
+  fromAccount Account  @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccount   Account  @relation("ToAccount", fields: [toAccountId], references: [id])
+  currency    Currency @relation(fields: [currencyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([date])
+  @@map("transfers")
+}
+
+model Budget {
+  id            String       @id @default(uuid())
+  name          String
+  type          BudgetType
+  targetAmount  Decimal      @db.Decimal(18, 2)
+  currentAmount Decimal      @default(0) @db.Decimal(18, 2)
+  currencyId    String
+  accountId     String?      // Solo para envelopes
+  deadline      DateTime?
+  status        BudgetStatus @default(active)
+
+  // Relations
+  currency      Currency             @relation(fields: [currencyId], references: [id])
+  account       Account?             @relation(fields: [accountId], references: [id])
+  contributions BudgetContribution[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([currencyId])
+  @@index([accountId])
+  @@index([status])
+  @@map("budgets")
+}
+
+model BudgetContribution {
+  id          String   @id @default(uuid())
+  budgetId    String
+  amount      Decimal  @db.Decimal(18, 2)
+  date        DateTime @default(now())
+  description String?
+
+  // Relations
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([budgetId])
+  @@index([date])
+  @@map("budget_contributions")
+}
