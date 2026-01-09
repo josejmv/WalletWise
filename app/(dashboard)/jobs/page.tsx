@@ -19,20 +19,37 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { JobForm } from "./_components/job-form";
 
 interface Job {
   id: string;
   name: string;
-  type: string;
+  type: "fixed" | "freelance";
   salary: number;
-  periodicity: string;
+  periodicity: "biweekly" | "monthly" | "one_time";
   payDay: number | null;
-  status: string;
-  currency: { code: string; symbol: string };
-  account: { name: string };
+  status: "active" | "archived" | "pending";
+  currency: { id: string; code: string; symbol: string };
+  account: { id: string; name: string };
 }
 
 async function fetchJobs(): Promise<Job[]> {
@@ -52,6 +69,12 @@ async function activateJob(id: string): Promise<void> {
   const res = await fetch(`/api/jobs/${id}?action=activate`, {
     method: "POST",
   });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+}
+
+async function deleteJob(id: string): Promise<void> {
+  const res = await fetch(`/api/jobs/${id}`, { method: "DELETE" });
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
 }
@@ -78,14 +101,13 @@ const periodicityLabels: Record<string, string> = {
 };
 
 export default function JobsPage() {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const {
-    data: jobs,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: jobs, isLoading } = useQuery({
     queryKey: ["jobs"],
     queryFn: fetchJobs,
   });
@@ -105,6 +127,38 @@ export default function JobsPage() {
       toast({ title: "Trabajo activado" });
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteJob,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["jobs"] });
+      toast({ title: "Trabajo eliminado" });
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al eliminar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    setEditingJob(null);
+    queryClient.invalidateQueries({ queryKey: ["jobs"] });
+  };
+
+  const handleEdit = (job: Job) => {
+    setEditingJob(job);
+    setFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingJob(null);
+  };
 
   if (isLoading) {
     return (
@@ -130,7 +184,7 @@ export default function JobsPage() {
             Gestiona tus fuentes de ingreso
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Trabajo
         </Button>
@@ -179,7 +233,14 @@ export default function JobsPage() {
                       {formatCurrency(job.salary, job.currency.symbol)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(job)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
                         {job.status === "active" ? (
                           <Button
                             variant="ghost"
@@ -197,6 +258,13 @@ export default function JobsPage() {
                             <RotateCcw className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(job.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -210,6 +278,42 @@ export default function JobsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={formOpen} onOpenChange={handleCloseForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingJob ? "Editar Trabajo" : "Nuevo Trabajo"}
+            </DialogTitle>
+          </DialogHeader>
+          <JobForm
+            job={editingJob}
+            onSuccess={handleFormSuccess}
+            onCancel={handleCloseForm}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Trabajo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion no se puede deshacer. Se eliminara permanentemente
+              este trabajo y todos sus datos asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

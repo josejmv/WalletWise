@@ -1,7 +1,8 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { Plus, Package, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Pencil, Trash2, Package, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -18,10 +19,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+import { InventoryItemForm } from "./_components/inventory-item-form";
 
 interface InventoryItem {
   id: string;
@@ -29,11 +48,12 @@ interface InventoryItem {
   currentQuantity: number;
   minQuantity: number;
   maxQuantity: number;
-  unit: string;
+  unit: "unidades" | "kg" | "g" | "L" | "mL" | "paquetes";
   estimatedPrice: number;
   isActive: boolean;
-  category: { name: string };
-  currency: { code: string; symbol: string };
+  notes: string | null;
+  category: { id: string; name: string };
+  currency: { id: string; code: string; symbol: string };
 }
 
 async function fetchInventoryItems(): Promise<InventoryItem[]> {
@@ -43,15 +63,59 @@ async function fetchInventoryItems(): Promise<InventoryItem[]> {
   return data.data;
 }
 
+async function deleteInventoryItem(id: string): Promise<void> {
+  const res = await fetch(`/api/inventory-items/${id}`, { method: "DELETE" });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+}
+
 function formatCurrency(value: number, symbol: string): string {
   return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
 }
 
 export default function InventoryPage() {
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const { data: items, isLoading } = useQuery({
     queryKey: ["inventory-items"],
     queryFn: fetchInventoryItems,
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteInventoryItem,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      toast({ title: "Producto eliminado" });
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al eliminar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleFormSuccess = () => {
+    setFormOpen(false);
+    setEditingItem(null);
+    queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+  };
+
+  const handleEdit = (item: InventoryItem) => {
+    setEditingItem(item);
+    setFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setFormOpen(false);
+    setEditingItem(null);
+  };
 
   const lowStockCount =
     items?.filter((item) => item.currentQuantity <= item.minQuantity).length ||
@@ -84,7 +148,7 @@ export default function InventoryPage() {
             Gestiona tu inventario del hogar
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
           Nuevo Producto
         </Button>
@@ -135,6 +199,7 @@ export default function InventoryPage() {
                   <TableHead>Stock</TableHead>
                   <TableHead>Unidad</TableHead>
                   <TableHead className="text-right">Precio Est.</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,6 +247,24 @@ export default function InventoryPage() {
                           item.currency.symbol,
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -194,6 +277,42 @@ export default function InventoryPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={formOpen} onOpenChange={handleCloseForm}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingItem ? "Editar Producto" : "Nuevo Producto"}
+            </DialogTitle>
+          </DialogHeader>
+          <InventoryItemForm
+            item={editingItem}
+            onSuccess={handleFormSuccess}
+            onCancel={handleCloseForm}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Producto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion no se puede deshacer. Se eliminara permanentemente
+              este producto del inventario.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
