@@ -167,6 +167,88 @@ async function main() {
   }
   console.log("Categories seeded");
 
+  // Seed Inventory Categories
+  const inventoryCategories = [
+    {
+      name: "Despensa",
+      icon: "package",
+      color: "#F59E0B",
+      description: "Productos de despensa y alimentos no perecederos",
+    },
+    {
+      name: "Refrigerados",
+      icon: "thermometer-snowflake",
+      color: "#3B82F6",
+      description: "Productos que requieren refrigeración",
+    },
+    {
+      name: "Limpieza",
+      icon: "spray-can",
+      color: "#10B981",
+      description: "Productos de limpieza del hogar",
+    },
+    {
+      name: "Higiene personal",
+      icon: "bath",
+      color: "#EC4899",
+      description: "Productos de higiene y cuidado personal",
+    },
+    {
+      name: "Bebidas",
+      icon: "glass-water",
+      color: "#06B6D4",
+      description: "Bebidas y líquidos",
+    },
+    {
+      name: "Congelados",
+      icon: "snowflake",
+      color: "#6366F1",
+      description: "Productos congelados",
+    },
+    {
+      name: "Frutas y verduras",
+      icon: "apple-whole",
+      color: "#84CC16",
+      description: "Frutas y verduras frescas",
+    },
+    {
+      name: "Carnes y proteínas",
+      icon: "drumstick-bite",
+      color: "#EF4444",
+      description: "Carnes, pollo, pescado y proteínas",
+    },
+    {
+      name: "Panadería",
+      icon: "bread-slice",
+      color: "#D97706",
+      description: "Pan, galletas y productos de panadería",
+    },
+    {
+      name: "Mascotas",
+      icon: "paw",
+      color: "#8B5CF6",
+      description: "Alimentos y productos para mascotas",
+    },
+  ];
+
+  for (const inventoryCategory of inventoryCategories) {
+    const categoryId = inventoryCategory.name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "-");
+
+    await prisma.inventoryCategory.upsert({
+      where: { name: inventoryCategory.name },
+      update: {},
+      create: {
+        id: categoryId,
+        ...inventoryCategory,
+      },
+    });
+  }
+  console.log("Inventory categories seeded");
+
   console.log("Database seeded successfully!");
 }
 
