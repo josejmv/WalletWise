@@ -15,6 +15,7 @@
 - Sistema multi-moneda (USD, COP, VES) con tasas de cambio
 - Comparacion de tasa oficial vs tasa del comercio
 - Metas de ahorro y sobres (envelopes)
+- Inventario del hogar con lista de compras inteligente
 - Reportes exportables (CSV/PDF)
 
 ---
@@ -33,17 +34,18 @@
 
 ## Modulos
 
-| Modulo         | Descripcion                         | Documentacion                              |
-| -------------- | ----------------------------------- | ------------------------------------------ |
-| **Dashboard**  | Vista principal con KPIs y graficos | [Ver docs](./modules/dashboard/README.md)  |
-| **Jobs**       | Trabajos fijos y freelance          | [Ver docs](./modules/jobs/README.md)       |
-| **Accounts**   | Cuentas bancarias y billeteras      | [Ver docs](./modules/accounts/README.md)   |
-| **Categories** | Categorias de gastos                | [Ver docs](./modules/categories/README.md) |
-| **Expenses**   | Gastos unicos y recurrentes         | [Ver docs](./modules/expenses/README.md)   |
-| **Incomes**    | Registro de ingresos                | [Ver docs](./modules/incomes/README.md)    |
-| **Transfers**  | Transferencias entre cuentas        | [Ver docs](./modules/transfers/README.md)  |
-| **Budgets**    | Presupuestos y metas de ahorro      | [Ver docs](./modules/budgets/README.md)    |
-| **Reports**    | Reportes y exportacion              | [Ver docs](./modules/reports/README.md)    |
+| Modulo         | Descripcion                             | Documentacion                              |
+| -------------- | --------------------------------------- | ------------------------------------------ |
+| **Dashboard**  | Vista principal con KPIs y graficos     | [Ver docs](./modules/dashboard/README.md)  |
+| **Jobs**       | Trabajos fijos y freelance              | [Ver docs](./modules/jobs/README.md)       |
+| **Accounts**   | Cuentas bancarias y billeteras          | [Ver docs](./modules/accounts/README.md)   |
+| **Categories** | Categorias de gastos                    | [Ver docs](./modules/categories/README.md) |
+| **Expenses**   | Gastos unicos y recurrentes             | [Ver docs](./modules/expenses/README.md)   |
+| **Incomes**    | Registro de ingresos                    | [Ver docs](./modules/incomes/README.md)    |
+| **Transfers**  | Transferencias entre cuentas            | [Ver docs](./modules/transfers/README.md)  |
+| **Budgets**    | Presupuestos y metas de ahorro          | [Ver docs](./modules/budgets/README.md)    |
+| **Inventory**  | Inventario del hogar y lista de mercado | [Ver docs](./modules/inventory/README.md)  |
+| **Reports**    | Reportes y exportacion                  | [Ver docs](./modules/reports/README.md)    |
 
 ---
 
@@ -61,12 +63,14 @@ app/
 │   ├── incomes/
 │   ├── transfers/
 │   ├── budgets/
+│   ├── inventory/
 │   └── reports/
 └── api/                  # REST endpoints
 
 lib/
 ├── prisma.ts             # Cliente Prisma singleton
-└── utils.ts              # Utilidades
+├── utils.ts              # Utilidades (cn)
+└── formatters.ts         # Formateo de moneda, fechas
 
 prisma/
 ├── schema.prisma         # Schema de base de datos
@@ -85,10 +89,12 @@ prisma/
 
 ### Arquitectura y Estandares
 
-| Documento                            | Descripcion                                |
-| ------------------------------------ | ------------------------------------------ |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Frontend, Backend, DB, Git, Codigo, Naming |
-| [API.md](./API.md)                   | Referencia completa de todos los endpoints |
+| Documento                                      | Descripcion                                          |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)           | Frontend, Backend, DB, Git, Codigo, Naming           |
+| [API.md](./API.md)                             | Referencia completa de todos los endpoints           |
+| [CHARTS.md](./CHARTS.md)                       | Graficos, indicadores KPI y sistema de visualizacion |
+| [DEVELOPMENT_ORDER.md](./DEVELOPMENT_ORDER.md) | Orden de desarrollo por dependencias                 |
 
 ---
 
@@ -123,6 +129,14 @@ prisma/
 | -------------------- | ---------------------- |
 | `Budget`             | Metas y sobres         |
 | `BudgetContribution` | Aportes a presupuestos |
+
+### Inventario
+
+| Modelo                  | Descripcion              |
+| ----------------------- | ------------------------ |
+| `InventoryCategory`     | Categorias de productos  |
+| `InventoryItem`         | Productos del inventario |
+| `InventoryPriceHistory` | Historial de precios     |
 
 ### Otros
 

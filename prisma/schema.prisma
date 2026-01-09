@@ -52,6 +52,15 @@ enum AccountTypeEnum {
   credit_card
 }
 
+enum InventoryUnit {
+  unidades
+  kg
+  g
+  L
+  mL
+  paquetes
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -72,6 +81,8 @@ model Currency {
   budgets               Budget[]
   exchangeRatesFrom     ExchangeRate[] @relation("FromCurrency")
   exchangeRatesTo       ExchangeRate[] @relation("ToCurrency")
+  inventoryItems        InventoryItem[]
+  inventoryPriceHistory InventoryPriceHistory[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -302,4 +313,70 @@ model BudgetContribution {
   @@index([budgetId])
   @@index([date])
   @@map("budget_contributions")
+}
+
+// ============================================
+// INVENTORY MODELS
+// ============================================
+
+model InventoryCategory {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  icon        String?
+  color       String?
+  description String?
+
+  // Relations
+  items InventoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("inventory_categories")
+}
+
+model InventoryItem {
+  id              String        @id @default(uuid())
+  name            String
+  categoryId      String
+  currentQuantity Decimal       @default(0) @db.Decimal(10, 2)
+  maxQuantity     Decimal       @db.Decimal(10, 2)
+  minQuantity     Decimal       @default(0) @db.Decimal(10, 2)
+  unit            InventoryUnit @default(unidades)
+  estimatedPrice  Decimal       @db.Decimal(18, 2)
+  currencyId      String
+  isActive        Boolean       @default(true)
+  notes           String?
+
+  // Relations
+  category     InventoryCategory       @relation(fields: [categoryId], references: [id])
+  currency     Currency                @relation(fields: [currencyId], references: [id])
+  priceHistory InventoryPriceHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([currencyId])
+  @@index([isActive])
+  @@map("inventory_items")
+}
+
+model InventoryPriceHistory {
+  id         String   @id @default(uuid())
+  itemId     String
+  price      Decimal  @db.Decimal(18, 2)
+  currencyId String
+  date       DateTime @default(now())
+  source     String?
+
+  // Relations
+  item     InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  currency Currency      @relation(fields: [currencyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([itemId])
+  @@index([date])
+  @@map("inventory_price_history")
 }
