@@ -13,11 +13,20 @@ import {
   ArrowLeftRight,
   PiggyBank,
   Package,
+  PackageSearch,
+  FolderTree,
+  TrendingUp,
+  ShoppingCart,
   FileText,
   Settings,
+  Settings2,
   ChevronLeft,
   ChevronRight,
   Database,
+  Receipt,
+  Landmark,
+  Coins,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -27,29 +36,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { BackupModal } from "@/components/backup-modal";
-
-interface NavItem {
-  title: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Trabajos", href: "/dashboard/jobs", icon: Briefcase },
-  { title: "Cuentas", href: "/dashboard/accounts", icon: Wallet },
-  { title: "Categorias", href: "/dashboard/categories", icon: Tags },
-  { title: "Ingresos", href: "/dashboard/incomes", icon: ArrowDownCircle },
-  { title: "Gastos", href: "/dashboard/expenses", icon: ArrowUpCircle },
-  {
-    title: "Transferencias",
-    href: "/dashboard/transfers",
-    icon: ArrowLeftRight,
-  },
-  { title: "Presupuestos", href: "/dashboard/budgets", icon: PiggyBank },
-  { title: "Inventario", href: "/dashboard/inventory", icon: Package },
-  { title: "Reportes", href: "/dashboard/reports", icon: FileText },
-];
+import { SidebarItem } from "./sidebar-item";
+import { SidebarGroup } from "./sidebar-group";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -66,6 +54,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         collapsed ? "w-16" : "w-64",
       )}
     >
+      {/* Header */}
       <div className="flex h-14 items-center border-b px-4">
         {!collapsed && (
           <Link
@@ -83,41 +72,122 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
       </div>
 
+      {/* Navigation */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
+        {/* Dashboard */}
+        <SidebarItem
+          title="Dashboard"
+          href="/dashboard"
+          icon={LayoutDashboard}
+          collapsed={collapsed}
+        />
 
-          const linkContent = (
-            <Link
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && "justify-center px-2",
-              )}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.title}</span>}
-            </Link>
-          );
+        {/* Transacciones */}
+        <SidebarGroup
+          title="Transacciones"
+          icon={Receipt}
+          collapsed={collapsed}
+          defaultOpen
+          items={[
+            {
+              title: "Ingresos",
+              href: "/dashboard/incomes",
+              icon: ArrowDownCircle,
+            },
+            {
+              title: "Gastos",
+              href: "/dashboard/expenses",
+              icon: ArrowUpCircle,
+            },
+            {
+              title: "Transferencias",
+              href: "/dashboard/transfers",
+              icon: ArrowLeftRight,
+            },
+          ]}
+        />
 
-          if (collapsed) {
-            return (
-              <Tooltip key={item.href} delayDuration={0}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                <TooltipContent side="right">{item.title}</TooltipContent>
-              </Tooltip>
-            );
-          }
+        {/* Finanzas */}
+        <SidebarGroup
+          title="Finanzas"
+          icon={Landmark}
+          collapsed={collapsed}
+          defaultOpen
+          items={[
+            { title: "Cuentas", href: "/dashboard/accounts", icon: Wallet },
+            {
+              title: "Presupuestos",
+              href: "/dashboard/budgets",
+              icon: PiggyBank,
+            },
+            { title: "Trabajos", href: "/dashboard/jobs", icon: Briefcase },
+          ]}
+        />
 
-          return <div key={item.href}>{linkContent}</div>;
-        })}
+        {/* Inventario */}
+        <SidebarGroup
+          title="Inventario"
+          icon={Package}
+          collapsed={collapsed}
+          items={[
+            {
+              title: "Items",
+              href: "/dashboard/inventory",
+              icon: PackageSearch,
+            },
+            {
+              title: "Categorias",
+              href: "/dashboard/inventory/categories",
+              icon: FolderTree,
+            },
+            {
+              title: "Historial Precios",
+              href: "/dashboard/inventory/price-history",
+              icon: TrendingUp,
+            },
+            {
+              title: "Lista de Compras",
+              href: "/dashboard/inventory/shopping-list",
+              icon: ShoppingCart,
+            },
+          ]}
+        />
+
+        {/* Configuracion */}
+        <SidebarGroup
+          title="Configuracion"
+          icon={Settings2}
+          collapsed={collapsed}
+          items={[
+            { title: "Monedas", href: "/dashboard/currencies", icon: Coins },
+            {
+              title: "Tasas de Cambio",
+              href: "/dashboard/exchange-rates",
+              icon: ArrowLeftRight,
+            },
+            {
+              title: "Categorias Gastos",
+              href: "/dashboard/categories",
+              icon: Tags,
+            },
+            {
+              title: "Tipos de Cuenta",
+              href: "/dashboard/account-types",
+              icon: CreditCard,
+            },
+          ]}
+        />
+
+        {/* Reportes */}
+        <SidebarItem
+          title="Reportes"
+          href="/dashboard/reports"
+          icon={FileText}
+          collapsed={collapsed}
+        />
       </nav>
 
+      {/* Footer */}
       <div className="border-t p-2 space-y-1">
         {!collapsed ? (
           <>
@@ -144,7 +214,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               )}
             >
               <Settings className="h-5 w-5" />
-              <span>Configuracion</span>
+              <span>Ajustes</span>
             </Link>
           </>
         ) : (
@@ -180,12 +250,13 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   <Settings className="h-5 w-5" />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right">Configuracion</TooltipContent>
+              <TooltipContent side="right">Ajustes</TooltipContent>
             </Tooltip>
           </>
         )}
       </div>
 
+      {/* Toggle button */}
       <Button
         variant="ghost"
         size="icon"

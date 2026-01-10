@@ -75,3 +75,19 @@ export interface RecentTransaction {
   category?: string;
   account: string;
 }
+
+export interface SavingsBreakdown {
+  savings: number;
+  count: number;
+}
+
+export interface SavingsData {
+  totalSavings: number;
+  transactionCount: number;
+  breakdown: {
+    incomes: SavingsBreakdown;
+    expenses: SavingsBreakdown;
+    transfers: SavingsBreakdown;
+  };
+  currencyCode: string;
+}

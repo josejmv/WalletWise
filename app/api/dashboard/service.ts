@@ -9,6 +9,7 @@ import type {
   DashboardFilters,
   DashboardSummary,
   RecentTransaction,
+  SavingsData,
 } from "./types";
 
 export async function getKPIs(
@@ -309,5 +310,76 @@ export async function getDashboardSummary(
     monthlyTrend,
     budgetProgress,
     recentTransactions,
+  };
+}
+
+/**
+ * Calculate savings from using custom exchange rates vs official rates
+ * Positive = saved money, Negative = paid extra
+ */
+export async function getSavingsData(): Promise<SavingsData> {
+  // Get expenses with both official and custom rates
+  const expenses = await prisma.expense.findMany({
+    where: {
+      AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
+    },
+    include: {
+      account: {
+        include: { currency: true },
+      },
+    },
+  });
+
+  // Get transfers with both official and custom rates
+  const transfers = await prisma.transfer.findMany({
+    where: {
+      AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
+    },
+    include: {
+      toAccount: {
+        include: { currency: true },
+      },
+    },
+  });
+
+  // Calculate savings for expenses
+  // For expenses: if custom rate is higher, you get more local currency for same USD = savings
+  let expenseSavings = 0;
+  for (const expense of expenses) {
+    const amount = Number(expense.amount);
+    const officialRate = Number(expense.officialRate);
+    const customRate = Number(expense.customRate);
+    // If paying in foreign currency, higher rate means better value
+    // Savings = amount * (customRate - officialRate)
+    expenseSavings += amount * (customRate - officialRate);
+  }
+
+  // Calculate savings for transfers
+  let transferSavings = 0;
+  for (const transfer of transfers) {
+    const amount = Number(transfer.amount);
+    const officialRate = Number(transfer.officialRate);
+    const customRate = Number(transfer.customRate);
+    // Similar logic for transfers
+    transferSavings += amount * (customRate - officialRate);
+  }
+
+  // Get base currency for display
+  const baseCurrency = await prisma.currency.findFirst({
+    where: { isBase: true },
+  });
+
+  const totalSavings = expenseSavings + transferSavings;
+  const transactionCount = expenses.length + transfers.length;
+
+  return {
+    totalSavings,
+    transactionCount,
+    breakdown: {
+      incomes: { savings: 0, count: 0 }, // Income doesn't have rate fields yet
+      expenses: { savings: expenseSavings, count: expenses.length },
+      transfers: { savings: transferSavings, count: transfers.length },
+    },
+    currencyCode: baseCurrency?.code || "USD",
   };
 }

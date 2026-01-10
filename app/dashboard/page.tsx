@@ -6,6 +6,11 @@ import { BudgetProgress } from "./_components/budget-progress";
 import { RecentTransactions } from "./_components/recent-transactions";
 import { BalanceByAccount } from "./_components/balance-by-account";
 import { PendingExpenses } from "./_components/pending-expenses";
+import { QuickActions } from "./_components/quick-actions";
+import { ExchangeRateWidget } from "./_components/exchange-rate-widget";
+import { SavingsWidget } from "./_components/savings-widget";
+import { RateHistoryChart } from "./_components/rate-history-chart";
+import { RateComparisonChart } from "./_components/rate-comparison-chart";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function KPISkeleton() {
@@ -22,6 +27,10 @@ function ChartSkeleton() {
   return <Skeleton className="h-80" />;
 }
 
+function WidgetSkeleton() {
+  return <Skeleton className="h-48" />;
+}
+
 export default function DashboardPage() {
   return (
     <div className="space-y-6">
@@ -32,10 +41,28 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {/* Quick Actions */}
+      <Suspense fallback={<WidgetSkeleton />}>
+        <QuickActions />
+      </Suspense>
+
       {/* KPI Cards */}
       <Suspense fallback={<KPISkeleton />}>
         <KPICards />
       </Suspense>
+
+      {/* Exchange Rates & Savings Row */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <Suspense fallback={<WidgetSkeleton />}>
+          <ExchangeRateWidget />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <SavingsWidget />
+        </Suspense>
+        <Suspense fallback={<WidgetSkeleton />}>
+          <RateComparisonChart />
+        </Suspense>
+      </div>
 
       {/* Pending Expenses */}
       <Suspense fallback={<ChartSkeleton />}>
@@ -51,6 +78,11 @@ export default function DashboardPage() {
           <MonthlyTrend />
         </Suspense>
       </div>
+
+      {/* Rate History Chart */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <RateHistoryChart />
+      </Suspense>
 
       {/* Second Row */}
       <div className="grid gap-6 md:grid-cols-2">

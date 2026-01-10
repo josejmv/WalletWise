@@ -8,6 +8,7 @@ import {
   getMonthlyTrend,
   getBudgetProgress,
   getRecentTransactions,
+  getSavingsData,
 } from "./service";
 
 export async function GET(request: Request) {
@@ -60,6 +61,10 @@ export async function GET(request: Request) {
           limit ? parseInt(limit) : 10,
         );
         return NextResponse.json({ success: true, data: recentTransactions });
+
+      case "savings":
+        const savings = await getSavingsData();
+        return NextResponse.json({ success: true, data: savings });
 
       default:
         const summary = await getDashboardSummary(
