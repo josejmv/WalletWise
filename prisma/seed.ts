@@ -5,8 +5,9 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database...");
 
-  // Seed Currencies
+  // Seed Currencies (Fiat + Crypto)
   const currencies = [
+    // Fiat
     {
       code: "USD",
       name: "Dólar estadounidense",
@@ -25,16 +26,52 @@ async function main() {
       symbol: "Bs.",
       isBase: false,
     },
+    // Crypto
+    {
+      code: "USDT",
+      name: "Tether",
+      symbol: "USDT",
+      isBase: false,
+    },
+    {
+      code: "BTC",
+      name: "Bitcoin",
+      symbol: "BTC",
+      isBase: false,
+    },
+    {
+      code: "ETH",
+      name: "Ethereum",
+      symbol: "ETH",
+      isBase: false,
+    },
+    {
+      code: "BNB",
+      name: "Binance Coin",
+      symbol: "BNB",
+      isBase: false,
+    },
+    {
+      code: "SOL",
+      name: "Solana",
+      symbol: "SOL",
+      isBase: false,
+    },
   ];
 
+  let usdCurrency = null;
+
   for (const currency of currencies) {
-    await prisma.currency.upsert({
+    const created = await prisma.currency.upsert({
       where: { code: currency.code },
       update: {},
       create: currency,
     });
+    if (currency.code === "USD") {
+      usdCurrency = created;
+    }
   }
-  console.log("Currencies seeded");
+  console.log("Currencies seeded (Fiat + Crypto)");
 
   // Seed Account Types
   const accountTypes = [
@@ -69,185 +106,88 @@ async function main() {
   }
   console.log("Account types seeded");
 
-  // Seed Default Categories
-  const categories = [
-    {
-      name: "Vivienda",
-      color: "#8B5CF6",
-      icon: "home",
-      children: ["Arriendo", "Servicios", "Condominio", "Mantenimiento"],
-    },
-    {
-      name: "Alimentación",
-      color: "#10B981",
-      icon: "utensils",
-      children: ["Mercado", "Restaurantes", "Delivery", "Snacks"],
-    },
-    {
-      name: "Transporte",
-      color: "#F59E0B",
-      icon: "car",
-      children: [
-        "Gasolina",
-        "Transporte público",
-        "Uber/Taxi",
-        "Mantenimiento vehículo",
-      ],
-    },
-    {
-      name: "Entretenimiento",
-      color: "#EC4899",
-      icon: "gamepad",
-      children: ["Streaming", "Salidas", "Hobbies", "Videojuegos"],
-    },
-    {
-      name: "Salud",
-      color: "#EF4444",
-      icon: "heart",
-      children: [
-        "Medicamentos",
-        "Consultas médicas",
-        "Gimnasio",
-        "Seguro médico",
-      ],
-    },
-    {
-      name: "Educación",
-      color: "#3B82F6",
-      icon: "graduation-cap",
-      children: ["Cursos", "Libros", "Suscripciones educativas"],
-    },
-    {
-      name: "Ropa y accesorios",
-      color: "#6366F1",
-      icon: "shirt",
-      children: ["Ropa", "Zapatos", "Accesorios"],
-    },
-    {
-      name: "Tecnología",
-      color: "#14B8A6",
-      icon: "laptop",
-      children: ["Hardware", "Software", "Suscripciones tech"],
-    },
-    {
-      name: "Otros",
-      color: "#6B7280",
-      icon: "ellipsis",
-      children: ["Regalos", "Donaciones", "Imprevistos"],
-    },
-  ];
+  // Seed Default UserConfig (single entry for now)
+  if (usdCurrency) {
+    const existingConfig = await prisma.userConfig.findFirst();
+    if (!existingConfig) {
+      const defaultSidebarConfig = {
+        items: [
+          { id: "dashboard", type: "item", pageId: "dashboard" },
+          {
+            id: "transactions",
+            type: "group",
+            label: "Transacciones",
+            icon: "Receipt",
+            isOpen: true,
+            children: [
+              { id: "incomes", type: "item", pageId: "incomes" },
+              { id: "expenses", type: "item", pageId: "expenses" },
+              { id: "transfers", type: "item", pageId: "transfers" },
+            ],
+          },
+          {
+            id: "finances",
+            type: "group",
+            label: "Finanzas",
+            icon: "Landmark",
+            isOpen: true,
+            children: [
+              { id: "accounts", type: "item", pageId: "accounts" },
+              { id: "budgets", type: "item", pageId: "budgets" },
+              { id: "jobs", type: "item", pageId: "jobs" },
+            ],
+          },
+          {
+            id: "inventory",
+            type: "group",
+            label: "Inventario",
+            icon: "Package",
+            isOpen: false,
+            children: [
+              { id: "inventory-items", type: "item", pageId: "inventory" },
+              {
+                id: "inventory-categories",
+                type: "item",
+                pageId: "inventory-categories",
+              },
+              {
+                id: "inventory-price-history",
+                type: "item",
+                pageId: "inventory-price-history",
+              },
+              { id: "shopping-list", type: "item", pageId: "shopping-list" },
+            ],
+          },
+          {
+            id: "configuration",
+            type: "group",
+            label: "Configuración",
+            icon: "Settings2",
+            isOpen: false,
+            children: [
+              { id: "currencies", type: "item", pageId: "currencies" },
+              { id: "exchange-rates", type: "item", pageId: "exchange-rates" },
+              { id: "categories", type: "item", pageId: "categories" },
+            ],
+          },
+          { id: "reports", type: "item", pageId: "reports" },
+        ],
+      };
 
-  for (const category of categories) {
-    const parent = await prisma.category.upsert({
-      where: {
-        id: category.name.toLowerCase().replace(/\s+/g, "-"),
-      },
-      update: {},
-      create: {
-        id: category.name.toLowerCase().replace(/\s+/g, "-"),
-        name: category.name,
-        color: category.color,
-        icon: category.icon,
-      },
-    });
-
-    for (const childName of category.children) {
-      const childId = `${parent.id}-${childName.toLowerCase().replace(/\s+/g, "-")}`;
-      await prisma.category.upsert({
-        where: { id: childId },
-        update: {},
-        create: {
-          id: childId,
-          name: childName,
-          parentId: parent.id,
-          color: category.color,
+      await prisma.userConfig.create({
+        data: {
+          baseCurrencyId: usdCurrency.id,
+          dateFormat: "DD/MM/YYYY",
+          numberFormat: "es-CO",
+          theme: "system",
+          sidebarConfig: defaultSidebarConfig,
         },
       });
+      console.log("UserConfig seeded");
+    } else {
+      console.log("UserConfig already exists, skipping");
     }
   }
-  console.log("Categories seeded");
-
-  // Seed Inventory Categories
-  const inventoryCategories = [
-    {
-      name: "Despensa",
-      icon: "package",
-      color: "#F59E0B",
-      description: "Productos de despensa y alimentos no perecederos",
-    },
-    {
-      name: "Refrigerados",
-      icon: "thermometer-snowflake",
-      color: "#3B82F6",
-      description: "Productos que requieren refrigeración",
-    },
-    {
-      name: "Limpieza",
-      icon: "spray-can",
-      color: "#10B981",
-      description: "Productos de limpieza del hogar",
-    },
-    {
-      name: "Higiene personal",
-      icon: "bath",
-      color: "#EC4899",
-      description: "Productos de higiene y cuidado personal",
-    },
-    {
-      name: "Bebidas",
-      icon: "glass-water",
-      color: "#06B6D4",
-      description: "Bebidas y líquidos",
-    },
-    {
-      name: "Congelados",
-      icon: "snowflake",
-      color: "#6366F1",
-      description: "Productos congelados",
-    },
-    {
-      name: "Frutas y verduras",
-      icon: "apple-whole",
-      color: "#84CC16",
-      description: "Frutas y verduras frescas",
-    },
-    {
-      name: "Carnes y proteínas",
-      icon: "drumstick-bite",
-      color: "#EF4444",
-      description: "Carnes, pollo, pescado y proteínas",
-    },
-    {
-      name: "Panadería",
-      icon: "bread-slice",
-      color: "#D97706",
-      description: "Pan, galletas y productos de panadería",
-    },
-    {
-      name: "Mascotas",
-      icon: "paw",
-      color: "#8B5CF6",
-      description: "Alimentos y productos para mascotas",
-    },
-  ];
-
-  for (const inventoryCategory of inventoryCategories) {
-    const categoryId = inventoryCategory.name
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/\s+/g, "-");
-
-    await prisma.inventoryCategory.upsert({
-      where: { name: inventoryCategory.name },
-      update: {},
-      create: {
-        id: categoryId,
-        ...inventoryCategory,
-      },
-    });
-  }
-  console.log("Inventory categories seeded");
 
   console.log("Database seeded successfully!");
 }

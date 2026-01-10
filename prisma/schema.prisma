@@ -61,6 +61,18 @@ enum InventoryUnit {
   paquetes
 }
 
+enum ExchangeRateSource {
+  official
+  binance
+  manual
+}
+
+enum TransferType {
+  account_to_account
+  account_to_budget
+  budget_to_account
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -83,6 +95,7 @@ model Currency {
   exchangeRatesTo       ExchangeRate[] @relation("ToCurrency")
   inventoryItems        InventoryItem[]
   inventoryPriceHistory InventoryPriceHistory[]
+  userConfigs           UserConfig[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -91,11 +104,12 @@ model Currency {
 }
 
 model ExchangeRate {
-  id             String   @id @default(uuid())
+  id             String             @id @default(uuid())
   fromCurrencyId String
   toCurrencyId   String
-  rate           Decimal  @db.Decimal(18, 8)
-  fetchedAt      DateTime @default(now())
+  rate           Decimal            @db.Decimal(18, 8)
+  source         ExchangeRateSource @default(official)
+  fetchedAt      DateTime           @default(now())
 
   // Relations
   fromCurrency Currency @relation("FromCurrency", fields: [fromCurrencyId], references: [id])
@@ -105,7 +119,21 @@ model ExchangeRate {
 
   @@index([fromCurrencyId, toCurrencyId])
   @@index([fetchedAt])
+  @@index([source])
   @@map("exchange_rates")
+}
+
+model ExchangeRateSyncLog {
+  id         String             @id @default(uuid())
+  source     ExchangeRateSource
+  status     String // success, error
+  message    String?
+  ratesCount Int                @default(0)
+  syncedAt   DateTime           @default(now())
+
+  @@index([source])
+  @@index([syncedAt])
+  @@map("exchange_rate_sync_logs")
 }
 
 model AccountType {
@@ -313,6 +341,28 @@ model BudgetContribution {
   @@index([budgetId])
   @@index([date])
   @@map("budget_contributions")
+}
+
+// ============================================
+// USER CONFIG
+// ============================================
+
+model UserConfig {
+  id             String    @id @default(uuid())
+  baseCurrencyId String
+  dateFormat     String    @default("DD/MM/YYYY") // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
+  numberFormat   String    @default("es-CO") // es-CO, en-US
+  theme          String    @default("system") // system, light, dark
+  sidebarConfig  Json      @default("[]")
+  lastRateSyncAt DateTime?
+
+  // Relations
+  baseCurrency Currency @relation(fields: [baseCurrencyId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_config")
 }
 
 // ============================================
