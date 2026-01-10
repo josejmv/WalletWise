@@ -11,6 +11,7 @@
 | Documento                                | Descripcion                                   |
 | ---------------------------------------- | --------------------------------------------- |
 | [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Resumen de lo completado y pendientes futuros |
+| [steps/](./steps/)                       | Versiones del proyecto (v1.0.0, v2.0.0, etc)  |
 
 ### Contexto y Configuracion
 
