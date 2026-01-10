@@ -6,10 +6,11 @@
 
 ## Versiones
 
-| Version               | Nombre              | Estado      | Descripcion                               |
-| --------------------- | ------------------- | ----------- | ----------------------------------------- |
-| [v1.0.0](./v1.0.0.md) | Single User Edition | Completado  | Dashboard de finanzas personales completo |
-| [v2.0.0](./v2.0.0.md) | Multi-User Edition  | Planificado | Autenticacion y soporte multi-usuario     |
+| Version               | Nombre                | Estado      | Descripcion                               |
+| --------------------- | --------------------- | ----------- | ----------------------------------------- |
+| [v1.0.0](./v1.0.0.md) | Single User Edition   | Completado  | Dashboard de finanzas personales completo |
+| [v1.1.0](./v1.1.0.md) | Mejoras Incrementales | Planificado | Binance P2P, mejoras UX, optimizaciones   |
+| [v2.0.0](./v2.0.0.md) | Multi-User Edition    | Planificado | Autenticacion y soporte multi-usuario     |
 
 ---
 

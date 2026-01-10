@@ -35,16 +35,20 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: "Dashboard", href: "/", icon: LayoutDashboard },
-  { title: "Trabajos", href: "/jobs", icon: Briefcase },
-  { title: "Cuentas", href: "/accounts", icon: Wallet },
-  { title: "Categorias", href: "/categories", icon: Tags },
-  { title: "Ingresos", href: "/incomes", icon: ArrowDownCircle },
-  { title: "Gastos", href: "/expenses", icon: ArrowUpCircle },
-  { title: "Transferencias", href: "/transfers", icon: ArrowLeftRight },
-  { title: "Presupuestos", href: "/budgets", icon: PiggyBank },
-  { title: "Inventario", href: "/inventory", icon: Package },
-  { title: "Reportes", href: "/reports", icon: FileText },
+  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { title: "Trabajos", href: "/dashboard/jobs", icon: Briefcase },
+  { title: "Cuentas", href: "/dashboard/accounts", icon: Wallet },
+  { title: "Categorias", href: "/dashboard/categories", icon: Tags },
+  { title: "Ingresos", href: "/dashboard/incomes", icon: ArrowDownCircle },
+  { title: "Gastos", href: "/dashboard/expenses", icon: ArrowUpCircle },
+  {
+    title: "Transferencias",
+    href: "/dashboard/transfers",
+    icon: ArrowLeftRight,
+  },
+  { title: "Presupuestos", href: "/dashboard/budgets", icon: PiggyBank },
+  { title: "Inventario", href: "/dashboard/inventory", icon: Package },
+  { title: "Reportes", href: "/dashboard/reports", icon: FileText },
 ];
 
 interface SidebarProps {
@@ -64,13 +68,16 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
     >
       <div className="flex h-14 items-center border-b px-4">
         {!collapsed && (
-          <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 font-semibold"
+          >
             <Wallet className="h-6 w-6 text-primary" />
             <span className="text-lg">WalletWise</span>
           </Link>
         )}
         {collapsed && (
-          <Link href="/" className="mx-auto">
+          <Link href="/dashboard" className="mx-auto">
             <Wallet className="h-6 w-6 text-primary" />
           </Link>
         )}
@@ -80,7 +87,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {navItems.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+            (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
           const linkContent = (
             <Link
@@ -128,10 +135,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               }
             />
             <Link
-              href="/settings"
+              href="/dashboard/settings"
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                pathname === "/settings"
+                pathname === "/dashboard/settings"
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
@@ -162,10 +169,10 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <Link
-                  href="/settings"
+                  href="/dashboard/settings"
                   className={cn(
                     "flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
-                    pathname === "/settings"
+                    pathname === "/dashboard/settings"
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
                       : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}

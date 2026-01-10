@@ -118,7 +118,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
       targetAmount: 0,
       currentAmount: 0,
       currencyId: "",
-      accountId: "",
+      accountId: "none",
       deadline: "",
       status: "active",
     },
@@ -132,7 +132,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
         targetAmount: budget.targetAmount,
         currentAmount: budget.currentAmount,
         currencyId: budget.currency.id,
-        accountId: budget.account?.id ?? "",
+        accountId: budget.account?.id ?? "none",
         deadline: budget.deadline
           ? new Date(budget.deadline).toISOString().split("T")[0]
           : "",
@@ -174,7 +174,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
   const onSubmit = (data: BudgetFormData) => {
     const submitData = {
       ...data,
-      accountId: data.accountId || undefined,
+      accountId: data.accountId === "none" ? undefined : data.accountId,
       deadline: data.deadline || undefined,
     };
     if (isEditing) {
@@ -286,14 +286,16 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
         <div className="space-y-2">
           <Label htmlFor="accountId">Cuenta (opcional)</Label>
           <Select
-            value={watch("accountId") || ""}
-            onValueChange={(value) => setValue("accountId", value || undefined)}
+            value={watch("accountId") || "none"}
+            onValueChange={(value) =>
+              setValue("accountId", value === "none" ? undefined : value)
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Sin cuenta asignada" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sin cuenta asignada</SelectItem>
+              <SelectItem value="none">Sin cuenta asignada</SelectItem>
               {accounts?.map((account: { id: string; name: string }) => (
                 <SelectItem key={account.id} value={account.id}>
                   {account.name}

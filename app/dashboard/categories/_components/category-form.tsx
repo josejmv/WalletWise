@@ -92,7 +92,7 @@ export function CategoryForm({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
-      parentId: "",
+      parentId: "none",
       color: "#3b82f6",
       icon: "",
     },
@@ -102,7 +102,7 @@ export function CategoryForm({
     if (category) {
       reset({
         name: category.name,
-        parentId: category.parentId ?? "",
+        parentId: category.parentId ?? "none",
         color: category.color ?? "#3b82f6",
         icon: category.icon ?? "",
       });
@@ -142,7 +142,7 @@ export function CategoryForm({
   const onSubmit = (data: CategoryFormData) => {
     const submitData = {
       ...data,
-      parentId: data.parentId || undefined,
+      parentId: data.parentId === "none" ? undefined : data.parentId,
     };
     if (isEditing) {
       updateMutation.mutate(submitData);
@@ -179,14 +179,16 @@ export function CategoryForm({
       <div className="space-y-2">
         <Label htmlFor="parentId">Categoria Padre (opcional)</Label>
         <Select
-          value={watch("parentId") || ""}
-          onValueChange={(value) => setValue("parentId", value || undefined)}
+          value={watch("parentId") || "none"}
+          onValueChange={(value) =>
+            setValue("parentId", value === "none" ? undefined : value)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Sin categoria padre" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Sin categoria padre</SelectItem>
+            <SelectItem value="none">Sin categoria padre</SelectItem>
             {availableParents.map((cat: { id: string; name: string }) => (
               <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
