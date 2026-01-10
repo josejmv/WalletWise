@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
+import { useFormatters } from "@/contexts/user-config-context";
 import { TransferForm } from "./_components/transfer-form";
 
 interface Transfer {
@@ -80,19 +81,8 @@ async function deleteTransfer(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
-function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function TransfersPage() {
+  const { formatDate, formatCurrency } = useFormatters();
   const [formOpen, setFormOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -224,7 +214,7 @@ export default function TransfersPage() {
                           <span className="font-medium">
                             {formatCurrency(
                               transfer.amount,
-                              transfer.currency.symbol,
+                              transfer.currency.code,
                             )}
                           </span>
                           {transfer.exchangeRate && (

@@ -33,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AccountForm } from "./_components/account-form";
 import { AccountCard } from "./_components/account-card";
 import { useToast } from "@/components/ui/use-toast";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface AccountWithBlocked {
   id: string;
@@ -62,6 +62,7 @@ async function deleteAccount(id: string): Promise<void> {
 }
 
 export default function AccountsPage() {
+  const { formatCurrency } = useFormatters();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] =
     useState<AccountWithBlocked | null>(null);

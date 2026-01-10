@@ -20,6 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface Transaction {
   id: string;
@@ -39,22 +40,6 @@ async function fetchRecentTransactions(): Promise<Transaction[]> {
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
-}
-
-function formatCurrency(value: number, currency: string): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: currency,
-    minimumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat("es-CO", {
-    day: "2-digit",
-    month: "short",
-  }).format(date);
 }
 
 const typeConfig = {
@@ -79,6 +64,8 @@ const typeConfig = {
 };
 
 export function RecentTransactions() {
+  const { formatDate, formatCurrency } = useFormatters();
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "recent-transactions"],
     queryFn: fetchRecentTransactions,

@@ -17,6 +17,7 @@ import {
   Legend,
   Tooltip,
 } from "recharts";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface ExpenseCategory {
   categoryId: string;
@@ -44,15 +45,8 @@ async function fetchExpensesByCategory(): Promise<ExpenseCategory[]> {
   return data.data;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
-
 export function ExpensesByCategory() {
+  const { formatCurrency } = useFormatters();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "expenses-by-category"],
     queryFn: fetchExpensesByCategory,

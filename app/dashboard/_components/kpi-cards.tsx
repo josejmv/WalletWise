@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Wallet, TrendingUp, TrendingDown, PiggyBank } from "lucide-react";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface DashboardKPIs {
   totalBalance: number;
@@ -23,16 +24,8 @@ async function fetchKPIs(): Promise<DashboardKPIs> {
   return data.data;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export function KPICards() {
+  const { formatCurrency } = useFormatters();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "kpis"],
     queryFn: fetchKPIs,

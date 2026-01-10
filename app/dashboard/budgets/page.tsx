@@ -39,6 +39,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
+import { useFormatters } from "@/contexts/user-config-context";
 import { BudgetForm } from "./_components/budget-form";
 import { ContributeModal } from "./_components/contribute-modal";
 import { WithdrawModal } from "./_components/withdraw-modal";
@@ -68,18 +69,6 @@ async function deleteBudget(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
-function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 const statusLabels: Record<string, string> = {
   active: "Activo",
   completed: "Completado",
@@ -92,6 +81,7 @@ const typeLabels: Record<string, string> = {
 };
 
 export default function BudgetsPage() {
+  const { formatDate, formatCurrency } = useFormatters();
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -214,13 +204,13 @@ export default function BudgetsPage() {
                       <span>
                         {formatCurrency(
                           budget.currentAmount,
-                          budget.currency.symbol,
+                          budget.currency.code,
                         )}
                       </span>
                       <span className="text-muted-foreground">
                         {formatCurrency(
                           budget.targetAmount,
-                          budget.currency.symbol,
+                          budget.currency.code,
                         )}
                       </span>
                     </div>

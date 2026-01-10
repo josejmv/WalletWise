@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface BudgetData {
   budgetId: string;
@@ -29,15 +30,8 @@ async function fetchBudgetProgress(): Promise<BudgetData[]> {
   return data.data;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-  }).format(value);
-}
-
 export function BudgetProgress() {
+  const { formatCurrency } = useFormatters();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "budget-progress"],
     queryFn: fetchBudgetProgress,

@@ -18,6 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface AccountBalance {
   accountId: string;
@@ -34,16 +35,12 @@ async function fetchBalanceByAccount(): Promise<AccountBalance[]> {
   return data.data;
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    notation: "compact",
-  }).format(value);
-}
-
 export function BalanceByAccount() {
+  const { formatNumber } = useFormatters();
+
+  // Compact formatter for chart axis
+  const formatCompact = (value: number) =>
+    formatNumber(value, { notation: "compact", compactDisplay: "short" });
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "balance-by-account"],
     queryFn: fetchBalanceByAccount,
@@ -111,7 +108,7 @@ export function BalanceByAccount() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={formatCurrency}
+              tickFormatter={formatCompact}
             />
             <YAxis
               type="category"
@@ -122,7 +119,7 @@ export function BalanceByAccount() {
               width={100}
             />
             <Tooltip
-              formatter={(value) => formatCurrency(Number(value))}
+              formatter={(value) => formatNumber(Number(value))}
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",

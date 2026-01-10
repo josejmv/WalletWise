@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface SavingsData {
   totalSavings: number;
@@ -31,6 +31,7 @@ async function fetchSavings(): Promise<SavingsData> {
 }
 
 export function SavingsWidget() {
+  const { formatCurrency } = useFormatters();
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "savings"],
     queryFn: fetchSavings,

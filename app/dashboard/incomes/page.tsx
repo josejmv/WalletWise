@@ -38,6 +38,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
+import { useFormatters } from "@/contexts/user-config-context";
 import { IncomeForm } from "./_components/income-form";
 
 interface Income {
@@ -94,19 +95,8 @@ async function deleteIncome(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
-function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function IncomesPage() {
+  const { formatDate, formatCurrency } = useFormatters();
   const [formOpen, setFormOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -219,7 +209,7 @@ export default function IncomesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">
-              ${new Intl.NumberFormat("es-CO").format(totalIncome)}
+              {formatCurrency(totalIncome, "USD")}
             </div>
             <p className="text-xs text-muted-foreground">
               {totalCount} registro(s)
@@ -261,7 +251,7 @@ export default function IncomesPage() {
                         {income.description || "-"}
                       </TableCell>
                       <TableCell className="text-right font-medium text-green-500">
-                        {formatCurrency(income.amount, income.currency.symbol)}
+                        {formatCurrency(income.amount, income.currency.code)}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">

@@ -19,6 +19,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface MonthlyData {
   month: string;
@@ -33,15 +34,6 @@ async function fetchMonthlyTrend(): Promise<MonthlyData[]> {
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-CO", {
-    style: "currency",
-    currency: "USD",
-    minimumFractionDigits: 0,
-    notation: "compact",
-  }).format(value);
 }
 
 function formatMonth(month: string): string {
@@ -64,6 +56,11 @@ function formatMonth(month: string): string {
 }
 
 export function MonthlyTrend() {
+  const { formatNumber } = useFormatters();
+
+  // Compact formatter for chart axis
+  const formatCompact = (value: number) =>
+    formatNumber(value, { notation: "compact", compactDisplay: "short" });
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard", "monthly-trend"],
     queryFn: fetchMonthlyTrend,
@@ -121,10 +118,10 @@ export function MonthlyTrend() {
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              tickFormatter={formatCurrency}
+              tickFormatter={formatCompact}
             />
             <Tooltip
-              formatter={(value) => formatCurrency(Number(value))}
+              formatter={(value) => formatNumber(Number(value))}
               contentStyle={{
                 backgroundColor: "hsl(var(--card))",
                 border: "1px solid hsl(var(--border))",

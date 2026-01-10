@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatters } from "@/contexts/user-config-context";
 
 const withdrawSchema = z.object({
   amount: z.number().positive("El monto debe ser mayor a 0"),
@@ -74,6 +74,7 @@ export function WithdrawModal({
   onOpenChange,
   onSuccess,
 }: WithdrawModalProps) {
+  const { formatCurrency } = useFormatters();
   const { toast } = useToast();
 
   const { data: accounts, isLoading: loadingAccounts } = useQuery({

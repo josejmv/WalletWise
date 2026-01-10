@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface Budget {
   id: string;
@@ -63,6 +63,7 @@ export default function AccountDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { formatCurrency } = useFormatters();
 
   const { data: account, isLoading } = useQuery({
     queryKey: ["account", id, "withBlocked"],

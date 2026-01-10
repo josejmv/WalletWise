@@ -48,6 +48,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
+import { useFormatters } from "@/contexts/user-config-context";
 import { ExpenseForm } from "./_components/expense-form";
 
 interface Expense {
@@ -127,19 +128,8 @@ const periodicityLabels: Record<string, string> = {
   yearly: "Anual",
 };
 
-function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
-}
-
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString("es-CO", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function ExpensesPage() {
+  const { formatDate, formatCurrency } = useFormatters();
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -273,7 +263,7 @@ export default function ExpensesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">
-              ${new Intl.NumberFormat("es-CO").format(totalExpense)}
+              {formatCurrency(totalExpense, "USD")}
             </div>
             <p className="text-xs text-muted-foreground">
               {totalCount} registro(s)
@@ -361,7 +351,7 @@ export default function ExpensesPage() {
                         <span className="font-semibold text-red-500">
                           {formatCurrency(
                             expense.amount,
-                            expense.currency.symbol,
+                            expense.currency.code,
                           )}
                         </span>
                         {isDue && (
@@ -451,7 +441,7 @@ export default function ExpensesPage() {
                         <TableCell className="text-right font-medium text-red-500">
                           {formatCurrency(
                             expense.amount,
-                            expense.currency.symbol,
+                            expense.currency.code,
                           )}
                         </TableCell>
                         <TableCell className="text-right">

@@ -23,7 +23,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { formatCurrency } from "@/lib/formatters";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface AccountWithBlocked {
   id: string;
@@ -45,6 +45,7 @@ interface AccountCardProps {
 }
 
 export function AccountCard({ account, onEdit, onDelete }: AccountCardProps) {
+  const { formatCurrency } = useFormatters();
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasBlockedBalance = account.blockedBalance > 0;
