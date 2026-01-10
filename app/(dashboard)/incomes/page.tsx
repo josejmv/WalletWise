@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { IncomeForm } from "./_components/income-form";
 
@@ -49,11 +50,42 @@ interface Income {
   currency: { id: string; code: string; symbol: string };
 }
 
-async function fetchIncomes(): Promise<Income[]> {
-  const res = await fetch("/api/incomes");
+interface PaginatedResponse {
+  success: boolean;
+  data: Income[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+interface SummaryResponse {
+  success: boolean;
+  data: {
+    totalAmount: number;
+    count: number;
+  };
+}
+
+async function fetchIncomes(
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse> {
+  const res = await fetch(
+    `/api/incomes?paginated=true&page=${page}&limit=${limit}`,
+  );
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
-  return data.data;
+  return data;
+}
+
+async function fetchSummary(): Promise<SummaryResponse> {
+  const res = await fetch("/api/incomes?summary=true");
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+  return data;
 }
 
 async function deleteIncome(id: string): Promise<void> {
@@ -78,18 +110,26 @@ export default function IncomesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: incomes, isLoading } = useQuery({
-    queryKey: ["incomes"],
-    queryFn: fetchIncomes,
+  const { data: incomesData, isLoading } = useQuery({
+    queryKey: ["incomes", page, limit],
+    queryFn: () => fetchIncomes(page, limit),
+  });
+
+  const { data: summaryData } = useQuery({
+    queryKey: ["incomes-summary"],
+    queryFn: fetchSummary,
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteIncome,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incomes"] });
+      queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
       toast({ title: "Ingreso eliminado" });
       setDeleteId(null);
     },
@@ -106,6 +146,7 @@ export default function IncomesPage() {
     setFormOpen(false);
     setEditingIncome(null);
     queryClient.invalidateQueries({ queryKey: ["incomes"] });
+    queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
   };
 
   const handleEdit = (income: Income) => {
@@ -118,8 +159,24 @@ export default function IncomesPage() {
     setEditingIncome(null);
   };
 
-  const totalIncome =
-    incomes?.reduce((sum, income) => sum + income.amount, 0) || 0;
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+  };
+
+  const incomes = incomesData?.data || [];
+  const meta = incomesData?.meta || {
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  };
+  const totalIncome = summaryData?.data?.totalAmount || 0;
+  const totalCount = summaryData?.data?.count || 0;
 
   if (isLoading) {
     return (
@@ -165,7 +222,7 @@ export default function IncomesPage() {
               ${new Intl.NumberFormat("es-CO").format(totalIncome)}
             </div>
             <p className="text-xs text-muted-foreground">
-              {incomes?.length || 0} registro(s)
+              {totalCount} registro(s)
             </p>
           </CardContent>
         </Card>
@@ -174,59 +231,69 @@ export default function IncomesPage() {
       <Card>
         <CardHeader>
           <CardTitle>Historial de Ingresos</CardTitle>
-          <CardDescription>{incomes?.length || 0} ingreso(s)</CardDescription>
+          <CardDescription>{meta.total} ingreso(s)</CardDescription>
         </CardHeader>
         <CardContent>
-          {incomes && incomes.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Trabajo</TableHead>
-                  <TableHead>Cuenta</TableHead>
-                  <TableHead>Descripcion</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {incomes.map((income) => (
-                  <TableRow key={income.id}>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(income.date)}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {income.job.name}
-                    </TableCell>
-                    <TableCell>{income.account.name}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {income.description || "-"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium text-green-500">
-                      {formatCurrency(income.amount, income.currency.symbol)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(income)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(income.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          {incomes.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Trabajo</TableHead>
+                    <TableHead>Cuenta</TableHead>
+                    <TableHead>Descripcion</TableHead>
+                    <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {incomes.map((income) => (
+                    <TableRow key={income.id}>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(income.date)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {income.job.name}
+                      </TableCell>
+                      <TableCell>{income.account.name}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {income.description || "-"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-green-500">
+                        {formatCurrency(income.amount, income.currency.symbol)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(income)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(income.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pagination
+                page={meta.page}
+                totalPages={meta.totalPages}
+                total={meta.total}
+                limit={meta.limit}
+                onPageChange={handlePageChange}
+                onLimitChange={handleLimitChange}
+              />
+            </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               No hay ingresos registrados

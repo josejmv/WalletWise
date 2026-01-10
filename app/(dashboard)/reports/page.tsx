@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Download, Calendar } from "lucide-react";
+import { Download, FileText } from "lucide-react";
+import { generateFinancialPDF } from "@/lib/export-utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,13 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface FinancialSummary {
@@ -44,15 +37,24 @@ function formatCurrency(value: number): string {
 }
 
 export default function ReportsPage() {
-  const [reportType, setReportType] = useState("summary");
-
   const { data: summary, isLoading } = useQuery({
     queryKey: ["reports", "summary"],
     queryFn: fetchSummary,
   });
 
-  const handleExport = async (format: "csv" | "json") => {
+  const handleExport = (format: "csv" | "json") => {
     window.open(`/api/reports?type=export&format=${format}`, "_blank");
+  };
+
+  const handleExportPDF = () => {
+    if (!summary) return;
+    generateFinancialPDF({
+      title: "Reporte Financiero - WalletWise",
+      period: summary.period,
+      overview: summary.overview,
+      topExpenseCategories: summary.topExpenseCategories,
+      topIncomeJobs: summary.topIncomeJobs,
+    });
   };
 
   if (isLoading) {
@@ -78,13 +80,17 @@ export default function ReportsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handleExportPDF} disabled={!summary}>
+            <FileText className="mr-2 h-4 w-4" />
+            Exportar PDF
+          </Button>
           <Button variant="outline" onClick={() => handleExport("csv")}>
             <Download className="mr-2 h-4 w-4" />
-            Exportar CSV
+            CSV
           </Button>
           <Button variant="outline" onClick={() => handleExport("json")}>
             <Download className="mr-2 h-4 w-4" />
-            Exportar JSON
+            JSON
           </Button>
         </div>
       </div>

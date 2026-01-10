@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RefreshCw, ArrowRight } from "lucide-react";
+import { RefreshCw, ArrowRight, CloudDownload, Loader2 } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -46,6 +48,9 @@ function formatDate(dateString: string): string {
 }
 
 export default function ExchangeRatesPage() {
+  const { toast } = useToast();
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const {
     data: rates,
     isLoading,
@@ -54,6 +59,36 @@ export default function ExchangeRatesPage() {
     queryKey: ["exchange-rates"],
     queryFn: fetchExchangeRates,
   });
+
+  async function handleSync() {
+    setIsSyncing(true);
+    try {
+      const res = await fetch("/api/exchange-rates/sync", { method: "POST" });
+      const data = await res.json();
+
+      if (data.success) {
+        toast({
+          title: "Sincronizacion exitosa",
+          description: `${data.synced} tasa(s) sincronizada(s)${data.errors?.length ? `. Errores: ${data.errors.join(", ")}` : ""}`,
+        });
+        refetch();
+      } else {
+        toast({
+          title: "Error al sincronizar",
+          description: data.error,
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error de conexion",
+        description: "No se pudo conectar con el servidor",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -77,10 +112,20 @@ export default function ExchangeRatesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Tasas de Cambio</h1>
           <p className="text-muted-foreground">Conversion entre monedas</p>
         </div>
-        <Button variant="outline" onClick={() => refetch()}>
-          <RefreshCw className="mr-2 h-4 w-4" />
-          Actualizar Tasas
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => refetch()}>
+            <RefreshCw className="mr-2 h-4 w-4" />
+            Actualizar
+          </Button>
+          <Button onClick={handleSync} disabled={isSyncing}>
+            {isSyncing ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <CloudDownload className="mr-2 h-4 w-4" />
+            )}
+            Sincronizar desde API
+          </Button>
+        </div>
       </div>
 
       <Card>

@@ -5,9 +5,17 @@ import type {
   UpdateIncomeInput,
   IncomeFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
 export async function getIncomes(filters?: IncomeFilters) {
   return repository.findAll(filters);
+}
+
+export async function getIncomesPaginated(
+  filters?: IncomeFilters,
+  pagination?: PaginationParams,
+) {
+  return repository.findAllPaginated(filters, pagination);
 }
 
 export async function getIncomeById(id: string) {

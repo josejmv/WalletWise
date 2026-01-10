@@ -11,6 +11,7 @@ export interface CreateExchangeRateInput {
   fromCurrencyId: string;
   toCurrencyId: string;
   rate: number;
+  fetchedAt?: Date;
 }
 
 export interface UpdateExchangeRateInput {

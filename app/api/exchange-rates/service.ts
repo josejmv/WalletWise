@@ -133,3 +133,70 @@ export async function getHistory(
 ) {
   return repository.getHistory(fromCurrencyId, toCurrencyId, limit);
 }
+
+// ExchangeRate-API integration
+const EXCHANGE_API_URL = "https://open.er-api.com/v6/latest";
+
+interface ExchangeAPIResponse {
+  result: string;
+  base_code: string;
+  rates: Record<string, number>;
+}
+
+export async function syncFromAPI(): Promise<{
+  synced: number;
+  errors: string[];
+}> {
+  const errors: string[] = [];
+  let synced = 0;
+
+  try {
+    // Get all currencies from the database
+    const currencies = await prisma.currency.findMany();
+    if (currencies.length === 0) {
+      return { synced: 0, errors: ["No hay monedas registradas"] };
+    }
+
+    // Find the base currency (USD typically)
+    const baseCurrency = currencies.find((c) => c.isBase) || currencies[0];
+
+    // Fetch rates from API using base currency
+    const response = await fetch(`${EXCHANGE_API_URL}/${baseCurrency.code}`);
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const data: ExchangeAPIResponse = await response.json();
+    if (data.result !== "success") {
+      throw new Error("API returned error");
+    }
+
+    // Create exchange rates for all currency pairs
+    const now = new Date();
+    for (const targetCurrency of currencies) {
+      if (targetCurrency.id === baseCurrency.id) continue;
+
+      const rate = data.rates[targetCurrency.code];
+      if (!rate) {
+        errors.push(`No se encontro tasa para ${targetCurrency.code}`);
+        continue;
+      }
+
+      // Create rate from base to target
+      await repository.create({
+        fromCurrencyId: baseCurrency.id,
+        toCurrencyId: targetCurrency.id,
+        rate,
+        fetchedAt: now,
+      });
+      synced++;
+    }
+
+    return { synced, errors };
+  } catch (error) {
+    errors.push(
+      error instanceof Error ? error.message : "Error al sincronizar",
+    );
+    return { synced, errors };
+  }
+}

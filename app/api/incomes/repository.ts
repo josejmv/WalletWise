@@ -4,8 +4,9 @@ import type {
   UpdateIncomeInput,
   IncomeFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
-export async function findAll(filters?: IncomeFilters) {
+function buildWhereClause(filters?: IncomeFilters) {
   const where: Record<string, unknown> = {};
 
   if (filters?.jobId) {
@@ -24,6 +25,12 @@ export async function findAll(filters?: IncomeFilters) {
     };
   }
 
+  return where;
+}
+
+export async function findAll(filters?: IncomeFilters) {
+  const where = buildWhereClause(filters);
+
   return prisma.income.findMany({
     where,
     include: {
@@ -33,6 +40,44 @@ export async function findAll(filters?: IncomeFilters) {
     },
     orderBy: { date: "desc" },
   });
+}
+
+export async function findAllPaginated(
+  filters?: IncomeFilters,
+  pagination?: PaginationParams,
+) {
+  const where = buildWhereClause(filters);
+  const page = pagination?.page || 1;
+  const limit = pagination?.limit || 10;
+  const skip = (page - 1) * limit;
+
+  const sortBy = pagination?.sortBy || "date";
+  const sortOrder = pagination?.sortOrder || "desc";
+
+  const [data, total] = await Promise.all([
+    prisma.income.findMany({
+      where,
+      include: {
+        job: true,
+        account: true,
+        currency: true,
+      },
+      orderBy: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
+    }),
+    prisma.income.count({ where }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export async function findById(id: string) {

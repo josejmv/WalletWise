@@ -36,6 +36,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { TransferForm } from "./_components/transfer-form";
 
@@ -50,11 +51,27 @@ interface Transfer {
   currency: { id: string; code: string; symbol: string };
 }
 
-async function fetchTransfers(): Promise<Transfer[]> {
-  const res = await fetch("/api/transfers");
+interface PaginatedResponse {
+  success: boolean;
+  data: Transfer[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+async function fetchTransfers(
+  page: number,
+  limit: number,
+): Promise<PaginatedResponse> {
+  const res = await fetch(
+    `/api/transfers?paginated=true&page=${page}&limit=${limit}`,
+  );
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
-  return data.data;
+  return data;
 }
 
 async function deleteTransfer(id: string): Promise<void> {
@@ -79,12 +96,14 @@ export default function TransfersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: transfers, isLoading } = useQuery({
-    queryKey: ["transfers"],
-    queryFn: fetchTransfers,
+  const { data: transfersData, isLoading } = useQuery({
+    queryKey: ["transfers", page, limit],
+    queryFn: () => fetchTransfers(page, limit),
   });
 
   const deleteMutation = useMutation({
@@ -117,6 +136,23 @@ export default function TransfersPage() {
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingTransfer(null);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+  };
+
+  const transfers = transfersData?.data || [];
+  const meta = transfersData?.meta || {
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
   };
 
   if (isLoading) {
@@ -152,75 +188,83 @@ export default function TransfersPage() {
       <Card>
         <CardHeader>
           <CardTitle>Historial de Transferencias</CardTitle>
-          <CardDescription>
-            {transfers?.length || 0} transferencia(s)
-          </CardDescription>
+          <CardDescription>{meta.total} transferencia(s)</CardDescription>
         </CardHeader>
         <CardContent>
-          {transfers && transfers.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Origen</TableHead>
-                  <TableHead></TableHead>
-                  <TableHead>Destino</TableHead>
-                  <TableHead className="text-right">Monto</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transfers.map((transfer) => (
-                  <TableRow key={transfer.id}>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(transfer.date)}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {transfer.fromAccount.name}
-                    </TableCell>
-                    <TableCell>
-                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {transfer.toAccount.name}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div>
-                        <span className="font-medium">
-                          {formatCurrency(
-                            transfer.amount,
-                            transfer.currency.symbol,
-                          )}
-                        </span>
-                        {transfer.exchangeRate && (
-                          <p className="text-xs text-muted-foreground">
-                            Tasa: {transfer.exchangeRate}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(transfer)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(transfer.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
+          {transfers.length > 0 ? (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Origen</TableHead>
+                    <TableHead></TableHead>
+                    <TableHead>Destino</TableHead>
+                    <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {transfers.map((transfer) => (
+                    <TableRow key={transfer.id}>
+                      <TableCell className="text-muted-foreground">
+                        {formatDate(transfer.date)}
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {transfer.fromAccount.name}
+                      </TableCell>
+                      <TableCell>
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {transfer.toAccount.name}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div>
+                          <span className="font-medium">
+                            {formatCurrency(
+                              transfer.amount,
+                              transfer.currency.symbol,
+                            )}
+                          </span>
+                          {transfer.exchangeRate && (
+                            <p className="text-xs text-muted-foreground">
+                              Tasa: {transfer.exchangeRate}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(transfer)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteId(transfer.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <Pagination
+                page={meta.page}
+                totalPages={meta.totalPages}
+                total={meta.total}
+                limit={meta.limit}
+                onPageChange={handlePageChange}
+                onLimitChange={handleLimitChange}
+              />
+            </>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               No hay transferencias registradas

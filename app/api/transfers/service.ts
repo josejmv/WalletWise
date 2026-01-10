@@ -5,9 +5,17 @@ import type {
   UpdateTransferInput,
   TransferFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
 export async function getTransfers(filters?: TransferFilters) {
   return repository.findAll(filters);
+}
+
+export async function getTransfersPaginated(
+  filters?: TransferFilters,
+  pagination?: PaginationParams,
+) {
+  return repository.findAllPaginated(filters, pagination);
 }
 
 export async function getTransferById(id: string) {

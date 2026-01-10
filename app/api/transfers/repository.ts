@@ -4,8 +4,9 @@ import type {
   UpdateTransferInput,
   TransferFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
-export async function findAll(filters?: TransferFilters) {
+function buildWhereClause(filters?: TransferFilters) {
   const where: Record<string, unknown> = {};
 
   if (filters?.fromAccountId) {
@@ -24,6 +25,12 @@ export async function findAll(filters?: TransferFilters) {
     };
   }
 
+  return where;
+}
+
+export async function findAll(filters?: TransferFilters) {
+  const where = buildWhereClause(filters);
+
   return prisma.transfer.findMany({
     where,
     include: {
@@ -33,6 +40,44 @@ export async function findAll(filters?: TransferFilters) {
     },
     orderBy: { date: "desc" },
   });
+}
+
+export async function findAllPaginated(
+  filters?: TransferFilters,
+  pagination?: PaginationParams,
+) {
+  const where = buildWhereClause(filters);
+  const page = pagination?.page || 1;
+  const limit = pagination?.limit || 10;
+  const skip = (page - 1) * limit;
+
+  const sortBy = pagination?.sortBy || "date";
+  const sortOrder = pagination?.sortOrder || "desc";
+
+  const [data, total] = await Promise.all([
+    prisma.transfer.findMany({
+      where,
+      include: {
+        fromAccount: true,
+        toAccount: true,
+        currency: true,
+      },
+      orderBy: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
+    }),
+    prisma.transfer.count({ where }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export async function findById(id: string) {

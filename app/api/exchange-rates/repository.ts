@@ -71,7 +71,7 @@ export async function create(data: CreateExchangeRateInput) {
   return prisma.exchangeRate.create({
     data: {
       ...data,
-      fetchedAt: new Date(),
+      fetchedAt: data.fetchedAt ?? new Date(),
     },
     include: {
       fromCurrency: true,

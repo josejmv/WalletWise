@@ -4,8 +4,9 @@ import type {
   UpdateExpenseInput,
   ExpenseFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
-export async function findAll(filters?: ExpenseFilters) {
+function buildWhereClause(filters?: ExpenseFilters) {
   const where: Record<string, unknown> = {};
 
   if (filters?.categoryId) {
@@ -27,6 +28,12 @@ export async function findAll(filters?: ExpenseFilters) {
     };
   }
 
+  return where;
+}
+
+export async function findAll(filters?: ExpenseFilters) {
+  const where = buildWhereClause(filters);
+
   return prisma.expense.findMany({
     where,
     include: {
@@ -36,6 +43,44 @@ export async function findAll(filters?: ExpenseFilters) {
     },
     orderBy: { date: "desc" },
   });
+}
+
+export async function findAllPaginated(
+  filters?: ExpenseFilters,
+  pagination?: PaginationParams,
+) {
+  const where = buildWhereClause(filters);
+  const page = pagination?.page || 1;
+  const limit = pagination?.limit || 10;
+  const skip = (page - 1) * limit;
+
+  const sortBy = pagination?.sortBy || "date";
+  const sortOrder = pagination?.sortOrder || "desc";
+
+  const [data, total] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      include: {
+        category: true,
+        account: true,
+        currency: true,
+      },
+      orderBy: { [sortBy]: sortOrder },
+      skip,
+      take: limit,
+    }),
+    prisma.expense.count({ where }),
+  ]);
+
+  return {
+    data,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 }
 
 export async function findById(id: string) {

@@ -5,6 +5,7 @@ import { MonthlyTrend } from "./_components/monthly-trend";
 import { BudgetProgress } from "./_components/budget-progress";
 import { RecentTransactions } from "./_components/recent-transactions";
 import { BalanceByAccount } from "./_components/balance-by-account";
+import { PendingExpenses } from "./_components/pending-expenses";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function KPISkeleton() {
@@ -34,6 +35,11 @@ export default function DashboardPage() {
       {/* KPI Cards */}
       <Suspense fallback={<KPISkeleton />}>
         <KPICards />
+      </Suspense>
+
+      {/* Pending Expenses */}
+      <Suspense fallback={<ChartSkeleton />}>
+        <PendingExpenses />
       </Suspense>
 
       {/* Charts Row */}

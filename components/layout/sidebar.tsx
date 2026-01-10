@@ -17,6 +17,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { BackupModal } from "@/components/backup-modal";
 
 interface NavItem {
   title: string;
@@ -109,37 +111,71 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t p-2">
+      <div className="border-t p-2 space-y-1">
         {!collapsed ? (
-          <Link
-            href="/settings"
-            className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              pathname === "/settings"
-                ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-            )}
-          >
-            <Settings className="h-5 w-5" />
-            <span>Configuracion</span>
-          </Link>
+          <>
+            <BackupModal
+              trigger={
+                <button
+                  className={cn(
+                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <Database className="h-5 w-5" />
+                  <span>Backup</span>
+                </button>
+              }
+            />
+            <Link
+              href="/settings"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                pathname === "/settings"
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+              )}
+            >
+              <Settings className="h-5 w-5" />
+              <span>Configuracion</span>
+            </Link>
+          </>
         ) : (
-          <Tooltip delayDuration={0}>
-            <TooltipTrigger asChild>
-              <Link
-                href="/settings"
-                className={cn(
-                  "flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
-                  pathname === "/settings"
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                )}
-              >
-                <Settings className="h-5 w-5" />
-              </Link>
-            </TooltipTrigger>
-            <TooltipContent side="right">Configuracion</TooltipContent>
-          </Tooltip>
+          <>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <BackupModal
+                  trigger={
+                    <button
+                      className={cn(
+                        "flex w-full items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+                        "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      )}
+                    >
+                      <Database className="h-5 w-5" />
+                    </button>
+                  }
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right">Backup</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/settings"
+                  className={cn(
+                    "flex items-center justify-center rounded-lg px-2 py-2 text-sm font-medium transition-colors",
+                    pathname === "/settings"
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  )}
+                >
+                  <Settings className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">Configuracion</TooltipContent>
+            </Tooltip>
+          </>
         )}
       </div>
 

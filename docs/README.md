@@ -6,6 +6,12 @@
 
 ## Indice Principal
 
+### Estado del Proyecto
+
+| Documento                                | Descripcion                                   |
+| ---------------------------------------- | --------------------------------------------- |
+| [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Resumen de lo completado y pendientes futuros |
+
 ### Contexto y Configuracion
 
 | Documento                  | Descripcion                         |

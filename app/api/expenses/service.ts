@@ -5,9 +5,17 @@ import type {
   UpdateExpenseInput,
   ExpenseFilters,
 } from "./types";
+import type { PaginationParams } from "@/lib/pagination";
 
 export async function getExpenses(filters?: ExpenseFilters) {
   return repository.findAll(filters);
+}
+
+export async function getExpensesPaginated(
+  filters?: ExpenseFilters,
+  pagination?: PaginationParams,
+) {
+  return repository.findAllPaginated(filters, pagination);
 }
 
 export async function getExpenseById(id: string) {

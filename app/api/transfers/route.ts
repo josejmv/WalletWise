@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
-import { getTransfers, createTransfer, getTransferSummary } from "./service";
+import {
+  getTransfers,
+  getTransfersPaginated,
+  createTransfer,
+  getTransferSummary,
+} from "./service";
 import { createTransferSchema } from "./schema";
+import { parsePaginationParams } from "@/lib/pagination";
 
 export async function GET(request: Request) {
   try {
@@ -11,6 +17,7 @@ export async function GET(request: Request) {
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
     const summary = searchParams.get("summary");
+    const paginated = searchParams.get("paginated");
 
     const filters = {
       ...(fromAccountId && { fromAccountId }),
@@ -25,6 +32,16 @@ export async function GET(request: Request) {
         Object.keys(filters).length > 0 ? filters : undefined,
       );
       return NextResponse.json({ success: true, data: result });
+    }
+
+    // Use pagination if requested
+    if (paginated === "true") {
+      const pagination = parsePaginationParams(searchParams);
+      const result = await getTransfersPaginated(
+        Object.keys(filters).length > 0 ? filters : undefined,
+        pagination,
+      );
+      return NextResponse.json({ success: true, ...result });
     }
 
     const transfers = await getTransfers(

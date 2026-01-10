@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 import {
   getExpenses,
+  getExpensesPaginated,
   createExpense,
   getExpenseSummary,
   getRecurringExpenses,
   getDueExpenses,
 } from "./service";
 import { createExpenseSchema } from "./schema";
+import { parsePaginationParams } from "@/lib/pagination";
 
 export async function GET(request: Request) {
   try {
@@ -20,6 +22,7 @@ export async function GET(request: Request) {
     const summary = searchParams.get("summary");
     const recurring = searchParams.get("recurring");
     const due = searchParams.get("due");
+    const paginated = searchParams.get("paginated");
 
     if (recurring === "true") {
       const expenses = await getRecurringExpenses();
@@ -45,6 +48,16 @@ export async function GET(request: Request) {
         Object.keys(filters).length > 0 ? filters : undefined,
       );
       return NextResponse.json({ success: true, data: result });
+    }
+
+    // Use pagination if requested
+    if (paginated === "true") {
+      const pagination = parsePaginationParams(searchParams);
+      const result = await getExpensesPaginated(
+        Object.keys(filters).length > 0 ? filters : undefined,
+        pagination,
+      );
+      return NextResponse.json({ success: true, ...result });
     }
 
     const expenses = await getExpenses(
