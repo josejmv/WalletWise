@@ -14,6 +14,9 @@ export async function findAll(filters?: ExchangeRateFilters) {
   if (filters?.toCurrencyId) {
     where.toCurrencyId = filters.toCurrencyId;
   }
+  if (filters?.source) {
+    where.source = filters.source;
+  }
 
   return prisma.exchangeRate.findMany({
     where,

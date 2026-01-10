@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { ExchangeRateDisplay } from "@/components/exchange-rate-display";
+import { useExchangeRate } from "@/hooks/use-exchange-rate";
 
 const expenseSchema = z.object({
   categoryId: z.string().min(1, "La categoria es requerida"),
@@ -28,6 +30,10 @@ const expenseSchema = z.object({
   description: z.string().optional(),
   isRecurring: z.boolean(),
   periodicity: z.enum(["weekly", "monthly", "yearly"]).optional(),
+  // Exchange rate fields
+  exchangeRate: z.number().optional(),
+  officialRate: z.number().optional(),
+  customRate: z.number().optional(),
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -55,14 +61,30 @@ async function fetchCategories() {
   return data.data;
 }
 
-async function fetchAccounts() {
+interface Account {
+  id: string;
+  name: string;
+  currency: {
+    id: string;
+    code: string;
+    symbol: string;
+  };
+}
+
+interface Currency {
+  id: string;
+  code: string;
+  symbol: string;
+}
+
+async function fetchAccounts(): Promise<Account[]> {
   const res = await fetch("/api/accounts");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
 }
 
-async function fetchCurrencies() {
+async function fetchCurrencies(): Promise<Currency[]> {
   const res = await fetch("/api/currencies");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
@@ -104,6 +126,7 @@ export function ExpenseForm({
 }: ExpenseFormProps) {
   const { toast } = useToast();
   const isEditing = !!expense;
+  const [customRate, setCustomRate] = useState<number | null>(null);
 
   const { data: categories, isLoading: loadingCategories } = useQuery({
     queryKey: ["categories"],
@@ -139,6 +162,39 @@ export function ExpenseForm({
       isRecurring: false,
     },
   });
+
+  const watchedAccountId = watch("accountId");
+  const watchedCurrencyId = watch("currencyId");
+  const watchedAmount = watch("amount");
+
+  // Get selected account and its currency
+  const selectedAccount = accounts?.find((a) => a.id === watchedAccountId);
+  const selectedCurrency = currencies?.find((c) => c.id === watchedCurrencyId);
+  const accountCurrency = selectedAccount?.currency;
+
+  // Check if currencies differ (need exchange rate)
+  const needsExchangeRate =
+    accountCurrency &&
+    selectedCurrency &&
+    accountCurrency.id !== selectedCurrency.id;
+
+  // Fetch exchange rate when currencies differ
+  const { rate: officialRate, isLoading: loadingRate } = useExchangeRate(
+    needsExchangeRate ? watchedCurrencyId : undefined,
+    needsExchangeRate ? accountCurrency?.id : undefined,
+  );
+
+  // Auto-select currency when account changes
+  useEffect(() => {
+    if (selectedAccount && !isEditing) {
+      setValue("currencyId", selectedAccount.currency.id);
+    }
+  }, [selectedAccount, setValue, isEditing]);
+
+  // Handle custom rate changes
+  const handleCustomRateChange = useCallback((rate: number | null) => {
+    setCustomRate(rate);
+  }, []);
 
   useEffect(() => {
     if (expense) {
@@ -186,6 +242,22 @@ export function ExpenseForm({
   });
 
   const onSubmit = (data: ExpenseFormData) => {
+    // Add exchange rate data if currencies differ
+    if (needsExchangeRate) {
+      const activeRate = customRate || officialRate;
+      if (!activeRate) {
+        toast({
+          title: "Tasa de cambio requerida",
+          description: "Ingresa una tasa de cambio para continuar",
+          variant: "destructive",
+        });
+        return;
+      }
+      data.exchangeRate = activeRate;
+      if (officialRate) data.officialRate = officialRate;
+      if (customRate) data.customRate = customRate;
+    }
+
     if (isEditing) {
       updateMutation.mutate(data);
     } else {
@@ -256,7 +328,7 @@ export function ExpenseForm({
               <SelectValue placeholder="Moneda" />
             </SelectTrigger>
             <SelectContent>
-              {currencies?.map((currency: { id: string; code: string }) => (
+              {currencies?.map((currency) => (
                 <SelectItem key={currency.id} value={currency.id}>
                   {currency.code}
                 </SelectItem>
@@ -277,9 +349,9 @@ export function ExpenseForm({
               <SelectValue placeholder="Cuenta origen" />
             </SelectTrigger>
             <SelectContent>
-              {accounts?.map((account: { id: string; name: string }) => (
+              {accounts?.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
-                  {account.name}
+                  {account.name} ({account.currency.code})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -290,6 +362,21 @@ export function ExpenseForm({
           <Input id="date" type="date" {...register("date")} />
         </div>
       </div>
+
+      {/* Exchange Rate Display */}
+      {needsExchangeRate && selectedCurrency && accountCurrency && (
+        <ExchangeRateDisplay
+          amount={watchedAmount || 0}
+          fromCurrencyCode={selectedCurrency.code}
+          fromCurrencySymbol={selectedCurrency.symbol}
+          toCurrencyCode={accountCurrency.code}
+          toCurrencySymbol={accountCurrency.symbol}
+          officialRate={officialRate}
+          isLoading={loadingRate}
+          onCustomRateChange={handleCustomRateChange}
+          showCustomInput={true}
+        />
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="description">Descripcion (opcional)</Label>

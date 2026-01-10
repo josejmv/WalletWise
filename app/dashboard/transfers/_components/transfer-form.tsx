@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { ExchangeRateDisplay } from "@/components/exchange-rate-display";
+import { useExchangeRate } from "@/hooks/use-exchange-rate";
 
 const transferSchema = z.object({
   fromAccountId: z.string().min(1, "La cuenta origen es requerida"),
@@ -24,6 +26,8 @@ const transferSchema = z.object({
   amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
   currencyId: z.string().min(1, "La moneda es requerida"),
   exchangeRate: z.number().optional(),
+  officialRate: z.number().optional(),
+  customRate: z.number().optional(),
   date: z.string().min(1, "La fecha es requerida"),
   description: z.string().optional(),
 });
@@ -45,14 +49,30 @@ interface TransferFormProps {
   onCancel: () => void;
 }
 
-async function fetchAccounts() {
+interface Account {
+  id: string;
+  name: string;
+  currency: {
+    id: string;
+    code: string;
+    symbol: string;
+  };
+}
+
+interface Currency {
+  id: string;
+  code: string;
+  symbol: string;
+}
+
+async function fetchAccounts(): Promise<Account[]> {
   const res = await fetch("/api/accounts");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
 }
 
-async function fetchCurrencies() {
+async function fetchCurrencies(): Promise<Currency[]> {
   const res = await fetch("/api/currencies");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
@@ -94,6 +114,7 @@ export function TransferForm({
 }: TransferFormProps) {
   const { toast } = useToast();
   const isEditing = !!transfer;
+  const [customRate, setCustomRate] = useState<number | null>(null);
 
   const { data: accounts, isLoading: loadingAccounts } = useQuery({
     queryKey: ["accounts"],
@@ -123,6 +144,40 @@ export function TransferForm({
       description: "",
     },
   });
+
+  const watchedFromAccountId = watch("fromAccountId");
+  const watchedToAccountId = watch("toAccountId");
+  const watchedCurrencyId = watch("currencyId");
+  const watchedAmount = watch("amount");
+
+  // Get selected accounts and their currencies
+  const fromAccount = accounts?.find((a) => a.id === watchedFromAccountId);
+  const toAccount = accounts?.find((a) => a.id === watchedToAccountId);
+  const selectedCurrency = currencies?.find((c) => c.id === watchedCurrencyId);
+
+  // Check if transfer currency differs from destination account currency
+  const needsExchangeRate =
+    selectedCurrency &&
+    toAccount &&
+    selectedCurrency.id !== toAccount.currency.id;
+
+  // Fetch exchange rate when currencies differ
+  const { rate: officialRate, isLoading: loadingRate } = useExchangeRate(
+    needsExchangeRate ? watchedCurrencyId : undefined,
+    needsExchangeRate ? toAccount?.currency.id : undefined,
+  );
+
+  // Auto-select currency when from account changes
+  useEffect(() => {
+    if (fromAccount && !isEditing) {
+      setValue("currencyId", fromAccount.currency.id);
+    }
+  }, [fromAccount, setValue, isEditing]);
+
+  // Handle custom rate changes
+  const handleCustomRateChange = useCallback((rate: number | null) => {
+    setCustomRate(rate);
+  }, []);
 
   useEffect(() => {
     if (transfer) {
@@ -177,6 +232,23 @@ export function TransferForm({
       });
       return;
     }
+
+    // Add exchange rate data if currencies differ
+    if (needsExchangeRate) {
+      const activeRate = customRate || officialRate;
+      if (!activeRate) {
+        toast({
+          title: "Tasa de cambio requerida",
+          description: "Ingresa una tasa de cambio para continuar",
+          variant: "destructive",
+        });
+        return;
+      }
+      data.exchangeRate = activeRate;
+      if (officialRate) data.officialRate = officialRate;
+      if (customRate) data.customRate = customRate;
+    }
+
     if (isEditing) {
       updateMutation.mutate(data);
     } else {
@@ -208,9 +280,9 @@ export function TransferForm({
               <SelectValue placeholder="Desde" />
             </SelectTrigger>
             <SelectContent>
-              {accounts?.map((account: { id: string; name: string }) => (
+              {accounts?.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
-                  {account.name}
+                  {account.name} ({account.currency.code})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -231,9 +303,9 @@ export function TransferForm({
               <SelectValue placeholder="Hacia" />
             </SelectTrigger>
             <SelectContent>
-              {accounts?.map((account: { id: string; name: string }) => (
+              {accounts?.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
-                  {account.name}
+                  {account.name} ({account.currency.code})
                 </SelectItem>
               ))}
             </SelectContent>
@@ -270,7 +342,7 @@ export function TransferForm({
               <SelectValue placeholder="Moneda" />
             </SelectTrigger>
             <SelectContent>
-              {currencies?.map((currency: { id: string; code: string }) => (
+              {currencies?.map((currency) => (
                 <SelectItem key={currency.id} value={currency.id}>
                   {currency.code}
                 </SelectItem>
@@ -282,20 +354,25 @@ export function TransferForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="exchangeRate">Tasa de Cambio (opcional)</Label>
-          <Input
-            id="exchangeRate"
-            type="number"
-            step="0.0001"
-            placeholder="1.0000"
-            {...register("exchangeRate", { valueAsNumber: true })}
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="date">Fecha</Label>
           <Input id="date" type="date" {...register("date")} />
         </div>
       </div>
+
+      {/* Exchange Rate Display */}
+      {needsExchangeRate && selectedCurrency && toAccount && (
+        <ExchangeRateDisplay
+          amount={watchedAmount || 0}
+          fromCurrencyCode={selectedCurrency.code}
+          fromCurrencySymbol={selectedCurrency.symbol}
+          toCurrencyCode={toAccount.currency.code}
+          toCurrencySymbol={toAccount.currency.symbol}
+          officialRate={officialRate}
+          isLoading={loadingRate}
+          onCustomRateChange={handleCustomRateChange}
+          showCustomInput={true}
+        />
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="description">Descripcion (opcional)</Label>
