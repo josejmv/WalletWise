@@ -5,6 +5,7 @@ import type {
   UpdateBudgetInput,
   BudgetFilters,
   ContributeInput,
+  WithdrawInput,
 } from "./types";
 
 export async function getBudgets(filters?: BudgetFilters) {
@@ -31,18 +32,18 @@ export async function createBudget(data: CreateBudgetInput) {
     throw new Error("Moneda no encontrada");
   }
 
-  if (data.accountId) {
-    const account = await prisma.account.findUnique({
-      where: { id: data.accountId },
-    });
-    if (!account) {
-      throw new Error("Cuenta no encontrada");
-    }
+  // accountId es requerido para ambos tipos
+  const account = await prisma.account.findUnique({
+    where: { id: data.accountId },
+  });
+  if (!account) {
+    throw new Error("Cuenta no encontrada");
   }
 
-  if (data.type === "envelope" && !data.accountId) {
+  // Verificar que la moneda del budget coincida con la de la cuenta
+  if (account.currencyId !== data.currencyId) {
     throw new Error(
-      "Los presupuestos tipo envelope requieren una cuenta asociada",
+      "La moneda del presupuesto debe coincidir con la de la cuenta",
     );
   }
 
@@ -71,16 +72,14 @@ export async function updateBudget(id: string, data: UpdateBudgetInput) {
     if (!account) {
       throw new Error("Cuenta no encontrada");
     }
-  }
 
-  const newType = data.type ?? budget.type;
-  const newAccountId =
-    data.accountId !== undefined ? data.accountId : budget.accountId;
-
-  if (newType === "envelope" && !newAccountId) {
-    throw new Error(
-      "Los presupuestos tipo envelope requieren una cuenta asociada",
-    );
+    // Verificar que la moneda coincida
+    const currencyId = data.currencyId ?? budget.currencyId;
+    if (account.currencyId !== currencyId) {
+      throw new Error(
+        "La moneda del presupuesto debe coincidir con la de la cuenta",
+      );
+    }
   }
 
   return repository.update(id, data);
@@ -109,10 +108,30 @@ export async function contributeToBudget(id: string, data: ContributeInput) {
     throw new Error("No se puede contribuir a un presupuesto cancelado");
   }
 
-  return repository.contribute(id, data.amount, data.description);
+  // Verificar que la cuenta existe
+  const account = await prisma.account.findUnique({
+    where: { id: data.fromAccountId },
+  });
+  if (!account) {
+    throw new Error("Cuenta no encontrada");
+  }
+
+  // Verificar que la moneda de la cuenta coincida con la del budget
+  if (account.currencyId !== budget.currencyId) {
+    throw new Error(
+      "La moneda de la cuenta debe coincidir con la del presupuesto",
+    );
+  }
+
+  return repository.contribute(
+    id,
+    data.amount,
+    data.fromAccountId,
+    data.description,
+  );
 }
 
-export async function withdrawFromBudget(id: string, data: ContributeInput) {
+export async function withdrawFromBudget(id: string, data: WithdrawInput) {
   const budget = await repository.findById(id);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
@@ -122,6 +141,21 @@ export async function withdrawFromBudget(id: string, data: ContributeInput) {
     throw new Error("No se puede retirar de un presupuesto cancelado");
   }
 
+  // Verificar que la cuenta existe
+  const account = await prisma.account.findUnique({
+    where: { id: data.toAccountId },
+  });
+  if (!account) {
+    throw new Error("Cuenta no encontrada");
+  }
+
+  // Verificar que la moneda de la cuenta coincida con la del budget
+  if (account.currencyId !== budget.currencyId) {
+    throw new Error(
+      "La moneda de la cuenta debe coincidir con la del presupuesto",
+    );
+  }
+
   const currentAmount = Number(budget.currentAmount);
   if (data.amount > currentAmount) {
     throw new Error(
@@ -129,7 +163,12 @@ export async function withdrawFromBudget(id: string, data: ContributeInput) {
     );
   }
 
-  return repository.withdraw(id, data.amount, data.description);
+  return repository.withdraw(
+    id,
+    data.amount,
+    data.toAccountId,
+    data.description,
+  );
 }
 
 export async function cancelBudget(id: string) {

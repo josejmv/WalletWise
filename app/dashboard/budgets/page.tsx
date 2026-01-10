@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Target, Wallet } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Target,
+  Wallet,
+  ArrowDownCircle,
+  ArrowUpCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -32,6 +40,8 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { BudgetForm } from "./_components/budget-form";
+import { ContributeModal } from "./_components/contribute-modal";
+import { WithdrawModal } from "./_components/withdraw-modal";
 
 interface Budget {
   id: string;
@@ -42,7 +52,7 @@ interface Budget {
   deadline: string | null;
   status: "active" | "completed" | "cancelled";
   currency: { id: string; code: string; symbol: string };
-  account: { id: string; name: string } | null;
+  account: { id: string; name: string; currencyId: string };
 }
 
 async function fetchBudgets(): Promise<Budget[]> {
@@ -85,6 +95,8 @@ export default function BudgetsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [contributeBudget, setContributeBudget] = useState<Budget | null>(null);
+  const [withdrawBudget, setWithdrawBudget] = useState<Budget | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -235,6 +247,30 @@ export default function BudgetsPage() {
                       </span>
                     )}
                   </div>
+                  {budget.status !== "cancelled" && (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setContributeBudget(budget)}
+                        disabled={budget.status === "completed"}
+                      >
+                        <ArrowDownCircle className="mr-1 h-4 w-4" />
+                        Contribuir
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setWithdrawBudget(budget)}
+                        disabled={budget.currentAmount <= 0}
+                      >
+                        <ArrowUpCircle className="mr-1 h-4 w-4" />
+                        Retirar
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
@@ -283,6 +319,30 @@ export default function BudgetsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {contributeBudget && (
+        <ContributeModal
+          budget={contributeBudget}
+          open={!!contributeBudget}
+          onOpenChange={(open) => !open && setContributeBudget(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["budgets"] });
+            queryClient.invalidateQueries({ queryKey: ["accounts"] });
+          }}
+        />
+      )}
+
+      {withdrawBudget && (
+        <WithdrawModal
+          budget={withdrawBudget}
+          open={!!withdrawBudget}
+          onOpenChange={(open) => !open && setWithdrawBudget(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ["budgets"] });
+            queryClient.invalidateQueries({ queryKey: ["accounts"] });
+          }}
+        />
+      )}
     </div>
   );
 }

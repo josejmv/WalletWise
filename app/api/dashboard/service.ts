@@ -271,7 +271,7 @@ export async function getRecentTransactions(
       currencyCode: tr.currency.code,
       description: tr.description,
       date: tr.date,
-      account: tr.fromAccount.name,
+      account: tr.fromAccount?.name ?? "Budget",
     })),
   ];
 

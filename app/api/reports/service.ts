@@ -418,8 +418,8 @@ export async function exportTransactions(
       amount: Number(tr.amount),
       currency: tr.currency.code,
       description: tr.description || "",
-      category: `${tr.fromAccount.name} → ${tr.toAccount.name}`,
-      account: tr.fromAccount.name,
+      category: `${tr.fromAccount?.name ?? "Budget"} → ${tr.toAccount?.name ?? "Budget"}`,
+      account: tr.fromAccount?.name ?? tr.toAccount?.name ?? "Transfer",
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 

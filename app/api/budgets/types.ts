@@ -11,7 +11,7 @@ export type { Budget, BudgetType, BudgetStatus, BudgetContribution };
 
 export interface BudgetWithRelations extends Budget {
   currency: Currency;
-  account: Account | null;
+  account: Account;
   contributions: BudgetContribution[];
 }
 
@@ -21,7 +21,7 @@ export interface CreateBudgetInput {
   targetAmount: number;
   currentAmount?: number;
   currencyId: string;
-  accountId?: string;
+  accountId: string; // Ahora requerido para ambos tipos
   deadline?: Date;
   status?: BudgetStatus;
 }
@@ -32,7 +32,7 @@ export interface UpdateBudgetInput {
   targetAmount?: number;
   currentAmount?: number;
   currencyId?: string;
-  accountId?: string | null;
+  accountId?: string;
   deadline?: Date | null;
   status?: BudgetStatus;
 }
@@ -46,5 +46,12 @@ export interface BudgetFilters {
 
 export interface ContributeInput {
   amount: number;
+  fromAccountId: string; // Cuenta de donde viene la contribucion
+  description?: string;
+}
+
+export interface WithdrawInput {
+  amount: number;
+  toAccountId: string; // Cuenta a donde va el retiro
   description?: string;
 }

@@ -160,14 +160,16 @@ model Account {
   isActive      Boolean @default(true)
 
   // Relations
-  accountType       AccountType @relation(fields: [accountTypeId], references: [id])
-  currency          Currency    @relation(fields: [currencyId], references: [id])
-  jobs              Job[]
-  incomes           Income[]
-  expenses          Expense[]
-  transfersFrom     Transfer[]  @relation("FromAccount")
-  transfersTo       Transfer[]  @relation("ToAccount")
-  budgets           Budget[]
+  accountType         AccountType          @relation(fields: [accountTypeId], references: [id])
+  currency            Currency             @relation(fields: [currencyId], references: [id])
+  jobs                Job[]
+  incomes             Income[]
+  expenses            Expense[]
+  transfersFrom       Transfer[]           @relation("FromAccount")
+  transfersTo         Transfer[]           @relation("ToAccount")
+  budgets             Budget[]
+  contributionsFrom   BudgetContribution[] @relation("ContributionFrom")
+  contributionsTo     BudgetContribution[] @relation("ContributionTo")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -278,26 +280,36 @@ model Expense {
 }
 
 model Transfer {
-  id            String   @id @default(uuid())
-  fromAccountId String
-  toAccountId   String
-  amount        Decimal  @db.Decimal(18, 2)
+  id            String       @id @default(uuid())
+  type          TransferType @default(account_to_account)
+  fromAccountId String? // null si es budget_to_account
+  toAccountId   String? // null si es account_to_budget
+  fromBudgetId  String? // para budget_to_account
+  toBudgetId    String? // para account_to_budget
+  amount        Decimal      @db.Decimal(18, 2)
   currencyId    String
-  exchangeRate  Decimal? @db.Decimal(18, 8) // Si las cuentas tienen diferente moneda
-  date          DateTime @default(now())
+  exchangeRate  Decimal?     @db.Decimal(18, 8) // Si las cuentas tienen diferente moneda
+  officialRate  Decimal?     @db.Decimal(18, 8) // Tasa oficial de la API
+  customRate    Decimal?     @db.Decimal(18, 8) // Tasa auxiliar del comercio
+  date          DateTime     @default(now())
   description   String?
 
   // Relations
-  fromAccount Account  @relation("FromAccount", fields: [fromAccountId], references: [id])
-  toAccount   Account  @relation("ToAccount", fields: [toAccountId], references: [id])
-  currency    Currency @relation(fields: [currencyId], references: [id])
+  fromAccount Account?  @relation("FromAccount", fields: [fromAccountId], references: [id])
+  toAccount   Account?  @relation("ToAccount", fields: [toAccountId], references: [id])
+  fromBudget  Budget?   @relation("FromBudget", fields: [fromBudgetId], references: [id])
+  toBudget    Budget?   @relation("ToBudget", fields: [toBudgetId], references: [id])
+  currency    Currency  @relation(fields: [currencyId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([fromAccountId])
   @@index([toAccountId])
+  @@index([fromBudgetId])
+  @@index([toBudgetId])
   @@index([date])
+  @@index([type])
   @@map("transfers")
 }
 
@@ -308,14 +320,16 @@ model Budget {
   targetAmount  Decimal      @db.Decimal(18, 2)
   currentAmount Decimal      @default(0) @db.Decimal(18, 2)
   currencyId    String
-  accountId     String?      // Solo para envelopes
+  accountId     String // Requerido para ambos tipos (bloquea saldo)
   deadline      DateTime?
   status        BudgetStatus @default(active)
 
   // Relations
   currency      Currency             @relation(fields: [currencyId], references: [id])
-  account       Account?             @relation(fields: [accountId], references: [id])
+  account       Account              @relation(fields: [accountId], references: [id])
   contributions BudgetContribution[]
+  transfersFrom Transfer[]           @relation("FromBudget")
+  transfersTo   Transfer[]           @relation("ToBudget")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -327,18 +341,24 @@ model Budget {
 }
 
 model BudgetContribution {
-  id          String   @id @default(uuid())
-  budgetId    String
-  amount      Decimal  @db.Decimal(18, 2)
-  date        DateTime @default(now())
-  description String?
+  id              String   @id @default(uuid())
+  budgetId        String
+  fromAccountId   String? // Cuenta de donde vino la contribucion (null para retiros)
+  toAccountId     String? // Cuenta a donde fue el retiro (null para contribuciones)
+  amount          Decimal  @db.Decimal(18, 2) // Positivo = contribucion, Negativo = retiro
+  date            DateTime @default(now())
+  description     String?
 
   // Relations
-  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  fromAccount Account? @relation("ContributionFrom", fields: [fromAccountId], references: [id])
+  toAccount   Account? @relation("ContributionTo", fields: [toAccountId], references: [id])
 
   createdAt DateTime @default(now())
 
   @@index([budgetId])
+  @@index([fromAccountId])
+  @@index([toAccountId])
   @@index([date])
   @@map("budget_contributions")
 }

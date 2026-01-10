@@ -139,20 +139,24 @@ export async function updateTransfer(id: string, data: UpdateTransferInput) {
     : Number(existingTransfer.amount);
 
   return prisma.$transaction(async (tx) => {
-    // Revert old transfer
-    await tx.account.update({
-      where: { id: existingTransfer.fromAccountId },
-      data: {
-        balance: { increment: Number(existingTransfer.amount) },
-      },
-    });
+    // Revert old transfer (only for account_to_account transfers)
+    if (existingTransfer.fromAccountId) {
+      await tx.account.update({
+        where: { id: existingTransfer.fromAccountId },
+        data: {
+          balance: { increment: Number(existingTransfer.amount) },
+        },
+      });
+    }
 
-    await tx.account.update({
-      where: { id: existingTransfer.toAccountId },
-      data: {
-        balance: { decrement: oldDestinationAmount },
-      },
-    });
+    if (existingTransfer.toAccountId) {
+      await tx.account.update({
+        where: { id: existingTransfer.toAccountId },
+        data: {
+          balance: { decrement: oldDestinationAmount },
+        },
+      });
+    }
 
     const transfer = await tx.transfer.update({
       where: { id },
@@ -169,20 +173,24 @@ export async function updateTransfer(id: string, data: UpdateTransferInput) {
       ? Number(transfer.amount) * Number(transfer.exchangeRate)
       : Number(transfer.amount);
 
-    // Apply new transfer
-    await tx.account.update({
-      where: { id: transfer.fromAccountId },
-      data: {
-        balance: { decrement: Number(transfer.amount) },
-      },
-    });
+    // Apply new transfer (only for account_to_account transfers)
+    if (transfer.fromAccountId) {
+      await tx.account.update({
+        where: { id: transfer.fromAccountId },
+        data: {
+          balance: { decrement: Number(transfer.amount) },
+        },
+      });
+    }
 
-    await tx.account.update({
-      where: { id: transfer.toAccountId },
-      data: {
-        balance: { increment: newDestinationAmount },
-      },
-    });
+    if (transfer.toAccountId) {
+      await tx.account.update({
+        where: { id: transfer.toAccountId },
+        data: {
+          balance: { increment: newDestinationAmount },
+        },
+      });
+    }
 
     return transfer;
   });
@@ -200,21 +208,25 @@ export async function deleteTransfer(id: string) {
     : Number(transfer.amount);
 
   return prisma.$transaction(async (tx) => {
-    // Revert from source account
-    await tx.account.update({
-      where: { id: transfer.fromAccountId },
-      data: {
-        balance: { increment: Number(transfer.amount) },
-      },
-    });
+    // Revert from source account (only for account_to_account transfers)
+    if (transfer.fromAccountId) {
+      await tx.account.update({
+        where: { id: transfer.fromAccountId },
+        data: {
+          balance: { increment: Number(transfer.amount) },
+        },
+      });
+    }
 
-    // Revert from destination account
-    await tx.account.update({
-      where: { id: transfer.toAccountId },
-      data: {
-        balance: { decrement: destinationAmount },
-      },
-    });
+    // Revert from destination account (only for account_to_account transfers)
+    if (transfer.toAccountId) {
+      await tx.account.update({
+        where: { id: transfer.toAccountId },
+        data: {
+          balance: { decrement: destinationAmount },
+        },
+      });
+    }
 
     return tx.transfer.delete({ where: { id } });
   });

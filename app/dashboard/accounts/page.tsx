@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -12,14 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,22 +19,37 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountForm } from "./_components/account-form";
+import { AccountCard } from "./_components/account-card";
 import { useToast } from "@/components/ui/use-toast";
+import { formatCurrency } from "@/lib/formatters";
 
-interface Account {
+interface AccountWithBlocked {
   id: string;
   name: string;
   balance: number;
   isActive: boolean;
   accountType: { id: string; name: string; type: string };
   currency: { id: string; code: string; symbol: string };
+  totalBalance: number;
+  availableBalance: number;
+  blockedBalance: number;
+  budgetsCount: number;
 }
 
-async function fetchAccounts(): Promise<Account[]> {
-  const res = await fetch("/api/accounts");
+async function fetchAccountsWithBlocked(): Promise<AccountWithBlocked[]> {
+  const res = await fetch("/api/accounts?withBlocked=true");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
@@ -54,16 +61,11 @@ async function deleteAccount(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
-function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)}`;
-}
-
 export default function AccountsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editingAccount, setEditingAccount] =
+    useState<AccountWithBlocked | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -72,8 +74,8 @@ export default function AccountsPage() {
     isLoading,
     error,
   } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: fetchAccounts,
+    queryKey: ["accounts", "withBlocked"],
+    queryFn: fetchAccountsWithBlocked,
   });
 
   const deleteMutation = useMutation({
@@ -81,6 +83,7 @@ export default function AccountsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast({ title: "Cuenta eliminada correctamente" });
+      setDeleteId(null);
     },
     onError: (error: Error) => {
       toast({
@@ -91,7 +94,7 @@ export default function AccountsPage() {
     },
   });
 
-  const handleEdit = (account: Account) => {
+  const handleEdit = (account: AccountWithBlocked) => {
     setEditingAccount(account);
     setIsFormOpen(true);
   };
@@ -105,6 +108,25 @@ export default function AccountsPage() {
     handleFormClose();
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
   };
+
+  // Calculate totals by currency
+  const totalsByCurrency =
+    accounts?.reduce(
+      (acc, account) => {
+        const key = account.currency.code;
+        if (!acc[key]) {
+          acc[key] = { total: 0, available: 0, blocked: 0 };
+        }
+        acc[key].total += account.totalBalance;
+        acc[key].available += account.availableBalance;
+        acc[key].blocked += account.blockedBalance;
+        return acc;
+      },
+      {} as Record<
+        string,
+        { total: number; available: number; blocked: number }
+      >,
+    ) ?? {};
 
   if (isLoading) {
     return (
@@ -171,74 +193,77 @@ export default function AccountsPage() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Todas las Cuentas</CardTitle>
-          <CardDescription>
-            {accounts?.length || 0} cuenta(s) registrada(s)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {accounts && accounts.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Moneda</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {accounts.map((account) => (
-                  <TableRow key={account.id}>
-                    <TableCell className="font-medium">
-                      {account.name}
-                    </TableCell>
-                    <TableCell>{account.accountType.name}</TableCell>
-                    <TableCell>{account.currency.code}</TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={account.isActive ? "success" : "secondary"}
-                      >
-                        {account.isActive ? "Activa" : "Inactiva"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(account.balance, account.currency.symbol)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(account)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => deleteMutation.mutate(account.id)}
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              No hay cuentas registradas. Crea tu primera cuenta.
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Summary by currency */}
+      {Object.keys(totalsByCurrency).length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Object.entries(totalsByCurrency).map(([currency, totals]) => (
+            <Card key={currency}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total en {currency}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {formatCurrency(totals.total, currency)}
+                </div>
+                {totals.blocked > 0 && (
+                  <div className="flex gap-4 mt-2 text-sm">
+                    <span className="text-green-600">
+                      Disponible: {formatCurrency(totals.available, currency)}
+                    </span>
+                    <span className="text-amber-600">
+                      Bloqueado: {formatCurrency(totals.blocked, currency)}
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Accounts grid */}
+      {accounts && accounts.length > 0 ? (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {accounts.map((account) => (
+            <AccountCard
+              key={account.id}
+              account={account}
+              onEdit={() => handleEdit(account)}
+              onDelete={() => setDeleteId(account.id)}
+            />
+          ))}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-12 text-muted-foreground">
+            No hay cuentas registradas. Crea tu primera cuenta.
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar Cuenta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta accion no se puede deshacer. Se eliminara permanentemente
+              esta cuenta y todos sus registros asociados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

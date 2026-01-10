@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getAccounts, createAccount, getTotalBalance } from "./service";
+import {
+  getAccounts,
+  createAccount,
+  getTotalBalance,
+  getAccountsWithBlockedBalances,
+} from "./service";
 import { createAccountSchema } from "./schema";
 
 export async function GET(request: Request) {
@@ -9,10 +14,17 @@ export async function GET(request: Request) {
     const currencyId = searchParams.get("currencyId");
     const isActive = searchParams.get("isActive");
     const totalOnly = searchParams.get("totalOnly");
+    const withBlocked = searchParams.get("withBlocked");
 
     if (totalOnly === "true") {
       const total = await getTotalBalance(currencyId ?? undefined);
       return NextResponse.json({ success: true, data: { total } });
+    }
+
+    // Return accounts with blocked balance info
+    if (withBlocked === "true") {
+      const accounts = await getAccountsWithBlockedBalances();
+      return NextResponse.json({ success: true, data: accounts });
     }
 
     const filters = {

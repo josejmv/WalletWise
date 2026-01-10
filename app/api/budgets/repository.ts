@@ -95,23 +95,48 @@ export async function remove(id: string) {
 export async function contribute(
   budgetId: string,
   amount: number,
+  fromAccountId: string,
   description?: string,
 ) {
   return prisma.$transaction(async (tx) => {
+    // Verificar que la cuenta tiene saldo suficiente
+    const account = await tx.account.findUnique({
+      where: { id: fromAccountId },
+    });
+
+    if (!account) {
+      throw new Error("Cuenta no encontrada");
+    }
+
+    if (Number(account.balance) < amount) {
+      throw new Error(
+        `Saldo insuficiente. Disponible: ${account.balance}, requerido: ${amount}`,
+      );
+    }
+
+    // Crear la contribucion
     await tx.budgetContribution.create({
       data: {
         budgetId,
+        fromAccountId,
         amount,
         description,
       },
     });
 
+    // Reducir el balance de la cuenta origen
+    await tx.account.update({
+      where: { id: fromAccountId },
+      data: {
+        balance: { decrement: amount },
+      },
+    });
+
+    // Incrementar el monto actual del budget
     const budget = await tx.budget.update({
       where: { id: budgetId },
       data: {
-        currentAmount: {
-          increment: amount,
-        },
+        currentAmount: { increment: amount },
       },
       include: {
         currency: true,
@@ -122,6 +147,7 @@ export async function contribute(
       },
     });
 
+    // Si se alcanzo la meta, marcar como completado
     if (Number(budget.currentAmount) >= Number(budget.targetAmount)) {
       return tx.budget.update({
         where: { id: budgetId },
@@ -143,23 +169,48 @@ export async function contribute(
 export async function withdraw(
   budgetId: string,
   amount: number,
+  toAccountId: string,
   description?: string,
 ) {
   return prisma.$transaction(async (tx) => {
+    // Verificar que el budget tiene saldo suficiente
+    const budget = await tx.budget.findUnique({
+      where: { id: budgetId },
+    });
+
+    if (!budget) {
+      throw new Error("Presupuesto no encontrado");
+    }
+
+    if (Number(budget.currentAmount) < amount) {
+      throw new Error(
+        `Saldo insuficiente en presupuesto. Disponible: ${budget.currentAmount}, requerido: ${amount}`,
+      );
+    }
+
+    // Crear el registro de retiro (monto negativo)
     await tx.budgetContribution.create({
       data: {
         budgetId,
+        toAccountId,
         amount: -amount,
         description,
       },
     });
 
+    // Incrementar el balance de la cuenta destino
+    await tx.account.update({
+      where: { id: toAccountId },
+      data: {
+        balance: { increment: amount },
+      },
+    });
+
+    // Reducir el monto del budget y reactivar si estaba completado
     return tx.budget.update({
       where: { id: budgetId },
       data: {
-        currentAmount: {
-          decrement: amount,
-        },
+        currentAmount: { decrement: amount },
         status: "active",
       },
       include: {

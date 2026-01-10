@@ -12,7 +12,7 @@ export const createBudgetSchema = z.object({
     .min(0, "El monto actual no puede ser negativo")
     .default(0),
   currencyId: z.string().uuid("ID de moneda invalido"),
-  accountId: z.string().uuid("ID de cuenta invalido").optional(),
+  accountId: z.string().uuid("ID de cuenta invalido"), // Ahora requerido
   deadline: z.coerce.date().optional(),
   status: budgetStatusEnum.default("active"),
 });
@@ -29,18 +29,20 @@ export const updateBudgetSchema = z.object({
     .min(0, "El monto actual no puede ser negativo")
     .optional(),
   currencyId: z.string().uuid("ID de moneda invalido").optional(),
-  accountId: z.string().uuid("ID de cuenta invalido").nullable().optional(),
+  accountId: z.string().uuid("ID de cuenta invalido").optional(),
   deadline: z.coerce.date().nullable().optional(),
   status: budgetStatusEnum.optional(),
 });
 
 export const contributeSchema = z.object({
   amount: z.number().positive("El monto debe ser mayor a 0"),
+  fromAccountId: z.string().uuid("ID de cuenta invalido"),
   description: z.string().optional(),
 });
 
 export const withdrawSchema = z.object({
   amount: z.number().positive("El monto debe ser mayor a 0"),
+  toAccountId: z.string().uuid("ID de cuenta invalido"),
   description: z.string().optional(),
 });
 

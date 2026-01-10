@@ -166,19 +166,24 @@ export async function getSummary(filters?: TransferFilters) {
     const amount = Number(transfer.amount);
     totalAmount += amount;
 
-    const fromData = byFromAccount.get(transfer.fromAccountId) || {
-      accountName: transfer.fromAccount.name,
-      total: 0,
-    };
-    fromData.total += amount;
-    byFromAccount.set(transfer.fromAccountId, fromData);
+    // Solo procesar account_to_account transfers
+    if (transfer.fromAccountId && transfer.fromAccount) {
+      const fromData = byFromAccount.get(transfer.fromAccountId) || {
+        accountName: transfer.fromAccount.name,
+        total: 0,
+      };
+      fromData.total += amount;
+      byFromAccount.set(transfer.fromAccountId, fromData);
+    }
 
-    const toData = byToAccount.get(transfer.toAccountId) || {
-      accountName: transfer.toAccount.name,
-      total: 0,
-    };
-    toData.total += amount;
-    byToAccount.set(transfer.toAccountId, toData);
+    if (transfer.toAccountId && transfer.toAccount) {
+      const toData = byToAccount.get(transfer.toAccountId) || {
+        accountName: transfer.toAccount.name,
+        total: 0,
+      };
+      toData.total += amount;
+      byToAccount.set(transfer.toAccountId, toData);
+    }
   }
 
   return {

@@ -24,7 +24,7 @@ const budgetSchema = z.object({
   targetAmount: z.number().min(1, "El monto objetivo debe ser mayor a 0"),
   currentAmount: z.number().optional(),
   currencyId: z.string().min(1, "La moneda es requerida"),
-  accountId: z.string().optional(),
+  accountId: z.string().min(1, "La cuenta es requerida"),
   deadline: z.string().optional(),
   status: z.enum(["active", "completed", "cancelled"]).optional(),
 });
@@ -41,7 +41,7 @@ interface BudgetFormProps {
     deadline: string | null;
     status: "active" | "completed" | "cancelled";
     currency: { id: string };
-    account: { id: string } | null;
+    account: { id: string; currencyId: string };
   } | null;
   onSuccess: () => void;
   onCancel: () => void;
@@ -118,7 +118,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
       targetAmount: 0,
       currentAmount: 0,
       currencyId: "",
-      accountId: "none",
+      accountId: "",
       deadline: "",
       status: "active",
     },
@@ -132,7 +132,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
         targetAmount: budget.targetAmount,
         currentAmount: budget.currentAmount,
         currencyId: budget.currency.id,
-        accountId: budget.account?.id ?? "none",
+        accountId: budget.account.id,
         deadline: budget.deadline
           ? new Date(budget.deadline).toISOString().split("T")[0]
           : "",
@@ -140,6 +140,20 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
       });
     }
   }, [budget, reset]);
+
+  // Auto-seleccionar moneda cuando se cambia la cuenta
+  const selectedAccountId = watch("accountId");
+  useEffect(() => {
+    if (selectedAccountId && accounts) {
+      const selectedAccount = accounts.find(
+        (acc: { id: string; currencyId: string }) =>
+          acc.id === selectedAccountId,
+      );
+      if (selectedAccount) {
+        setValue("currencyId", selectedAccount.currencyId);
+      }
+    }
+  }, [selectedAccountId, accounts, setValue]);
 
   const createMutation = useMutation({
     mutationFn: createBudget,
@@ -174,7 +188,6 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
   const onSubmit = (data: BudgetFormData) => {
     const submitData = {
       ...data,
-      accountId: data.accountId === "none" ? undefined : data.accountId,
       deadline: data.deadline || undefined,
     };
     if (isEditing) {
@@ -284,25 +297,33 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="accountId">Cuenta (opcional)</Label>
+          <Label htmlFor="accountId">Cuenta</Label>
           <Select
-            value={watch("accountId") || "none"}
-            onValueChange={(value) =>
-              setValue("accountId", value === "none" ? undefined : value)
-            }
+            value={watch("accountId")}
+            onValueChange={(value) => setValue("accountId", value)}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Sin cuenta asignada" />
+              <SelectValue placeholder="Selecciona una cuenta" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">Sin cuenta asignada</SelectItem>
-              {accounts?.map((account: { id: string; name: string }) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
-                </SelectItem>
-              ))}
+              {accounts?.map(
+                (account: {
+                  id: string;
+                  name: string;
+                  currency: { code: string };
+                }) => (
+                  <SelectItem key={account.id} value={account.id}>
+                    {account.name} ({account.currency.code})
+                  </SelectItem>
+                ),
+              )}
             </SelectContent>
           </Select>
+          {errors.accountId && (
+            <p className="text-sm text-destructive">
+              {errors.accountId.message}
+            </p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="deadline">Fecha Limite (opcional)</Label>

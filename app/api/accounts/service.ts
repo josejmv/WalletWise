@@ -84,3 +84,88 @@ export async function adjustBalance(id: string, amount: number) {
 export async function getTotalBalance(currencyId?: string) {
   return repository.getTotalBalance(currencyId);
 }
+
+export async function getAccountWithBlockedBalance(id: string) {
+  const account = await repository.findById(id);
+  if (!account) {
+    throw new Error("Cuenta no encontrada");
+  }
+
+  // Get active budgets linked to this account
+  const budgets = await prisma.budget.findMany({
+    where: {
+      accountId: id,
+      status: { in: ["active", "completed"] },
+    },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      currentAmount: true,
+      targetAmount: true,
+      status: true,
+    },
+  });
+
+  const blockedBalance = budgets.reduce(
+    (sum, budget) => sum + Number(budget.currentAmount),
+    0,
+  );
+
+  const totalBalance = Number(account.balance);
+  const availableBalance = totalBalance - blockedBalance;
+
+  return {
+    ...account,
+    totalBalance,
+    availableBalance,
+    blockedBalance,
+    budgets,
+  };
+}
+
+export async function getAccountsWithBlockedBalances() {
+  const accounts = await repository.findAll();
+
+  // Get all active budgets grouped by account
+  const budgets = await prisma.budget.findMany({
+    where: {
+      status: { in: ["active", "completed"] },
+    },
+    select: {
+      id: true,
+      name: true,
+      type: true,
+      currentAmount: true,
+      targetAmount: true,
+      status: true,
+      accountId: true,
+    },
+  });
+
+  // Group budgets by account
+  const budgetsByAccount = new Map<string, typeof budgets>();
+  for (const budget of budgets) {
+    const existing = budgetsByAccount.get(budget.accountId) || [];
+    existing.push(budget);
+    budgetsByAccount.set(budget.accountId, existing);
+  }
+
+  return accounts.map((account) => {
+    const accountBudgets = budgetsByAccount.get(account.id) || [];
+    const blockedBalance = accountBudgets.reduce(
+      (sum, budget) => sum + Number(budget.currentAmount),
+      0,
+    );
+    const totalBalance = Number(account.balance);
+    const availableBalance = totalBalance - blockedBalance;
+
+    return {
+      ...account,
+      totalBalance,
+      availableBalance,
+      blockedBalance,
+      budgetsCount: accountBudgets.length,
+    };
+  });
+}

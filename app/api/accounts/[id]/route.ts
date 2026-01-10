@@ -4,6 +4,7 @@ import {
   updateAccount,
   deleteAccount,
   adjustBalance,
+  getAccountWithBlockedBalance,
 } from "../service";
 import { updateAccountSchema } from "../schema";
 
@@ -14,6 +15,14 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const withBlocked = searchParams.get("withBlocked");
+
+    if (withBlocked === "true") {
+      const account = await getAccountWithBlockedBalance(id);
+      return NextResponse.json({ success: true, data: account });
+    }
+
     const account = await getAccountById(id);
     return NextResponse.json({ success: true, data: account });
   } catch (error) {
