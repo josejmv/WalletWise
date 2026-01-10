@@ -49,6 +49,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { useFormatters } from "@/contexts/user-config-context";
+import { RateDetailsPopover } from "@/components/rate-details-popover";
 import { ExpenseForm } from "./_components/expense-form";
 
 interface Expense {
@@ -59,8 +60,10 @@ interface Expense {
   isRecurring: boolean;
   periodicity: "weekly" | "monthly" | "yearly" | null;
   nextDueDate: string | null;
+  officialRate: number | null;
+  customRate: number | null;
   category: { id: string; name: string };
-  account: { id: string; name: string };
+  account: { id: string; name: string; currency?: { code: string } };
   currency: { id: string; code: string; symbol: string };
 }
 
@@ -414,6 +417,7 @@ export default function ExpensesPage() {
                       <TableHead>Cuenta</TableHead>
                       <TableHead>Descripcion</TableHead>
                       <TableHead className="text-right">Monto</TableHead>
+                      <TableHead className="text-center">Tasa</TableHead>
                       <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -443,6 +447,15 @@ export default function ExpensesPage() {
                             expense.amount,
                             expense.currency.code,
                           )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <RateDetailsPopover
+                            officialRate={expense.officialRate}
+                            customRate={expense.customRate}
+                            fromCurrency={expense.currency.code}
+                            toCurrency={expense.account.currency?.code}
+                            amount={expense.amount}
+                          />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">

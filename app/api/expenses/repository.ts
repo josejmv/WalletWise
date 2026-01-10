@@ -38,7 +38,7 @@ export async function findAll(filters?: ExpenseFilters) {
     where,
     include: {
       category: true,
-      account: true,
+      account: { include: { currency: true } },
       currency: true,
     },
     orderBy: { date: "desc" },
@@ -62,7 +62,7 @@ export async function findAllPaginated(
       where,
       include: {
         category: true,
-        account: true,
+        account: { include: { currency: true } },
         currency: true,
       },
       orderBy: { [sortBy]: sortOrder },

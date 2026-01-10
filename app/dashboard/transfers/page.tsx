@@ -2,7 +2,15 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ArrowRightLeft,
+  Wallet,
+  PiggyBank,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -39,18 +47,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { useFormatters } from "@/contexts/user-config-context";
+import { RateDetailsPopover } from "@/components/rate-details-popover";
 import { TransferForm } from "./_components/transfer-form";
+
+type TransferType =
+  | "account_to_account"
+  | "account_to_budget"
+  | "budget_to_account";
 
 interface Transfer {
   id: string;
+  type: TransferType;
   amount: number;
   exchangeRate: number | null;
+  officialRate: number | null;
+  customRate: number | null;
   date: string;
   description: string | null;
-  fromAccount: { id: string; name: string };
-  toAccount: { id: string; name: string };
+  fromAccount: { id: string; name: string; currency?: { code: string } } | null;
+  toAccount: { id: string; name: string; currency?: { code: string } } | null;
+  fromBudget: { id: string; name: string } | null;
+  toBudget: { id: string; name: string } | null;
   currency: { id: string; code: string; symbol: string };
 }
+
+const transferTypeLabels: Record<TransferType, string> = {
+  account_to_account: "Cuenta → Cuenta",
+  account_to_budget: "Cuenta → Budget",
+  budget_to_account: "Budget → Cuenta",
+};
 
 interface PaginatedResponse {
   success: boolean;
@@ -187,63 +212,103 @@ export default function TransfersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Fecha</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Origen</TableHead>
                     <TableHead></TableHead>
                     <TableHead>Destino</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-center">Tasa</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {transfers.map((transfer) => (
-                    <TableRow key={transfer.id}>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(transfer.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {transfer.fromAccount.name}
-                      </TableCell>
-                      <TableCell>
-                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {transfer.toAccount.name}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div>
+                  {transfers.map((transfer) => {
+                    const fromName =
+                      transfer.fromAccount?.name ||
+                      transfer.fromBudget?.name ||
+                      "-";
+                    const toName =
+                      transfer.toAccount?.name ||
+                      transfer.toBudget?.name ||
+                      "-";
+                    const fromCurrency =
+                      transfer.fromAccount?.currency?.code ||
+                      transfer.currency.code;
+                    const toCurrency =
+                      transfer.toAccount?.currency?.code ||
+                      transfer.currency.code;
+                    const isBudgetTransfer =
+                      transfer.type !== "account_to_account";
+
+                    return (
+                      <TableRow key={transfer.id}>
+                        <TableCell className="text-muted-foreground">
+                          {formatDate(transfer.date)}
+                        </TableCell>
+                        <TableCell>
+                          {isBudgetTransfer ? (
+                            <Badge variant="outline" className="text-xs gap-1">
+                              <PiggyBank className="h-3 w-3" />
+                              {transfer.type === "account_to_budget"
+                                ? "A Budget"
+                                : "De Budget"}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="secondary"
+                              className="text-xs gap-1"
+                            >
+                              <Wallet className="h-3 w-3" />
+                              Cuentas
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {fromName}
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRightLeft className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell className="font-medium">{toName}</TableCell>
+                        <TableCell className="text-right">
                           <span className="font-medium">
                             {formatCurrency(
                               transfer.amount,
                               transfer.currency.code,
                             )}
                           </span>
-                          {transfer.exchangeRate && (
-                            <p className="text-xs text-muted-foreground">
-                              Tasa: {transfer.exchangeRate}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(transfer)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(transfer.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <RateDetailsPopover
+                            officialRate={transfer.officialRate}
+                            customRate={transfer.customRate}
+                            exchangeRate={transfer.exchangeRate}
+                            fromCurrency={fromCurrency}
+                            toCurrency={toCurrency}
+                            amount={transfer.amount}
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleEdit(transfer)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleteId(transfer.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
               <Pagination

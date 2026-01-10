@@ -34,8 +34,10 @@ export async function findAll(filters?: TransferFilters) {
   return prisma.transfer.findMany({
     where,
     include: {
-      fromAccount: true,
-      toAccount: true,
+      fromAccount: { include: { currency: true } },
+      toAccount: { include: { currency: true } },
+      fromBudget: true,
+      toBudget: true,
       currency: true,
     },
     orderBy: { date: "desc" },
@@ -58,8 +60,10 @@ export async function findAllPaginated(
     prisma.transfer.findMany({
       where,
       include: {
-        fromAccount: true,
-        toAccount: true,
+        fromAccount: { include: { currency: true } },
+        toAccount: { include: { currency: true } },
+        fromBudget: true,
+        toBudget: true,
         currency: true,
       },
       orderBy: { [sortBy]: sortOrder },

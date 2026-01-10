@@ -41,8 +41,8 @@ interface TransferFormProps {
     exchangeRate: number | null;
     date: string;
     description: string | null;
-    fromAccount: { id: string };
-    toAccount: { id: string };
+    fromAccount: { id: string } | null;
+    toAccount: { id: string } | null;
     currency: { id: string };
   } | null;
   onSuccess: () => void;
@@ -182,8 +182,8 @@ export function TransferForm({
   useEffect(() => {
     if (transfer) {
       reset({
-        fromAccountId: transfer.fromAccount.id,
-        toAccountId: transfer.toAccount.id,
+        fromAccountId: transfer.fromAccount?.id ?? "",
+        toAccountId: transfer.toAccount?.id ?? "",
         amount: transfer.amount,
         currencyId: transfer.currency.id,
         exchangeRate: transfer.exchangeRate ?? undefined,
