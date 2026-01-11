@@ -27,18 +27,54 @@ WalletWise es un dashboard de finanzas personales con gestion de ingresos, gasto
 
 ## Stack Tecnologico
 
-| Categoria         | Tecnologia         | Version |
-| ----------------- | ------------------ | ------- |
-| **Frontend**      | Next.js            | 16      |
-|                   | React              | 19      |
-|                   | TypeScript         | 5.x     |
-|                   | Tailwind CSS       | 4.x     |
-|                   | TanStack Query     | 5.x     |
-| **Backend**       | Next.js API Routes | 16      |
-|                   | Prisma             | 6.x     |
-|                   | Zod                | 3.x     |
-| **Base de datos** | PostgreSQL         | 16      |
-| **Contenedores**  | Docker Compose     | -       |
+| Categoria         | Tecnologia           | Version |
+| ----------------- | -------------------- | ------- |
+| **Frontend**      | Next.js              | 16      |
+|                   | React                | 19      |
+|                   | TypeScript           | 5.x     |
+|                   | Tailwind CSS         | 4.x     |
+|                   | TanStack Query       | 5.x     |
+| **Backend**       | Next.js API Routes   | 16      |
+|                   | Prisma               | 6.x     |
+|                   | Zod                  | 3.x     |
+| **Base de datos** | PostgreSQL           | 16      |
+| **Contenedores**  | Docker Compose       | -       |
+| **Hosting**       | Vercel               | -       |
+| **DB Cloud**      | Neon (Serverless PG) | -       |
+
+### Arquitectura de Despliegue
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         VERCEL                               │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Next.js Application                     │    │
+│  │  ┌─────────────────┐   ┌─────────────────────────┐  │    │
+│  │  │    Frontend     │   │   API Routes (Backend)  │  │    │
+│  │  │  React + SSR    │   │   Prisma + Business     │  │    │
+│  │  └─────────────────┘   └───────────┬─────────────┘  │    │
+│  └────────────────────────────────────┼────────────────┘    │
+└───────────────────────────────────────┼─────────────────────┘
+                                        │ HTTPS
+                                        ▼
+┌─────────────────────────────────────────────────────────────┐
+│                          NEON                                │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │           PostgreSQL 16 (Serverless)                 │    │
+│  │   - Auto-scaling compute                             │    │
+│  │   - Branching (para previews)                        │    │
+│  │   - Connection pooling                               │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Ventajas de esta arquitectura:**
+
+1. **Zero-config deployment**: Push a main = deploy automatico
+2. **Serverless**: Escala automaticamente segun demanda
+3. **Edge Network**: CDN global para assets estaticos
+4. **Preview Deployments**: Cada PR tiene su propio entorno
+5. **Cost-effective**: Tier gratuito suficiente para uso personal
 
 ---
 
@@ -729,5 +765,6 @@ chore(deps): update dependencies
 
 - [API Reference](./API.md)
 - [Context](./CONTEXT.md)
-- [Setup](./SETUP.md)
+- [Setup](./SETUP.md) - Instalacion local
+- [Deploy](./DEPLOY.md) - Despliegue en produccion
 - [Modulos](./modules/)

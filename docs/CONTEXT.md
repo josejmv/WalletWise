@@ -27,8 +27,10 @@
 | **Frontend**      | Next.js 16, React 19, TypeScript 5, Tailwind 4 |
 | **Backend**       | Next.js API Routes, Prisma 6, Zod 3            |
 | **Base de datos** | PostgreSQL 16                                  |
-| **Contenedores**  | Docker Compose                                 |
+| **Contenedores**  | Docker Compose (desarrollo local)              |
 | **Fetching**      | TanStack Query 5                               |
+| **Hosting**       | Vercel (Frontend + API Routes)                 |
+| **DB Cloud**      | Neon (PostgreSQL Serverless)                   |
 
 ---
 
@@ -79,9 +81,10 @@ prisma/
 
 ### Uso Personal
 
-- Sin sistema de autenticacion
+- Sin sistema de autenticacion (single-user)
 - Acceso directo al dashboard
-- Datos almacenados localmente en PostgreSQL
+- Desarrollo local: PostgreSQL via Docker
+- Produccion: Neon (PostgreSQL Serverless) + Vercel
 
 ---
 
@@ -208,7 +211,8 @@ NEXT_PUBLIC_BASE_CURRENCY="USD"
 - [README.md](./README.md) - Indice principal de documentacion
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y estandares
 - [API.md](./API.md) - Referencia de APIs
-- [SETUP.md](./SETUP.md) - Guia de instalacion
+- [SETUP.md](./SETUP.md) - Guia de instalacion local
+- [DEPLOY.md](./DEPLOY.md) - Guia de despliegue (Vercel + Neon)
 
 ---
 

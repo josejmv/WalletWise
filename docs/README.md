@@ -19,6 +19,7 @@
 | -------------------------- | ----------------------------------- |
 | [CONTEXT.md](./CONTEXT.md) | Contexto general, modelos y stack   |
 | [SETUP.md](./SETUP.md)     | Guia de instalacion y configuracion |
+| [DEPLOY.md](./DEPLOY.md)   | Guia de despliegue en Vercel + Neon |
 
 ### Arquitectura y Estandares
 
@@ -81,7 +82,9 @@ yarn dev
 | ORM             | Prisma 6                         |
 | Base de Datos   | PostgreSQL 16                    |
 | Graficos        | Recharts                         |
-| Contenedores    | Docker Compose                   |
+| Contenedores    | Docker Compose (desarrollo)      |
+| **Hosting**     | Vercel (Frontend + Backend)      |
+| **DB Cloud**    | Neon (PostgreSQL Serverless)     |
 
 ---
 
@@ -198,4 +201,5 @@ components/
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y estandares
 - [API.md](./API.md) - Referencia de APIs
 - [SETUP.md](./SETUP.md) - Guia de instalacion
+- [DEPLOY.md](./DEPLOY.md) - Guia de despliegue en produccion
 - [steps/v1.md](./steps/v1.md) - Detalles de version 1.x

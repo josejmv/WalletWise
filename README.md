@@ -6,6 +6,8 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma)](https://www.prisma.io/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-black?logo=vercel)](https://vercel.com/)
+[![Neon](https://img.shields.io/badge/Database-Neon-00E599?logo=postgresql)](https://neon.tech/)
 
 Dashboard de finanzas personales con soporte multi-moneda y criptomonedas.
 
@@ -22,14 +24,16 @@ Dashboard de finanzas personales con soporte multi-moneda y criptomonedas.
 
 ## Tech Stack
 
-| Capa     | Tecnologia                       |
-| -------- | -------------------------------- |
-| Frontend | Next.js 16, React 19, TypeScript |
-| Estilos  | Tailwind CSS 4, shadcn/ui        |
-| Backend  | Next.js API Routes, Prisma 6     |
-| Database | PostgreSQL 16                    |
-| Graficos | Recharts                         |
-| PDF      | jsPDF                            |
+| Capa         | Tecnologia                       |
+| ------------ | -------------------------------- |
+| Frontend     | Next.js 16, React 19, TypeScript |
+| Estilos      | Tailwind CSS 4, shadcn/ui        |
+| Backend      | Next.js API Routes, Prisma 6     |
+| Database     | PostgreSQL 16                    |
+| Graficos     | Recharts                         |
+| PDF          | jsPDF                            |
+| **Deploy**   | Vercel (Frontend + Backend)      |
+| **DB Cloud** | Neon (PostgreSQL Serverless)     |
 
 ## Quick Start
 
@@ -133,7 +137,8 @@ NEXT_PUBLIC_APP_NAME="WalletWise"
 La documentacion completa esta en la carpeta [docs/](./docs/):
 
 - [README.md](./docs/README.md) - Indice principal
-- [SETUP.md](./docs/SETUP.md) - Guia de instalacion
+- [SETUP.md](./docs/SETUP.md) - Guia de instalacion local
+- [DEPLOY.md](./docs/DEPLOY.md) - Guia de despliegue (Vercel + Neon)
 - [ARCHITECTURE.md](./docs/ARCHITECTURE.md) - Arquitectura
 - [API.md](./docs/API.md) - Referencia de API
 - [steps/v1.md](./docs/steps/v1.md) - Detalles de v1.x
