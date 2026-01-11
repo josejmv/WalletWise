@@ -189,14 +189,14 @@ export async function fetchBinanceP2PRate(
 }
 
 /**
- * Crypto assets supported
+ * Crypto assets supported (v1.3.0: simplified to USDT only)
  */
-export const CRYPTO_ASSETS = ["USDT", "BTC", "ETH", "BNB", "SOL"] as const;
+export const CRYPTO_ASSETS = ["USDT"] as const;
 
 /**
- * Fiat currencies for Binance P2P
+ * Fiat currencies for Binance P2P (v1.3.0: excluding USD since USDT-USD is always 1:1)
  */
-export const BINANCE_FIATS = ["VES", "COP", "USD"] as const;
+export const BINANCE_FIATS = ["VES", "COP"] as const;
 
 export type CryptoAsset = (typeof CRYPTO_ASSETS)[number];
 export type BinanceFiat = (typeof BINANCE_FIATS)[number];

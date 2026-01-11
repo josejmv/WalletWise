@@ -155,7 +155,8 @@ export function ExpenseForm({
     defaultValues: {
       categoryId: "",
       accountId: "",
-      amount: 0,
+      // v1.3.0: No default value for amount - use placeholder instead
+      amount: undefined as unknown as number,
       currencyId: "",
       date: new Date().toISOString().split("T")[0],
       description: "",

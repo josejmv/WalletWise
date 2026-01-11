@@ -48,7 +48,8 @@ interface Budget {
   id: string;
   name: string;
   type: "goal" | "envelope";
-  targetAmount: number;
+  // v1.3.0: targetAmount can be null (budgets without goal)
+  targetAmount: number | null;
   currentAmount: number;
   deadline: string | null;
   status: "active" | "completed" | "cancelled";
@@ -162,10 +163,12 @@ export default function BudgetsPage() {
       {budgets && budgets.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => {
-            const progress =
-              budget.targetAmount > 0
-                ? (budget.currentAmount / budget.targetAmount) * 100
-                : 0;
+            // v1.3.0: Handle null targetAmount
+            const hasTarget =
+              budget.targetAmount !== null && budget.targetAmount > 0;
+            const progress = hasTarget
+              ? (budget.currentAmount / budget.targetAmount!) * 100
+              : 0;
 
             return (
               <Card key={budget.id}>
@@ -203,26 +206,41 @@ export default function BudgetsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>
+                  {/* v1.3.0: Show progress bar only if there's a target */}
+                  {hasTarget ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>
+                          {formatCurrency(
+                            budget.currentAmount,
+                            budget.currency.code,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {formatCurrency(
+                            budget.targetAmount!,
+                            budget.currency.code,
+                          )}
+                        </span>
+                      </div>
+                      <Progress value={Math.min(progress, 100)} />
+                      <p className="text-xs text-muted-foreground text-center">
+                        {progress.toFixed(1)}% completado
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-2">
+                      <p className="text-2xl font-bold">
                         {formatCurrency(
                           budget.currentAmount,
                           budget.currency.code,
                         )}
-                      </span>
-                      <span className="text-muted-foreground">
-                        {formatCurrency(
-                          budget.targetAmount,
-                          budget.currency.code,
-                        )}
-                      </span>
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Bloqueado (sin objetivo)
+                      </p>
                     </div>
-                    <Progress value={Math.min(progress, 100)} />
-                    <p className="text-xs text-muted-foreground text-center">
-                      {progress.toFixed(1)}% completado
-                    </p>
-                  </div>
+                  )}
                   <div className="flex items-center justify-between text-sm">
                     <Badge
                       variant={

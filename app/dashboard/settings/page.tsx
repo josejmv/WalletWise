@@ -1,7 +1,14 @@
 "use client";
 
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,9 +17,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
-import { Settings, Palette, Calendar, Hash, Coins } from "lucide-react";
+import {
+  Settings,
+  Palette,
+  Calendar,
+  Hash,
+  Coins,
+  Menu,
+  ChevronUp,
+  ChevronDown,
+  GripVertical,
+} from "lucide-react";
+
+// v1.3.0: Sidebar item structure
+interface SidebarItem {
+  id: string;
+  type: "item" | "group";
+  pageId?: string;
+  label?: string;
+  icon?: string;
+  isOpen?: boolean;
+  children?: SidebarItem[];
+}
+
+interface SidebarConfig {
+  items: SidebarItem[];
+}
 
 interface UserConfig {
   id: string;
@@ -20,6 +53,7 @@ interface UserConfig {
   dateFormat: string;
   numberFormat: string;
   theme: string;
+  sidebarConfig?: SidebarConfig;
   baseCurrency: {
     id: string;
     code: string;
@@ -27,6 +61,16 @@ interface UserConfig {
     symbol: string;
   };
 }
+
+// v1.3.0: Default sidebar items for display
+const DEFAULT_SIDEBAR_ITEMS = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "transactions", label: "Transacciones" },
+  { id: "finances", label: "Finanzas" },
+  { id: "inventory", label: "Inventario" },
+  { id: "configuration", label: "Configuracion" },
+  { id: "reports", label: "Reportes" },
+];
 
 interface Currency {
   id: string;
@@ -252,15 +296,145 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      {/* Info Card */}
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <p className="text-sm text-muted-foreground">
-            La personalización del sidebar estará disponible próximamente en la
-            sección de configuración avanzada.
-          </p>
-        </CardContent>
-      </Card>
+      {/* v1.3.0: Sidebar Order */}
+      <SidebarOrderConfig
+        config={config}
+        onUpdate={(sidebarConfig) =>
+          updateMutation.mutate({ sidebarConfig } as Partial<UserConfig>)
+        }
+        isPending={updateMutation.isPending}
+      />
     </div>
+  );
+}
+
+// v1.3.0: Sidebar order configuration component
+function SidebarOrderConfig({
+  config,
+  onUpdate,
+  isPending,
+}: {
+  config: UserConfig | undefined;
+  onUpdate: (sidebarConfig: SidebarConfig) => void;
+  isPending: boolean;
+}) {
+  // Get current order from config or use default
+  const getInitialOrder = useCallback(() => {
+    if (config?.sidebarConfig?.items) {
+      return config.sidebarConfig.items.map((item) => {
+        const defaultItem = DEFAULT_SIDEBAR_ITEMS.find((d) => d.id === item.id);
+        return {
+          id: item.id,
+          label: item.label || defaultItem?.label || item.pageId || item.id,
+        };
+      });
+    }
+    return DEFAULT_SIDEBAR_ITEMS;
+  }, [config]);
+
+  const [items, setItems] = useState(getInitialOrder);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  const moveItem = useCallback(
+    (index: number, direction: "up" | "down") => {
+      const newIndex = direction === "up" ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= items.length) return;
+
+      const newItems = [...items];
+      [newItems[index], newItems[newIndex]] = [
+        newItems[newIndex],
+        newItems[index],
+      ];
+      setItems(newItems);
+      setHasChanges(true);
+    },
+    [items],
+  );
+
+  const handleSave = useCallback(() => {
+    // Convert to sidebar config format
+    const sidebarConfig: SidebarConfig = {
+      items: items.map((item) => {
+        // Find original item from config to preserve structure
+        const originalItem = config?.sidebarConfig?.items?.find(
+          (i) => i.id === item.id,
+        );
+        if (originalItem) {
+          return originalItem;
+        }
+        // Create basic item structure
+        return {
+          id: item.id,
+          type:
+            item.id === "dashboard" || item.id === "reports" ? "item" : "group",
+          ...(item.id === "dashboard" || item.id === "reports"
+            ? { pageId: item.id }
+            : { label: item.label }),
+        } as SidebarItem;
+      }),
+    };
+    onUpdate(sidebarConfig);
+    setHasChanges(false);
+  }, [items, config, onUpdate]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Menu className="h-5 w-5" />
+          Orden del Sidebar
+        </CardTitle>
+        <CardDescription>
+          Reordena los elementos del menu lateral usando las flechas
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          {items.map((item, index) => (
+            <div
+              key={item.id}
+              className="flex items-center gap-2 p-2 border rounded-md bg-muted/30"
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+              <span className="flex-1 font-medium">{item.label}</span>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => moveItem(index, "up")}
+                  disabled={index === 0}
+                >
+                  <ChevronUp className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => moveItem(index, "down")}
+                  disabled={index === items.length - 1}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {hasChanges && (
+          <div className="flex justify-end pt-2">
+            <Button onClick={handleSave} disabled={isPending}>
+              {isPending && <Spinner className="mr-2 h-4 w-4" />}
+              Guardar orden
+            </Button>
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          Nota: Los cambios en el orden del sidebar se aplicaran despues de
+          recargar la pagina.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

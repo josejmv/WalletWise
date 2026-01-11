@@ -92,6 +92,8 @@ export async function remove(id: string) {
   });
 }
 
+// v1.3.0: Block model - contribute does NOT deduct from account balance
+// The money stays in the account but is marked as "blocked" for this budget
 export async function contribute(
   budgetId: string,
   amount: number,
@@ -99,7 +101,7 @@ export async function contribute(
   description?: string,
 ) {
   return prisma.$transaction(async (tx) => {
-    // Verificar que la cuenta tiene saldo suficiente
+    // Verificar que la cuenta existe
     const account = await tx.account.findUnique({
       where: { id: fromAccountId },
     });
@@ -108,9 +110,24 @@ export async function contribute(
       throw new Error("Cuenta no encontrada");
     }
 
-    if (Number(account.balance) < amount) {
+    // v1.3.0: Calculate available balance (total - blocked in budgets)
+    const budgetsForAccount = await tx.budget.findMany({
+      where: {
+        accountId: fromAccountId,
+        status: { in: ["active", "completed"] },
+      },
+      select: { currentAmount: true },
+    });
+
+    const totalBlocked = budgetsForAccount.reduce(
+      (sum, b) => sum + Number(b.currentAmount),
+      0,
+    );
+    const availableBalance = Number(account.balance) - totalBlocked;
+
+    if (availableBalance < amount) {
       throw new Error(
-        `Saldo insuficiente. Disponible: ${account.balance}, requerido: ${amount}`,
+        `Saldo disponible insuficiente. Disponible: ${availableBalance.toFixed(2)}, requerido: ${amount}`,
       );
     }
 
@@ -124,15 +141,10 @@ export async function contribute(
       },
     });
 
-    // Reducir el balance de la cuenta origen
-    await tx.account.update({
-      where: { id: fromAccountId },
-      data: {
-        balance: { decrement: amount },
-      },
-    });
+    // v1.3.0: NO reducir el balance de la cuenta (modelo de bloqueo)
+    // El dinero permanece en la cuenta pero queda bloqueado
 
-    // Incrementar el monto actual del budget
+    // Incrementar el monto actual del budget (bloqueado)
     const budget = await tx.budget.update({
       where: { id: budgetId },
       data: {
@@ -147,8 +159,11 @@ export async function contribute(
       },
     });
 
-    // Si se alcanzo la meta, marcar como completado
-    if (Number(budget.currentAmount) >= Number(budget.targetAmount)) {
+    // Si se alcanzo la meta, marcar como completado (solo si hay meta)
+    if (
+      budget.targetAmount &&
+      Number(budget.currentAmount) >= Number(budget.targetAmount)
+    ) {
       return tx.budget.update({
         where: { id: budgetId },
         data: { status: "completed" },
@@ -166,6 +181,8 @@ export async function contribute(
   });
 }
 
+// v1.3.0: Block model - withdraw does NOT add to account balance
+// The money was never removed, just unblock it
 export async function withdraw(
   budgetId: string,
   amount: number,
@@ -198,15 +215,10 @@ export async function withdraw(
       },
     });
 
-    // Incrementar el balance de la cuenta destino
-    await tx.account.update({
-      where: { id: toAccountId },
-      data: {
-        balance: { increment: amount },
-      },
-    });
+    // v1.3.0: NO incrementar el balance de la cuenta (modelo de bloqueo)
+    // El dinero nunca salio, solo se desbloquea
 
-    // Reducir el monto del budget y reactivar si estaba completado
+    // Reducir el monto del budget (desbloquear) y reactivar si estaba completado
     return tx.budget.update({
       where: { id: budgetId },
       data: {

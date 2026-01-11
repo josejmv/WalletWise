@@ -6,55 +6,33 @@ async function main() {
   console.log("Seeding database...");
 
   // Seed Currencies (Fiat + Crypto)
+  // v1.3.0: Symbols equal to code for easier identification
+  // v1.3.0: Only USDT as crypto (removed BTC, ETH, BNB, SOL)
   const currencies = [
-    // Fiat
+    // Fiat - symbols = codes
     {
       code: "USD",
       name: "Dólar estadounidense",
-      symbol: "$",
+      symbol: "USD",
       isBase: true,
     },
     {
       code: "COP",
       name: "Peso colombiano",
-      symbol: "COP$",
+      symbol: "COP",
       isBase: false,
     },
     {
       code: "VES",
       name: "Bolívar venezolano",
-      symbol: "Bs.",
+      symbol: "VES",
       isBase: false,
     },
-    // Crypto
+    // Crypto - only USDT
     {
       code: "USDT",
       name: "Tether",
       symbol: "USDT",
-      isBase: false,
-    },
-    {
-      code: "BTC",
-      name: "Bitcoin",
-      symbol: "BTC",
-      isBase: false,
-    },
-    {
-      code: "ETH",
-      name: "Ethereum",
-      symbol: "ETH",
-      isBase: false,
-    },
-    {
-      code: "BNB",
-      name: "Binance Coin",
-      symbol: "BNB",
-      isBase: false,
-    },
-    {
-      code: "SOL",
-      name: "Solana",
-      symbol: "SOL",
       isBase: false,
     },
   ];
@@ -123,6 +101,12 @@ async function main() {
               { id: "incomes", type: "item", pageId: "incomes" },
               { id: "expenses", type: "item", pageId: "expenses" },
               { id: "transfers", type: "item", pageId: "transfers" },
+              // v1.3.0: Transaction history page
+              {
+                id: "transaction-history",
+                type: "item",
+                pageId: "transaction-history",
+              },
             ],
           },
           {

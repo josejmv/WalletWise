@@ -20,11 +20,14 @@ export async function getInventoryItemById(id: string) {
 }
 
 export async function createInventoryItem(data: CreateInventoryItemInput) {
-  const category = await prisma.inventoryCategory.findUnique({
-    where: { id: data.categoryId },
-  });
-  if (!category) {
-    throw new Error("Categoria de inventario no encontrada");
+  // v1.3.0: Only validate categoryId if it's provided (not null/undefined)
+  if (data.categoryId) {
+    const category = await prisma.inventoryCategory.findUnique({
+      where: { id: data.categoryId },
+    });
+    if (!category) {
+      throw new Error("Categoria de inventario no encontrada");
+    }
   }
 
   const currency = await prisma.currency.findUnique({

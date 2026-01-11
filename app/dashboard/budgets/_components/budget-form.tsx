@@ -22,7 +22,12 @@ import { InlineAccountModal } from "@/components/inline-account-modal";
 const budgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: z.enum(["goal", "envelope"]),
-  targetAmount: z.number().min(1, "El monto objetivo debe ser mayor a 0"),
+  // v1.3.0: targetAmount is optional (budgets without goal)
+  targetAmount: z
+    .number()
+    .positive("El monto objetivo debe ser mayor a 0")
+    .nullable()
+    .optional(),
   currentAmount: z.number().optional(),
   currencyId: z.string().min(1, "La moneda es requerida"),
   accountId: z.string().min(1, "La cuenta es requerida"),
@@ -37,7 +42,8 @@ interface BudgetFormProps {
     id: string;
     name: string;
     type: "goal" | "envelope";
-    targetAmount: number;
+    // v1.3.0: targetAmount can be null
+    targetAmount: number | null;
     currentAmount: number;
     deadline: string | null;
     status: "active" | "completed" | "cancelled";
@@ -130,7 +136,8 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
       reset({
         name: budget.name,
         type: budget.type,
-        targetAmount: budget.targetAmount,
+        // v1.3.0: Handle null targetAmount
+        targetAmount: budget.targetAmount ?? undefined,
         currentAmount: budget.currentAmount,
         currencyId: budget.currency.id,
         accountId: budget.account.id,
@@ -189,6 +196,8 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
   const onSubmit = (data: BudgetFormData) => {
     const submitData = {
       ...data,
+      // v1.3.0: Handle optional targetAmount - send null if not provided
+      targetAmount: data.targetAmount ?? null,
       deadline: data.deadline || undefined,
     };
     if (isEditing) {
@@ -268,12 +277,13 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="targetAmount">Monto Objetivo</Label>
+          {/* v1.3.0: targetAmount is optional */}
+          <Label htmlFor="targetAmount">Monto Objetivo (opcional)</Label>
           <Input
             id="targetAmount"
             type="number"
             step="0.01"
-            placeholder="0.00"
+            placeholder="Sin objetivo"
             {...register("targetAmount", { valueAsNumber: true })}
           />
           {errors.targetAmount && (

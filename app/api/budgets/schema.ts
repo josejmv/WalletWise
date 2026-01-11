@@ -6,7 +6,12 @@ const budgetStatusEnum = z.enum(["active", "completed", "cancelled"]);
 export const createBudgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: budgetTypeEnum,
-  targetAmount: z.number().positive("El monto objetivo debe ser mayor a 0"),
+  // v1.3.0: targetAmount is optional (budgets without goal)
+  targetAmount: z
+    .number()
+    .positive("El monto objetivo debe ser mayor a 0")
+    .nullable()
+    .optional(),
   currentAmount: z
     .number()
     .min(0, "El monto actual no puede ser negativo")

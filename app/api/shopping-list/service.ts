@@ -72,7 +72,8 @@ export async function generateShoppingList(
       itemId: item.id,
       itemName: item.name,
       categoryId: item.categoryId,
-      categoryName: item.category.name,
+      // v1.3.0: Handle null category
+      categoryName: item.category?.name ?? "Sin categoría",
       currentQuantity: current,
       minQuantity: min,
       maxQuantity: max,
@@ -145,7 +146,8 @@ export async function getLowStockItems(): Promise<ShoppingListItem[]> {
       itemId: item.id,
       itemName: item.name,
       categoryId: item.categoryId,
-      categoryName: item.category.name,
+      // v1.3.0: Handle null category
+      categoryName: item.category?.name ?? "Sin categoría",
       currentQuantity: current,
       minQuantity: min,
       maxQuantity: max,
@@ -165,23 +167,29 @@ export async function getLowStockItems(): Promise<ShoppingListItem[]> {
   );
 }
 
+// v1.3.0: categoryId can be null for items without category
 export async function getShoppingListByCategory(): Promise<
-  { categoryId: string; categoryName: string; items: ShoppingListItem[] }[]
+  {
+    categoryId: string | null;
+    categoryName: string;
+    items: ShoppingListItem[];
+  }[]
 > {
   const list = await generateShoppingList();
 
   const byCategory = new Map<
-    string,
+    string | null,
     { categoryName: string; items: ShoppingListItem[] }
   >();
 
   for (const item of list.items) {
-    const data = byCategory.get(item.categoryId) || {
+    const key = item.categoryId;
+    const data = byCategory.get(key) || {
       categoryName: item.categoryName,
       items: [],
     };
     data.items.push(item);
-    byCategory.set(item.categoryId, data);
+    byCategory.set(key, data);
   }
 
   return Array.from(byCategory.entries()).map(([categoryId, data]) => ({

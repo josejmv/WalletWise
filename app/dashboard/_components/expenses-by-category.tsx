@@ -128,8 +128,16 @@ export function ExpensesByCategory() {
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
               }}
+              labelStyle={{
+                color: "hsl(var(--foreground))",
+              }}
             />
-            <Legend />
+            {/* v1.3.0: Fix legend text color for dark mode */}
+            <Legend
+              formatter={(value) => (
+                <span style={{ color: "hsl(var(--foreground))" }}>{value}</span>
+              )}
+            />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>

@@ -11,4 +11,6 @@ export interface CreateAccountTypeInput {
 export interface UpdateAccountTypeInput {
   name?: string;
   description?: string;
+  // v1.3.0: Allow toggling active status
+  isActive?: boolean;
 }

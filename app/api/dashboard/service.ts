@@ -3,6 +3,7 @@ import {
   getUserBaseCurrencyId,
   getUserBaseCurrency,
   convertManyToBaseCurrency,
+  convertManyWithCustomRates,
   calculateSavings,
   isSavingsRate,
 } from "@/lib/currency-utils";
@@ -41,10 +42,11 @@ export async function getKPIs(
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
         select: { id: true, amount: true, currencyId: true },
       }),
+      // v1.3.0: Include customRate for expense conversion
       prisma.expense.findMany({
         where:
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
-        select: { id: true, amount: true, currencyId: true },
+        select: { id: true, amount: true, currencyId: true, customRate: true },
       }),
       prisma.job.count({ where: { status: "active" } }),
       prisma.budget.count({ where: { status: "active" } }),
@@ -59,8 +61,13 @@ export async function getKPIs(
     incomes.map((i) => ({ ...i, amount: Number(i.amount) })),
     baseCurrencyId,
   );
-  const expensesConverted = await convertManyToBaseCurrency(
-    expenses.map((e) => ({ ...e, amount: Number(e.amount) })),
+  // v1.3.0: Use custom rates for expense conversion when available
+  const expensesConverted = await convertManyWithCustomRates(
+    expenses.map((e) => ({
+      ...e,
+      amount: Number(e.amount),
+      customRate: e.customRate ? Number(e.customRate) : null,
+    })),
     baseCurrencyId,
   );
 
@@ -161,6 +168,7 @@ export async function getExpensesByCategory(
     ...(filters?.endDate && { lte: filters.endDate }),
   };
 
+  // v1.3.0: Include customRate for expense conversion
   const [expenses, baseCurrencyId] = await Promise.all([
     prisma.expense.findMany({
       where:
@@ -169,6 +177,7 @@ export async function getExpensesByCategory(
         id: true,
         amount: true,
         currencyId: true,
+        customRate: true,
         categoryId: true,
         category: { select: { name: true, color: true } },
       },
@@ -176,11 +185,12 @@ export async function getExpensesByCategory(
     getUserBaseCurrencyId(),
   ]);
 
-  // Convert all expenses to base currency
-  const expensesConverted = await convertManyToBaseCurrency(
+  // v1.3.0: Use custom rates for expense conversion when available
+  const expensesConverted = await convertManyWithCustomRates(
     expenses.map((e) => ({
       ...e,
       amount: Number(e.amount),
+      customRate: e.customRate ? Number(e.customRate) : null,
     })),
     baseCurrencyId,
   );

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { useFormatters } from "@/contexts/user-config-context";
 
 interface ExchangeRate {
   id: string;
@@ -32,11 +33,63 @@ interface ExchangeRate {
   toCurrency: { code: string; symbol: string };
 }
 
+interface CooldownStatus {
+  canSyncOfficial: boolean;
+  canSyncBinance: boolean;
+  nextOfficialSyncAt?: string;
+  nextBinanceSyncAt?: string;
+}
+
 async function fetchExchangeRates(): Promise<ExchangeRate[]> {
   const res = await fetch("/api/exchange-rates");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
+}
+
+async function fetchCooldownStatus(): Promise<CooldownStatus> {
+  const res = await fetch("/api/user-config");
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+
+  const config = data.data;
+  const now = new Date();
+  const COOLDOWN_HOURS = 6;
+
+  // Calculate official cooldown
+  let canSyncOfficial = true;
+  let nextOfficialSyncAt: string | undefined;
+  if (config.lastOfficialSyncAt) {
+    const lastSync = new Date(config.lastOfficialSyncAt);
+    const nextSync = new Date(
+      lastSync.getTime() + COOLDOWN_HOURS * 60 * 60 * 1000,
+    );
+    if (now < nextSync) {
+      canSyncOfficial = false;
+      nextOfficialSyncAt = nextSync.toISOString();
+    }
+  }
+
+  // Calculate binance cooldown
+  let canSyncBinance = true;
+  let nextBinanceSyncAt: string | undefined;
+  if (config.lastBinanceSyncAt) {
+    const lastSync = new Date(config.lastBinanceSyncAt);
+    const nextSync = new Date(
+      lastSync.getTime() + COOLDOWN_HOURS * 60 * 60 * 1000,
+    );
+    if (now < nextSync) {
+      canSyncBinance = false;
+      nextBinanceSyncAt = nextSync.toISOString();
+    }
+  }
+
+  return {
+    canSyncOfficial,
+    canSyncBinance,
+    nextOfficialSyncAt,
+    nextBinanceSyncAt,
+  };
 }
 
 function formatDate(dateString: string): string {
@@ -78,6 +131,7 @@ function getSourceColor(source: string): string {
 export default function ExchangeRatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { formatDate: formatUserDate } = useFormatters();
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [isSyncingOfficial, setIsSyncingOfficial] = useState(false);
   const [isSyncingBinance, setIsSyncingBinance] = useState(false);
@@ -91,7 +145,25 @@ export default function ExchangeRatesPage() {
     queryFn: fetchExchangeRates,
   });
 
+  const { data: cooldown, refetch: refetchCooldown } = useQuery({
+    queryKey: ["cooldown-status"],
+    queryFn: fetchCooldownStatus,
+    refetchInterval: 60000, // Refetch every minute to update status
+  });
+
   const isSyncing = isSyncingAll || isSyncingOfficial || isSyncingBinance;
+
+  // Format next sync date for display
+  const formatNextSyncDate = (isoString?: string): string => {
+    if (!isoString) return "";
+    const date = new Date(isoString);
+    const formattedDate = formatUserDate(date);
+    const time = date.toLocaleTimeString("es-CO", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `Disponible a las ${time} del ${formattedDate}`;
+  };
 
   async function handleSyncAll() {
     setIsSyncingAll(true);
@@ -122,6 +194,7 @@ export default function ExchangeRatesPage() {
         });
         queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
         queryClient.invalidateQueries({ queryKey: ["exchange-rate"] });
+        refetchCooldown();
       } else {
         toast({
           title: "Error al sincronizar",
@@ -155,6 +228,7 @@ export default function ExchangeRatesPage() {
         });
         queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
         queryClient.invalidateQueries({ queryKey: ["exchange-rate"] });
+        refetchCooldown();
       } else {
         toast({
           title: "Error al sincronizar",
@@ -188,6 +262,7 @@ export default function ExchangeRatesPage() {
         });
         queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
         queryClient.invalidateQueries({ queryKey: ["exchange-rate"] });
+        refetchCooldown();
       } else {
         toast({
           title: "Error al sincronizar",
@@ -228,43 +303,76 @@ export default function ExchangeRatesPage() {
           <h1 className="text-3xl font-bold tracking-tight">Tasas de Cambio</h1>
           <p className="text-muted-foreground">Conversion entre monedas</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => refetch()}
-            disabled={isSyncing}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Actualizar
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSyncOfficial}
-            disabled={isSyncing}
-          >
-            {isSyncingOfficial ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Oficial
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSyncBinance}
-            disabled={isSyncing}
-          >
-            {isSyncingBinance ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            Binance
-          </Button>
-          <Button onClick={handleSyncAll} disabled={isSyncing}>
-            {isSyncingAll ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <CloudDownload className="mr-2 h-4 w-4" />
-            )}
-            Sincronizar Todo
-          </Button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => refetch()}
+              disabled={isSyncing}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Actualizar
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSyncOfficial}
+              disabled={isSyncing || !cooldown?.canSyncOfficial}
+              title={
+                !cooldown?.canSyncOfficial
+                  ? formatNextSyncDate(cooldown?.nextOfficialSyncAt)
+                  : undefined
+              }
+            >
+              {isSyncingOfficial ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Oficial
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSyncBinance}
+              disabled={isSyncing || !cooldown?.canSyncBinance}
+              title={
+                !cooldown?.canSyncBinance
+                  ? formatNextSyncDate(cooldown?.nextBinanceSyncAt)
+                  : undefined
+              }
+            >
+              {isSyncingBinance ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : null}
+              Binance
+            </Button>
+            <Button
+              onClick={handleSyncAll}
+              disabled={
+                isSyncing ||
+                (!cooldown?.canSyncOfficial && !cooldown?.canSyncBinance)
+              }
+            >
+              {isSyncingAll ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CloudDownload className="mr-2 h-4 w-4" />
+              )}
+              Sincronizar Todo
+            </Button>
+          </div>
+          {/* Show cooldown status messages */}
+          {(!cooldown?.canSyncOfficial || !cooldown?.canSyncBinance) && (
+            <div className="text-xs text-muted-foreground text-right">
+              {!cooldown?.canSyncOfficial && (
+                <p>
+                  Oficial: {formatNextSyncDate(cooldown?.nextOfficialSyncAt)}
+                </p>
+              )}
+              {!cooldown?.canSyncBinance && (
+                <p>
+                  Binance: {formatNextSyncDate(cooldown?.nextBinanceSyncAt)}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

@@ -18,7 +18,8 @@ export interface BudgetWithRelations extends Budget {
 export interface CreateBudgetInput {
   name: string;
   type: BudgetType;
-  targetAmount: number;
+  // v1.3.0: targetAmount is optional (budgets without goal)
+  targetAmount?: number | null;
   currentAmount?: number;
   currencyId: string;
   accountId: string; // Ahora requerido para ambos tipos
@@ -29,7 +30,8 @@ export interface CreateBudgetInput {
 export interface UpdateBudgetInput {
   name?: string;
   type?: BudgetType;
-  targetAmount?: number;
+  // v1.3.0: targetAmount can be null to remove goal
+  targetAmount?: number | null;
   currentAmount?: number;
   currencyId?: string;
   accountId?: string;

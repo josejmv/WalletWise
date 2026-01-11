@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -27,6 +28,8 @@ import {
   Landmark,
   Coins,
   CreditCard,
+  History,
+  type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,14 +41,171 @@ import {
 import { BackupModal } from "@/components/backup-modal";
 import { SidebarItem } from "./sidebar-item";
 import { SidebarGroup } from "./sidebar-group";
+import { useUserConfigContext } from "@/contexts/user-config-context";
+
+// v1.3.0: Sidebar item configuration for dynamic ordering
+interface SidebarItemConfig {
+  id: string;
+  type: "item" | "group";
+  title: string;
+  href?: string;
+  icon: LucideIcon;
+  defaultOpen?: boolean;
+  items?: {
+    title: string;
+    href: string;
+    icon: LucideIcon;
+  }[];
+}
+
+// v1.3.0: Default sidebar structure
+const SIDEBAR_ITEMS: SidebarItemConfig[] = [
+  {
+    id: "dashboard",
+    type: "item",
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    id: "transactions",
+    type: "group",
+    title: "Transacciones",
+    icon: Receipt,
+    defaultOpen: true,
+    items: [
+      { title: "Ingresos", href: "/dashboard/incomes", icon: ArrowDownCircle },
+      { title: "Gastos", href: "/dashboard/expenses", icon: ArrowUpCircle },
+      {
+        title: "Transferencias",
+        href: "/dashboard/transfers",
+        icon: ArrowLeftRight,
+      },
+      {
+        title: "Historial",
+        href: "/dashboard/transactions/history",
+        icon: History,
+      },
+    ],
+  },
+  {
+    id: "finances",
+    type: "group",
+    title: "Finanzas",
+    icon: Landmark,
+    defaultOpen: true,
+    items: [
+      { title: "Cuentas", href: "/dashboard/accounts", icon: Wallet },
+      { title: "Presupuestos", href: "/dashboard/budgets", icon: PiggyBank },
+      { title: "Trabajos", href: "/dashboard/jobs", icon: Briefcase },
+    ],
+  },
+  {
+    id: "inventory",
+    type: "group",
+    title: "Inventario",
+    icon: Package,
+    defaultOpen: false,
+    items: [
+      { title: "Items", href: "/dashboard/inventory", icon: PackageSearch },
+      {
+        title: "Categorias",
+        href: "/dashboard/inventory/categories",
+        icon: FolderTree,
+      },
+      {
+        title: "Historial Precios",
+        href: "/dashboard/inventory/price-history",
+        icon: TrendingUp,
+      },
+      {
+        title: "Lista de Compras",
+        href: "/dashboard/inventory/shopping-list",
+        icon: ShoppingCart,
+      },
+    ],
+  },
+  {
+    id: "configuration",
+    type: "group",
+    title: "Configuracion",
+    icon: Settings2,
+    defaultOpen: false,
+    items: [
+      { title: "Monedas", href: "/dashboard/currencies", icon: Coins },
+      {
+        title: "Tasas de Cambio",
+        href: "/dashboard/exchange-rates",
+        icon: ArrowLeftRight,
+      },
+      { title: "Categorias Gastos", href: "/dashboard/categories", icon: Tags },
+      {
+        title: "Tipos de Cuenta",
+        href: "/dashboard/account-types",
+        icon: CreditCard,
+      },
+    ],
+  },
+  {
+    id: "reports",
+    type: "item",
+    title: "Reportes",
+    href: "/dashboard/reports",
+    icon: FileText,
+  },
+];
 
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
 }
 
+// v1.3.0: Type for sidebarConfig from UserConfig
+interface SidebarConfigItem {
+  id: string;
+  type: "item" | "group";
+  pageId?: string;
+  label?: string;
+  isOpen?: boolean;
+}
+
+interface SidebarConfig {
+  items: SidebarConfigItem[];
+}
+
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
+  const { config } = useUserConfigContext();
+
+  // v1.3.0: Get ordered sidebar items based on user config
+  const orderedItems = useMemo(() => {
+    const sidebarConfig = config?.sidebarConfig as SidebarConfig | undefined;
+
+    if (!sidebarConfig?.items?.length) {
+      return SIDEBAR_ITEMS;
+    }
+
+    // Create a map for quick lookup
+    const itemsMap = new Map(SIDEBAR_ITEMS.map((item) => [item.id, item]));
+
+    // Order items based on config
+    const ordered: SidebarItemConfig[] = [];
+    for (const configItem of sidebarConfig.items) {
+      const sidebarItem = itemsMap.get(configItem.id);
+      if (sidebarItem) {
+        ordered.push(sidebarItem);
+      }
+    }
+
+    // Add any items not in config at the end (fallback)
+    for (const item of SIDEBAR_ITEMS) {
+      if (!ordered.find((o) => o.id === item.id)) {
+        ordered.push(item);
+      }
+    }
+
+    return ordered;
+  }, [config?.sidebarConfig]);
 
   return (
     <aside
@@ -72,119 +232,28 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
         )}
       </div>
 
-      {/* Navigation */}
+      {/* Navigation - v1.3.0: Dynamic ordering based on user config */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
-        {/* Dashboard */}
-        <SidebarItem
-          title="Dashboard"
-          href="/dashboard"
-          icon={LayoutDashboard}
-          collapsed={collapsed}
-        />
-
-        {/* Transacciones */}
-        <SidebarGroup
-          title="Transacciones"
-          icon={Receipt}
-          collapsed={collapsed}
-          defaultOpen
-          items={[
-            {
-              title: "Ingresos",
-              href: "/dashboard/incomes",
-              icon: ArrowDownCircle,
-            },
-            {
-              title: "Gastos",
-              href: "/dashboard/expenses",
-              icon: ArrowUpCircle,
-            },
-            {
-              title: "Transferencias",
-              href: "/dashboard/transfers",
-              icon: ArrowLeftRight,
-            },
-          ]}
-        />
-
-        {/* Finanzas */}
-        <SidebarGroup
-          title="Finanzas"
-          icon={Landmark}
-          collapsed={collapsed}
-          defaultOpen
-          items={[
-            { title: "Cuentas", href: "/dashboard/accounts", icon: Wallet },
-            {
-              title: "Presupuestos",
-              href: "/dashboard/budgets",
-              icon: PiggyBank,
-            },
-            { title: "Trabajos", href: "/dashboard/jobs", icon: Briefcase },
-          ]}
-        />
-
-        {/* Inventario */}
-        <SidebarGroup
-          title="Inventario"
-          icon={Package}
-          collapsed={collapsed}
-          items={[
-            {
-              title: "Items",
-              href: "/dashboard/inventory",
-              icon: PackageSearch,
-            },
-            {
-              title: "Categorias",
-              href: "/dashboard/inventory/categories",
-              icon: FolderTree,
-            },
-            {
-              title: "Historial Precios",
-              href: "/dashboard/inventory/price-history",
-              icon: TrendingUp,
-            },
-            {
-              title: "Lista de Compras",
-              href: "/dashboard/inventory/shopping-list",
-              icon: ShoppingCart,
-            },
-          ]}
-        />
-
-        {/* Configuracion */}
-        <SidebarGroup
-          title="Configuracion"
-          icon={Settings2}
-          collapsed={collapsed}
-          items={[
-            { title: "Monedas", href: "/dashboard/currencies", icon: Coins },
-            {
-              title: "Tasas de Cambio",
-              href: "/dashboard/exchange-rates",
-              icon: ArrowLeftRight,
-            },
-            {
-              title: "Categorias Gastos",
-              href: "/dashboard/categories",
-              icon: Tags,
-            },
-            {
-              title: "Tipos de Cuenta",
-              href: "/dashboard/account-types",
-              icon: CreditCard,
-            },
-          ]}
-        />
-
-        {/* Reportes */}
-        <SidebarItem
-          title="Reportes"
-          href="/dashboard/reports"
-          icon={FileText}
-          collapsed={collapsed}
-        />
+        {orderedItems.map((item) =>
+          item.type === "item" ? (
+            <SidebarItem
+              key={item.id}
+              title={item.title}
+              href={item.href!}
+              icon={item.icon}
+              collapsed={collapsed}
+            />
+          ) : (
+            <SidebarGroup
+              key={item.id}
+              title={item.title}
+              icon={item.icon}
+              collapsed={collapsed}
+              defaultOpen={item.defaultOpen}
+              items={item.items!}
+            />
+          ),
+        )}
       </nav>
 
       {/* Footer */}

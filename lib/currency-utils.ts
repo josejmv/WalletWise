@@ -263,6 +263,84 @@ export async function convertManyToBaseCurrency<
 }
 
 /**
+ * v1.3.0: Convert transactions using custom rates when available
+ * Falls back to database rates if no custom rate is present
+ * @param items - Array of items with amount, currencyId, and optional customRate
+ * @param baseCurrencyId - Target currency ID (user's base currency)
+ * @returns Array with converted amounts
+ */
+export async function convertManyWithCustomRates<
+  T extends {
+    amount: number | string;
+    currencyId: string;
+    customRate?: number | null;
+  },
+>(
+  items: T[],
+  baseCurrencyId: string,
+): Promise<Array<T & { convertedAmount: number; rate: number | null }>> {
+  // Get all unique currency pairs needed (for items without custom rate)
+  const currencyIds = [...new Set(items.map((i) => i.currencyId))];
+
+  // Build a map of fallback rates for each currency pair
+  const fallbackRatesMap = new Map<string, number>();
+
+  for (const fromCurrencyId of currencyIds) {
+    if (fromCurrencyId === baseCurrencyId) {
+      fallbackRatesMap.set(fromCurrencyId, 1);
+    } else {
+      const rateInfo = await getLatestRate(fromCurrencyId, baseCurrencyId);
+      if (rateInfo) {
+        fallbackRatesMap.set(fromCurrencyId, rateInfo.rate);
+      }
+    }
+  }
+
+  // Convert all items using custom rate if available, fallback otherwise
+  return items.map((item) => {
+    const amount =
+      typeof item.amount === "string" ? Number(item.amount) : item.amount;
+
+    // If same currency, no conversion needed
+    if (item.currencyId === baseCurrencyId) {
+      return {
+        ...item,
+        convertedAmount: amount,
+        rate: 1,
+      };
+    }
+
+    // Use custom rate if available
+    if (item.customRate && item.customRate > 0) {
+      // Custom rate is stored as: fromCurrency -> toCurrency (e.g., USD -> VES)
+      // To convert back to base, we use the inverse
+      const convertedAmount = amount * Number(item.customRate);
+      return {
+        ...item,
+        convertedAmount,
+        rate: Number(item.customRate),
+      };
+    }
+
+    // Fallback to database rate
+    const rate = fallbackRatesMap.get(item.currencyId);
+    if (rate === undefined) {
+      return {
+        ...item,
+        convertedAmount: amount,
+        rate: null,
+      };
+    }
+
+    return {
+      ...item,
+      convertedAmount: amount * rate,
+      rate,
+    };
+  });
+}
+
+/**
  * Calculate savings from using custom rate vs official rate
  * CORRECTED: custom < official = SAVINGS (user pays less)
  *

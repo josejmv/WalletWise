@@ -7,19 +7,21 @@ import type {
 
 export type { InventoryItem, InventoryUnit };
 
+// v1.3.0: category can be null (items without category)
 export interface InventoryItemWithRelations extends InventoryItem {
-  category: InventoryCategory;
+  category: InventoryCategory | null;
   currency: Currency;
 }
 
 export interface CreateInventoryItemInput {
   name: string;
-  categoryId: string;
+  // v1.3.0: categoryId is optional (nullable)
+  categoryId?: string | null;
   currentQuantity?: number;
   maxQuantity: number;
   minQuantity?: number;
   unit?: InventoryUnit;
-  estimatedPrice: number;
+  estimatedPrice: number; // Has default 0 in schema
   currencyId: string;
   isActive?: boolean;
   notes?: string;
@@ -27,7 +29,8 @@ export interface CreateInventoryItemInput {
 
 export interface UpdateInventoryItemInput {
   name?: string;
-  categoryId?: string;
+  // v1.3.0: categoryId can be null to remove category
+  categoryId?: string | null;
   currentQuantity?: number;
   maxQuantity?: number;
   minQuantity?: number;

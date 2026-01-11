@@ -141,6 +141,8 @@ model AccountType {
   name        String          @unique
   type        AccountTypeEnum @unique
   description String?
+  // v1.3.0: Active status with default true
+  isActive    Boolean         @default(true)
 
   // Relations
   accounts Account[]
@@ -317,7 +319,8 @@ model Budget {
   id            String       @id @default(uuid())
   name          String
   type          BudgetType
-  targetAmount  Decimal      @db.Decimal(18, 2)
+  // v1.3.0: targetAmount is optional (budgets without goal)
+  targetAmount  Decimal?     @db.Decimal(18, 2)
   currentAmount Decimal      @default(0) @db.Decimal(18, 2)
   currencyId    String
   accountId     String // Requerido para ambos tipos (bloquea saldo)

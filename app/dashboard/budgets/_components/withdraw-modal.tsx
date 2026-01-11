@@ -37,7 +37,8 @@ interface Budget {
   id: string;
   name: string;
   currentAmount: number;
-  targetAmount: number;
+  // v1.3.0: targetAmount can be null (budgets without goal)
+  targetAmount: number | null;
   status: "active" | "completed" | "cancelled";
   currency: { id: string; code: string; symbol: string };
   account: { id: string; name: string };
@@ -126,7 +127,11 @@ export function WithdrawModal({
   };
 
   const currentAmount = Number(budget.currentAmount);
-  const progress = (currentAmount / Number(budget.targetAmount)) * 100;
+  // v1.3.0: Handle null targetAmount
+  const hasTarget = budget.targetAmount !== null && budget.targetAmount > 0;
+  const progress = hasTarget
+    ? (currentAmount / Number(budget.targetAmount!)) * 100
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -139,17 +144,20 @@ export function WithdrawModal({
           {/* Budget info */}
           <div className="rounded-lg bg-muted p-3 space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Saldo actual</span>
+              <span>Saldo bloqueado</span>
               <span className="font-medium">
                 {formatCurrency(currentAmount, budget.currency.code)}
               </span>
             </div>
-            <div className="h-2 bg-background rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
+            {/* v1.3.0: Only show progress bar if there's a target */}
+            {hasTarget && progress !== null && (
+              <div className="h-2 bg-background rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(progress, 100)}%` }}
+                />
+              </div>
+            )}
             {budget.status === "completed" && (
               <p className="text-sm text-green-600 font-medium">
                 Meta completada

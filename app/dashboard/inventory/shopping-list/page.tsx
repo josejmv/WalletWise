@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ShoppingCart,
   AlertTriangle,
   CheckCircle2,
   AlertCircle,
+  Download,
+  Share2,
 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -186,6 +191,141 @@ export default function ShoppingListPage() {
 
   const selectedCurrency = currencies?.find((c) => c.id === selectedCurrencyId);
 
+  // v1.3.0: Export to PDF
+  const exportToPDF = useCallback(() => {
+    if (!items || items.length === 0) return;
+
+    const doc = new jsPDF();
+    const today = new Date().toLocaleDateString("es-CO");
+
+    // Title
+    doc.setFontSize(18);
+    doc.text("Lista de Compras", 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Generada el ${today}`, 14, 30);
+
+    // Table data
+    const tableData = selectedCurrencyId
+      ? convertedItems.map((item) => [
+          item.name,
+          item.category?.name || "Sin categoria",
+          `${item.quantityNeeded} ${item.unit}`,
+          formatCurrency(Number(item.estimatedPrice), item.currency.code),
+          formatCurrency(item.originalSubtotal, item.currency.code),
+          item.convertedSubtotal !== null
+            ? formatCurrency(
+                item.convertedSubtotal,
+                selectedCurrency?.code ?? "USD",
+              )
+            : "Sin tasa",
+        ])
+      : items.map((item) => {
+          const quantityNeeded = item.maxQuantity - item.currentQuantity;
+          const subtotal = quantityNeeded * Number(item.estimatedPrice);
+          return [
+            item.name,
+            item.category?.name || "Sin categoria",
+            `${quantityNeeded} ${item.unit}`,
+            formatCurrency(Number(item.estimatedPrice), item.currency.code),
+            formatCurrency(subtotal, item.currency.code),
+          ];
+        });
+
+    // Table headers
+    const headers = selectedCurrencyId
+      ? [
+          "Producto",
+          "Categoria",
+          "Cantidad",
+          "Precio Unit.",
+          "Subtotal",
+          `Subtotal (${selectedCurrency?.code})`,
+        ]
+      : ["Producto", "Categoria", "Cantidad", "Precio Unit.", "Subtotal"];
+
+    autoTable(doc, {
+      head: [headers],
+      body: tableData,
+      startY: 38,
+      styles: { fontSize: 9 },
+      headStyles: { fillColor: [59, 130, 246] },
+    });
+
+    // Total
+    // @ts-expect-error jspdf-autotable adds lastAutoTable to doc
+    const finalY = doc.lastAutoTable.finalY || 38;
+
+    if (selectedCurrencyId && totalConverted > 0) {
+      doc.setFontSize(12);
+      doc.setTextColor(0);
+      doc.text(
+        `Total estimado: ${formatCurrency(totalConverted, selectedCurrency?.code ?? "USD")}`,
+        14,
+        finalY + 10,
+      );
+      if (itemsWithoutRate > 0) {
+        doc.setFontSize(9);
+        doc.setTextColor(150);
+        doc.text(
+          `* ${itemsWithoutRate} item(s) sin tasa de conversion`,
+          14,
+          finalY + 18,
+        );
+      }
+    }
+
+    doc.save(`lista-compras-${today.replace(/\//g, "-")}.pdf`);
+  }, [
+    items,
+    convertedItems,
+    selectedCurrencyId,
+    selectedCurrency,
+    totalConverted,
+    itemsWithoutRate,
+  ]);
+
+  // v1.3.0: Share via WhatsApp
+  const shareViaWhatsApp = useCallback(() => {
+    if (!items || items.length === 0) return;
+
+    let message = "Lista de Compras:\n\n";
+
+    if (selectedCurrencyId && convertedItems.length > 0) {
+      convertedItems.forEach((item) => {
+        const subtotalStr =
+          item.convertedSubtotal !== null
+            ? formatCurrency(
+                item.convertedSubtotal,
+                selectedCurrency?.code ?? "USD",
+              )
+            : formatCurrency(item.originalSubtotal, item.currency.code);
+        message += `- ${item.name}: ${item.quantityNeeded} ${item.unit} x ${formatCurrency(Number(item.estimatedPrice), item.currency.code)} = ${subtotalStr}\n`;
+      });
+      message += `\n*Total estimado: ${formatCurrency(totalConverted, selectedCurrency?.code ?? "USD")}*`;
+      if (itemsWithoutRate > 0) {
+        message += `\n_(${itemsWithoutRate} item(s) sin tasa de conversion)_`;
+      }
+    } else {
+      items.forEach((item) => {
+        const quantityNeeded = item.maxQuantity - item.currentQuantity;
+        const subtotal = quantityNeeded * Number(item.estimatedPrice);
+        message += `- ${item.name}: ${quantityNeeded} ${item.unit} x ${formatCurrency(Number(item.estimatedPrice), item.currency.code)} = ${formatCurrency(subtotal, item.currency.code)}\n`;
+      });
+    }
+
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, "_blank");
+  }, [
+    items,
+    convertedItems,
+    selectedCurrencyId,
+    selectedCurrency,
+    totalConverted,
+    itemsWithoutRate,
+  ]);
+
   if (loadingItems || loadingCurrencies) {
     return (
       <div className="space-y-6">
@@ -206,7 +346,30 @@ export default function ShoppingListPage() {
             Items con stock bajo que necesitan reposicion
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* v1.3.0: Export buttons */}
+          {items && items.length > 0 && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToPDF}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={shareViaWhatsApp}
+                className="gap-2"
+              >
+                <Share2 className="h-4 w-4" />
+                WhatsApp
+              </Button>
+            </div>
+          )}
           {/* Currency selector */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Ver total en:</span>

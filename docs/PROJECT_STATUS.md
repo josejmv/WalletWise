@@ -6,11 +6,11 @@
 
 ## Version Actual
 
-| Metrica      | Valor      |
-| ------------ | ---------- |
-| Version      | 1.2.0      |
-| Estado       | Completado |
-| Build Status | OK         |
+| Metrica      | Valor         |
+| ------------ | ------------- |
+| Version      | 1.3.0         |
+| Estado       | En Desarrollo |
+| Build Status | OK            |
 
 ---
 
@@ -61,6 +61,27 @@
 - [x] Categorias expandibles
 - [x] Inventario con categoria opcional
 - [x] Shopping list multi-moneda
+
+### Post-Testing y UX (v1.3.0) - En Desarrollo
+
+- [ ] Solo USDT como cripto (simplificar)
+- [ ] Simbolos de moneda = codigo
+- [ ] Botones sync con cooldown visual
+- [ ] Fix inventario (categoryId null, preseleccion)
+- [ ] Fix modelo presupuestos (bloqueo sin mover dinero)
+- [ ] targetAmount opcional en budgets
+- [ ] Conversiones con tasas custom
+- [ ] Inputs number sin valor por defecto
+- [ ] Selects preseleccionados en edicion
+- [ ] Icono categoria opcional
+- [ ] Account Types CRUD completo
+- [ ] Historial de precios mejorado
+- [ ] Shopping list: exportar PDF y WhatsApp
+- [ ] Nueva pagina historial de transacciones
+- [ ] Dashboard: fix donut dark mode
+- [ ] Dashboard: orden transacciones + selector
+- [ ] Dashboard: multiselect historial tasas
+- [ ] Personalizacion sidebar
 
 ---
 
@@ -133,6 +154,15 @@ components/
 
 ## Proximos Pasos
 
+Version 1.3.0 (en desarrollo):
+
+- Correcciones post-testing
+- Mejoras de UX
+- Nueva pagina historial
+- Exportacion shopping list
+
+Ver [docs/steps/v1.3.0.md](./steps/v1.3.0.md) para detalles.
+
 Version 2.0.0 (planificada):
 
 - Sistema de autenticacion
@@ -154,6 +184,7 @@ Ver [docs/steps/v2.0.0.md](./steps/v2.0.0.md) para detalles.
 | [API.md](./API.md)                   | Referencia de endpoints  |
 | [steps/v1.md](./steps/v1.md)         | Detalles de v1.0.0-1.1.0 |
 | [steps/v1.2.0.md](./steps/v1.2.0.md) | Detalles de v1.2.0       |
+| [steps/v1.3.0.md](./steps/v1.3.0.md) | Detalles de v1.3.0       |
 | [steps/v2.0.0.md](./steps/v2.0.0.md) | Roadmap v2.0.0           |
 
 ---
@@ -179,4 +210,4 @@ docker-compose up -d  # Levantar PostgreSQL
 
 ---
 
-_WalletWise v1.2.0 - Estado del Proyecto_
+_WalletWise v1.3.0 - Estado del Proyecto (En Desarrollo)_

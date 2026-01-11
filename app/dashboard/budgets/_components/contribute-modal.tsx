@@ -37,7 +37,8 @@ interface Budget {
   id: string;
   name: string;
   currentAmount: number;
-  targetAmount: number;
+  // v1.3.0: targetAmount can be null (budgets without goal)
+  targetAmount: number | null;
   currency: { id: string; code: string; symbol: string };
   account: { id: string; name: string };
 }
@@ -130,9 +131,14 @@ export function ContributeModal({
     (acc: { id: string }) => acc.id === selectedAccountId,
   );
 
-  const remaining = Number(budget.targetAmount) - Number(budget.currentAmount);
-  const progress =
-    (Number(budget.currentAmount) / Number(budget.targetAmount)) * 100;
+  // v1.3.0: Handle null targetAmount
+  const hasTarget = budget.targetAmount !== null && budget.targetAmount > 0;
+  const remaining = hasTarget
+    ? Number(budget.targetAmount) - Number(budget.currentAmount)
+    : null;
+  const progress = hasTarget
+    ? (Number(budget.currentAmount) / Number(budget.targetAmount!)) * 100
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -142,30 +148,44 @@ export function ContributeModal({
         </DialogHeader>
 
         <div className="space-y-4">
-          {/* Progress info */}
-          <div className="rounded-lg bg-muted p-3 space-y-2">
-            <div className="flex justify-between text-sm">
-              <span>Progreso actual</span>
-              <span className="font-medium">{progress.toFixed(1)}%</span>
+          {/* v1.3.0: Show progress info only if there's a target */}
+          {hasTarget ? (
+            <div className="rounded-lg bg-muted p-3 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Progreso actual</span>
+                <span className="font-medium">{progress!.toFixed(1)}%</span>
+              </div>
+              <div className="h-2 bg-background rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{ width: `${Math.min(progress!, 100)}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>
+                  {formatCurrency(
+                    Number(budget.currentAmount),
+                    budget.currency.code,
+                  )}
+                </span>
+                <span>
+                  Faltan: {formatCurrency(remaining!, budget.currency.code)}
+                </span>
+              </div>
             </div>
-            <div className="h-2 bg-background rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary transition-all"
-                style={{ width: `${Math.min(progress, 100)}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-sm text-muted-foreground">
-              <span>
+          ) : (
+            <div className="rounded-lg bg-muted p-3 text-center">
+              <p className="text-sm text-muted-foreground">
+                Monto actual bloqueado:
+              </p>
+              <p className="text-lg font-bold">
                 {formatCurrency(
                   Number(budget.currentAmount),
                   budget.currency.code,
                 )}
-              </span>
-              <span>
-                Faltan: {formatCurrency(remaining, budget.currency.code)}
-              </span>
+              </p>
             </div>
-          </div>
+          )}
 
           {loadingAccounts ? (
             <div className="flex justify-center py-4">
@@ -237,25 +257,25 @@ export function ContributeModal({
                   </p>
                 )}
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setValue("amount", remaining)}
-                    disabled={remaining <= 0}
-                  >
-                    Completar meta
-                  </Button>
+                  {/* v1.3.0: Only show "Completar meta" if there's a target */}
+                  {hasTarget && remaining !== null && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setValue("amount", remaining)}
+                      disabled={remaining <= 0}
+                    >
+                      Completar meta
+                    </Button>
+                  )}
                   {selectedAccount && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
                       onClick={() =>
-                        setValue(
-                          "amount",
-                          Math.min(Number(selectedAccount.balance), remaining),
-                        )
+                        setValue("amount", Number(selectedAccount.balance))
                       }
                     >
                       Max disponible

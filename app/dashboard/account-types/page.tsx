@@ -10,6 +10,7 @@ import {
   Landmark,
   Wallet,
   Banknote,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,6 +31,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -55,6 +57,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import { Spinner } from "@/components/ui/spinner";
 
 interface AccountType {
   id: string;
@@ -122,10 +125,26 @@ async function deleteAccountType(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
+// v1.3.0: Delete with move accounts to another type
+async function deleteWithMove(id: string, moveToTypeId: string): Promise<void> {
+  const res = await fetch(`/api/account-types/${id}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ moveToTypeId }),
+  });
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+}
+
 export default function AccountTypesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AccountType | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // v1.3.0: State for move accounts modal
+  const [moveModalOpen, setMoveModalOpen] = useState(false);
+  const [typeToDelete, setTypeToDelete] = useState<AccountType | null>(null);
+  const [moveToTypeId, setMoveToTypeId] = useState("");
+  const [accountCount, setAccountCount] = useState(0);
   const [name, setName] = useState("");
   const [type, setType] = useState("");
   const [description, setDescription] = useState("");
@@ -195,8 +214,42 @@ export default function AccountTypesPage() {
       setDeleteId(null);
     },
     onError: (error: Error) => {
+      // v1.3.0: Check if error is due to associated accounts
+      const match = error.message.match(/hay (\d+) cuenta\(s\) asociada\(s\)/);
+      if (match && deleteId) {
+        const count = parseInt(match[1], 10);
+        const typeToMove = accountTypes?.find((t) => t.id === deleteId);
+        if (typeToMove) {
+          setTypeToDelete(typeToMove);
+          setAccountCount(count);
+          setMoveModalOpen(true);
+          setDeleteId(null);
+          return;
+        }
+      }
       toast({
         title: "Error al eliminar",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // v1.3.0: Mutation for delete with move
+  const deleteWithMoveMutation = useMutation({
+    mutationFn: ({ id, moveToTypeId }: { id: string; moveToTypeId: string }) =>
+      deleteWithMove(id, moveToTypeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["account-types"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      toast({ title: "Cuentas movidas y tipo eliminado" });
+      setMoveModalOpen(false);
+      setTypeToDelete(null);
+      setMoveToTypeId("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al mover cuentas",
         description: error.message,
         variant: "destructive",
       });
@@ -419,6 +472,87 @@ export default function AccountTypesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* v1.3.0: Modal for moving accounts before deletion */}
+      <Dialog
+        open={moveModalOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMoveModalOpen(false);
+            setTypeToDelete(null);
+            setMoveToTypeId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Mover Cuentas Asociadas
+            </DialogTitle>
+            <DialogDescription>
+              El tipo &quot;{typeToDelete?.name}&quot; tiene {accountCount}{" "}
+              cuenta(s) asociada(s). Selecciona otro tipo para mover las cuentas
+              antes de eliminar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="moveToType">Mover cuentas a:</Label>
+              <Select value={moveToTypeId} onValueChange={setMoveToTypeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tipo de cuenta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accountTypes
+                    ?.filter((t) => t.id !== typeToDelete?.id && t.isActive)
+                    .map((t) => {
+                      const config = typeConfig[t.type];
+                      const Icon = config.icon;
+                      return (
+                        <SelectItem key={t.id} value={t.id}>
+                          <div className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            {t.name}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setMoveModalOpen(false);
+                setTypeToDelete(null);
+                setMoveToTypeId("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!moveToTypeId || deleteWithMoveMutation.isPending}
+              onClick={() => {
+                if (typeToDelete && moveToTypeId) {
+                  deleteWithMoveMutation.mutate({
+                    id: typeToDelete.id,
+                    moveToTypeId,
+                  });
+                }
+              }}
+            >
+              {deleteWithMoveMutation.isPending && (
+                <Spinner className="mr-2 h-4 w-4" />
+              )}
+              Mover y Eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

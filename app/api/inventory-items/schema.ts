@@ -11,7 +11,8 @@ const inventoryUnitEnum = z.enum([
 
 export const createInventoryItemSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  categoryId: z.string().uuid("ID de categoria invalido"),
+  // v1.3.0: categoryId is optional (nullable)
+  categoryId: z.string().uuid("ID de categoria invalido").nullable().optional(),
   currentQuantity: z
     .number()
     .min(0, "La cantidad no puede ser negativa")
@@ -22,7 +23,11 @@ export const createInventoryItemSchema = z.object({
     .min(0, "La cantidad minima no puede ser negativa")
     .default(0),
   unit: inventoryUnitEnum.default("unidades"),
-  estimatedPrice: z.number().positive("El precio debe ser mayor a 0"),
+  // v1.3.0: estimatedPrice defaults to 0 if not provided
+  estimatedPrice: z
+    .number()
+    .min(0, "El precio no puede ser negativo")
+    .default(0),
   currencyId: z.string().uuid("ID de moneda invalido"),
   isActive: z.boolean().default(true),
   notes: z.string().optional(),
@@ -30,7 +35,8 @@ export const createInventoryItemSchema = z.object({
 
 export const updateInventoryItemSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").optional(),
-  categoryId: z.string().uuid("ID de categoria invalido").optional(),
+  // v1.3.0: categoryId can be null to remove category
+  categoryId: z.string().uuid("ID de categoria invalido").nullable().optional(),
   currentQuantity: z
     .number()
     .min(0, "La cantidad no puede ser negativa")

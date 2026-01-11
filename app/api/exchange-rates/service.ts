@@ -378,6 +378,31 @@ export async function syncFromBinance(): Promise<SyncResult> {
       }
     }
 
+    // v1.3.0: Create fixed USDT-USD = 1 rate (and inverse)
+    const usdtId = currencyMap.get("USDT");
+    const usdId = currencyMap.get("USD");
+    if (usdtId && usdId) {
+      // USDT -> USD = 1
+      await repository.create({
+        fromCurrencyId: usdtId,
+        toCurrencyId: usdId,
+        rate: 1,
+        source: "binance", // Using binance as source since it's part of crypto sync
+        fetchedAt: now,
+      });
+      synced++;
+
+      // USD -> USDT = 1
+      await repository.create({
+        fromCurrencyId: usdId,
+        toCurrencyId: usdtId,
+        rate: 1,
+        source: "binance",
+        fetchedAt: now,
+      });
+      synced++;
+    }
+
     // Update last Binance sync timestamp
     await updateLastBinanceSyncAt();
 
