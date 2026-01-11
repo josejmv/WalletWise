@@ -1,4 +1,8 @@
-import { PrismaClient, AccountTypeEnum } from "@prisma/client";
+import {
+  PrismaClient,
+  AccountTypeEnum,
+  ExchangeRateSource,
+} from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -37,7 +41,8 @@ async function main() {
     },
   ];
 
-  let usdCurrency = null;
+  // Store currencies by code for easy access
+  const currencyMap: Record<string, { id: string; code: string }> = {};
 
   for (const currency of currencies) {
     const created = await prisma.currency.upsert({
@@ -45,11 +50,106 @@ async function main() {
       update: {},
       create: currency,
     });
-    if (currency.code === "USD") {
-      usdCurrency = created;
-    }
+    currencyMap[currency.code] = created;
   }
   console.log("Currencies seeded (Fiat + Crypto)");
+
+  // v1.3.0: Seed initial exchange rates for development
+  // Rates updated 2026-01-11 - will be updated by sync in production
+  const USD_COP = 3733.0;
+  const USD_VES = 330.38;
+  const USDT_COP = 3720.0;
+  const USDT_VES = 530.0;
+
+  const initialRates = [
+    // USD pairs (official source)
+    {
+      from: "USD",
+      to: "COP",
+      rate: USD_COP,
+      source: ExchangeRateSource.official,
+    },
+    {
+      from: "USD",
+      to: "VES",
+      rate: USD_VES,
+      source: ExchangeRateSource.official,
+    },
+    // Inverse rates
+    {
+      from: "COP",
+      to: "USD",
+      rate: 1 / USD_COP,
+      source: ExchangeRateSource.official,
+    },
+    {
+      from: "VES",
+      to: "USD",
+      rate: 1 / USD_VES,
+      source: ExchangeRateSource.official,
+    },
+    // Cross rate COP-VES
+    {
+      from: "COP",
+      to: "VES",
+      rate: USD_VES / USD_COP,
+      source: ExchangeRateSource.official,
+    },
+    {
+      from: "VES",
+      to: "COP",
+      rate: USD_COP / USD_VES,
+      source: ExchangeRateSource.official,
+    },
+    // USDT pairs (fixed 1:1 with USD, binance for others)
+    { from: "USDT", to: "USD", rate: 1.0, source: ExchangeRateSource.binance },
+    { from: "USD", to: "USDT", rate: 1.0, source: ExchangeRateSource.binance },
+    {
+      from: "USDT",
+      to: "COP",
+      rate: USDT_COP,
+      source: ExchangeRateSource.binance,
+    },
+    {
+      from: "USDT",
+      to: "VES",
+      rate: USDT_VES,
+      source: ExchangeRateSource.binance,
+    },
+    // Inverse USDT rates
+    {
+      from: "COP",
+      to: "USDT",
+      rate: 1 / USDT_COP,
+      source: ExchangeRateSource.binance,
+    },
+    {
+      from: "VES",
+      to: "USDT",
+      rate: 1 / USDT_VES,
+      source: ExchangeRateSource.binance,
+    },
+  ];
+
+  for (const rate of initialRates) {
+    const fromCurrency = currencyMap[rate.from];
+    const toCurrency = currencyMap[rate.to];
+
+    if (fromCurrency && toCurrency) {
+      await prisma.exchangeRate.create({
+        data: {
+          fromCurrencyId: fromCurrency.id,
+          toCurrencyId: toCurrency.id,
+          rate: rate.rate,
+          source: rate.source,
+          fetchedAt: new Date(),
+        },
+      });
+    }
+  }
+  console.log("Exchange rates seeded (initial development rates)");
+
+  const usdCurrency = currencyMap["USD"];
 
   // Seed Account Types
   const accountTypes = [

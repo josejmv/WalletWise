@@ -8,6 +8,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ControlledDatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -85,7 +86,8 @@ async function createTransfer(data: TransferFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      date: new Date(data.date),
+      // Parse as noon local time to avoid timezone issues
+      date: new Date(data.date + "T12:00:00"),
     }),
   });
   const result = await res.json();
@@ -99,7 +101,8 @@ async function updateTransfer(id: string, data: TransferFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      date: new Date(data.date),
+      // Parse as noon local time to avoid timezone issues
+      date: new Date(data.date + "T12:00:00"),
     }),
   });
   const result = await res.json();
@@ -355,7 +358,16 @@ export function TransferForm({
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Fecha</Label>
-          <Input id="date" type="date" {...register("date")} />
+          <ControlledDatePicker
+            id="date"
+            field={{
+              value: watch("date"),
+              onChange: (value) => setValue("date", value),
+            }}
+          />
+          {errors.date && (
+            <p className="text-sm text-destructive">{errors.date.message}</p>
+          )}
         </div>
       </div>
 

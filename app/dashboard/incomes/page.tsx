@@ -38,7 +38,10 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
-import { useFormatters } from "@/contexts/user-config-context";
+import {
+  useFormatters,
+  useUserConfigContext,
+} from "@/contexts/user-config-context";
 import { IncomeForm } from "./_components/income-form";
 
 interface Income {
@@ -97,6 +100,8 @@ async function deleteIncome(id: string): Promise<void> {
 
 export default function IncomesPage() {
   const { formatDate, formatCurrency } = useFormatters();
+  const { config } = useUserConfigContext();
+  const baseCurrencyCode = config?.baseCurrency?.code ?? "USD";
   const [formOpen, setFormOpen] = useState(false);
   const [editingIncome, setEditingIncome] = useState<Income | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -121,7 +126,11 @@ export default function IncomesPage() {
       queryClient.invalidateQueries({ queryKey: ["incomes"] });
       queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard", "recent-transactions"],
+      });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
       toast({ title: "Ingreso eliminado" });
       setDeleteId(null);
     },
@@ -140,7 +149,11 @@ export default function IncomesPage() {
     queryClient.invalidateQueries({ queryKey: ["incomes"] });
     queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({
+      queryKey: ["dashboard", "recent-transactions"],
+    });
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
   };
 
   const handleEdit = (income: Income) => {
@@ -213,7 +226,7 @@ export default function IncomesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(totalIncome, "USD")}
+              {formatCurrency(totalIncome, baseCurrencyCode)}
             </div>
             <p className="text-xs text-muted-foreground">
               {totalCount} registro(s)

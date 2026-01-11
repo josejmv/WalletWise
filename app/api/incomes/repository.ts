@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getUserBaseCurrencyId,
+  convertManyWithCustomRates,
+} from "@/lib/currency-utils";
 import type {
   CreateIncomeInput,
   UpdateIncomeInput,
@@ -157,6 +161,9 @@ export async function getSummary(filters?: IncomeFilters) {
     };
   }
 
+  // Get user's base currency for conversion
+  const baseCurrencyId = await getUserBaseCurrencyId();
+
   const incomes = await prisma.income.findMany({
     where,
     include: {
@@ -165,26 +172,46 @@ export async function getSummary(filters?: IncomeFilters) {
     },
   });
 
+  // Convert all incomes to base currency using custom rates when available
+  const incomesForConversion = incomes.map((i) => ({
+    id: i.id,
+    amount: Number(i.amount),
+    currencyId: i.currencyId,
+    customRate: i.customRate ? Number(i.customRate) : null,
+    jobId: i.jobId,
+    jobName: i.job.name,
+    currencyCode: i.currency.code,
+  }));
+
+  const convertedIncomes = await convertManyWithCustomRates(
+    incomesForConversion,
+    baseCurrencyId,
+  );
+
   const byJob = new Map<string, { jobName: string; total: number }>();
   const byCurrency = new Map<string, { currencyCode: string; total: number }>();
   let totalAmount = 0;
 
-  for (const income of incomes) {
-    const amount = Number(income.amount);
-    totalAmount += amount;
+  for (const income of convertedIncomes) {
+    // Use converted amount for totals
+    const convertedAmount = income.convertedAmount;
+    const originalAmount = income.amount;
+
+    totalAmount += convertedAmount;
 
     const jobData = byJob.get(income.jobId) || {
-      jobName: income.job.name,
+      jobName: income.jobName,
       total: 0,
     };
-    jobData.total += amount;
+    jobData.total += convertedAmount;
     byJob.set(income.jobId, jobData);
 
+    // For byCurrency, keep original amounts per currency
     const currencyData = byCurrency.get(income.currencyId) || {
-      currencyCode: income.currency.code,
+      currencyCode: income.currencyCode,
       total: 0,
     };
-    currencyData.total += amount;
+    currencyData.total += originalAmount;
     byCurrency.set(income.currencyId, currencyData);
   }
 

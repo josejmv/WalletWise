@@ -8,6 +8,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ControlledDatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -341,7 +342,14 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="deadline">Fecha Limite (opcional)</Label>
-        <Input id="deadline" type="date" {...register("deadline")} />
+        <ControlledDatePicker
+          id="deadline"
+          field={{
+            value: watch("deadline"),
+            onChange: (value) => setValue("deadline", value),
+          }}
+          placeholder="Sin fecha limite"
+        />
       </div>
 
       {isEditing && (

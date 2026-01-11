@@ -62,6 +62,18 @@ export async function createIncome(data: CreateIncomeInput) {
     throw new Error("Moneda no encontrada");
   }
 
+  // Calculate the amount to add to account
+  // If currencies differ, use exchange rate to convert
+  let amountToAdd = data.amount;
+  if (data.currencyId !== account.currencyId) {
+    // Use custom rate if available, otherwise use official rate
+    const rate = data.customRate || data.officialRate;
+    if (rate && rate > 0) {
+      // The rate converts from income currency to account currency
+      amountToAdd = data.amount * rate;
+    }
+  }
+
   return prisma.$transaction(async (tx) => {
     const income = await tx.income.create({
       data: {
@@ -78,7 +90,7 @@ export async function createIncome(data: CreateIncomeInput) {
     await tx.account.update({
       where: { id: data.accountId },
       data: {
-        balance: { increment: data.amount },
+        balance: { increment: amountToAdd },
       },
     });
 
@@ -92,6 +104,11 @@ export async function updateIncome(id: string, data: UpdateIncomeInput) {
     throw new Error("Ingreso no encontrado");
   }
 
+  // Get old account to check currency
+  const oldAccount = await prisma.account.findUnique({
+    where: { id: existingIncome.accountId },
+  });
+
   if (data.jobId) {
     const job = await prisma.job.findUnique({ where: { id: data.jobId } });
     if (!job) {
@@ -99,13 +116,13 @@ export async function updateIncome(id: string, data: UpdateIncomeInput) {
     }
   }
 
-  if (data.accountId) {
-    const account = await prisma.account.findUnique({
-      where: { id: data.accountId },
-    });
-    if (!account) {
-      throw new Error("Cuenta no encontrada");
-    }
+  // Get new account if changed
+  const newAccountId = data.accountId || existingIncome.accountId;
+  const newAccount = await prisma.account.findUnique({
+    where: { id: newAccountId },
+  });
+  if (!newAccount) {
+    throw new Error("Cuenta no encontrada");
   }
 
   if (data.currencyId) {
@@ -117,12 +134,22 @@ export async function updateIncome(id: string, data: UpdateIncomeInput) {
     }
   }
 
+  // Calculate old amount that was added (with conversion if currencies differed)
+  let oldAmountAdded = Number(existingIncome.amount);
+  if (oldAccount && existingIncome.currencyId !== oldAccount.currencyId) {
+    const oldRate =
+      Number(existingIncome.customRate) ||
+      Number(existingIncome.officialRate) ||
+      1;
+    oldAmountAdded = Number(existingIncome.amount) * oldRate;
+  }
+
   return prisma.$transaction(async (tx) => {
-    // Revert old amount from old account
+    // Revert old amount from old account (with conversion)
     await tx.account.update({
       where: { id: existingIncome.accountId },
       data: {
-        balance: { decrement: Number(existingIncome.amount) },
+        balance: { decrement: oldAmountAdded },
       },
     });
 
@@ -136,11 +163,19 @@ export async function updateIncome(id: string, data: UpdateIncomeInput) {
       },
     });
 
+    // Calculate new amount to add (with conversion if currencies differ)
+    let newAmountToAdd = Number(income.amount);
+    if (income.currencyId !== newAccount.currencyId) {
+      const newRate =
+        Number(income.customRate) || Number(income.officialRate) || 1;
+      newAmountToAdd = Number(income.amount) * newRate;
+    }
+
     // Add new amount to new account
     await tx.account.update({
       where: { id: income.accountId },
       data: {
-        balance: { increment: Number(income.amount) },
+        balance: { increment: newAmountToAdd },
       },
     });
 
@@ -154,11 +189,23 @@ export async function deleteIncome(id: string) {
     throw new Error("Ingreso no encontrado");
   }
 
+  // Get account to check currency
+  const account = await prisma.account.findUnique({
+    where: { id: income.accountId },
+  });
+
+  // Calculate amount that was added (with conversion if currencies differed)
+  let amountToRevert = Number(income.amount);
+  if (account && income.currencyId !== account.currencyId) {
+    const rate = Number(income.customRate) || Number(income.officialRate) || 1;
+    amountToRevert = Number(income.amount) * rate;
+  }
+
   return prisma.$transaction(async (tx) => {
     await tx.account.update({
       where: { id: income.accountId },
       data: {
-        balance: { decrement: Number(income.amount) },
+        balance: { decrement: amountToRevert },
       },
     });
 

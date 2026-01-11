@@ -161,17 +161,52 @@ interface SidebarProps {
 }
 
 // v1.3.0: Type for sidebarConfig from UserConfig
+interface SidebarConfigChild {
+  id: string;
+  title: string;
+  href: string;
+}
+
 interface SidebarConfigItem {
   id: string;
   type: "item" | "group";
-  pageId?: string;
-  label?: string;
-  isOpen?: boolean;
+  title: string;
+  href?: string;
+  children?: SidebarConfigChild[];
 }
 
 interface SidebarConfig {
   items: SidebarConfigItem[];
 }
+
+// Map of href to icon for dynamic items
+const HREF_TO_ICON: Record<string, LucideIcon> = {
+  "/dashboard": LayoutDashboard,
+  "/dashboard/incomes": ArrowDownCircle,
+  "/dashboard/expenses": ArrowUpCircle,
+  "/dashboard/transfers": ArrowLeftRight,
+  "/dashboard/transactions/history": History,
+  "/dashboard/accounts": Wallet,
+  "/dashboard/budgets": PiggyBank,
+  "/dashboard/jobs": Briefcase,
+  "/dashboard/inventory": PackageSearch,
+  "/dashboard/inventory/categories": FolderTree,
+  "/dashboard/inventory/price-history": TrendingUp,
+  "/dashboard/inventory/shopping-list": ShoppingCart,
+  "/dashboard/currencies": Coins,
+  "/dashboard/exchange-rates": ArrowLeftRight,
+  "/dashboard/categories": Tags,
+  "/dashboard/account-types": CreditCard,
+  "/dashboard/reports": FileText,
+};
+
+// Map of group id to icon
+const GROUP_TO_ICON: Record<string, LucideIcon> = {
+  transactions: Receipt,
+  finances: Landmark,
+  inventory: Package,
+  configuration: Settings2,
+};
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
@@ -185,23 +220,45 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       return SIDEBAR_ITEMS;
     }
 
-    // Create a map for quick lookup
-    const itemsMap = new Map(SIDEBAR_ITEMS.map((item) => [item.id, item]));
-
-    // Order items based on config
+    // Build sidebar items from config
     const ordered: SidebarItemConfig[] = [];
+
     for (const configItem of sidebarConfig.items) {
-      const sidebarItem = itemsMap.get(configItem.id);
-      if (sidebarItem) {
-        ordered.push(sidebarItem);
+      if (configItem.type === "item" && configItem.href) {
+        // Standalone item
+        ordered.push({
+          id: configItem.id,
+          type: "item",
+          title: configItem.title,
+          href: configItem.href,
+          icon: HREF_TO_ICON[configItem.href] || FileText,
+        });
+      } else if (configItem.type === "group" && configItem.children) {
+        // Group with children - filter out children without valid hrefs
+        const validChildren = configItem.children.filter(
+          (child) => child.href && child.title,
+        );
+        if (validChildren.length > 0) {
+          ordered.push({
+            id: configItem.id,
+            type: "group",
+            title: configItem.title,
+            icon: GROUP_TO_ICON[configItem.id] || Settings2,
+            defaultOpen:
+              configItem.id === "transactions" || configItem.id === "finances",
+            items: validChildren.map((child) => ({
+              title: child.title,
+              href: child.href,
+              icon: HREF_TO_ICON[child.href] || FileText,
+            })),
+          });
+        }
       }
     }
 
-    // Add any items not in config at the end (fallback)
-    for (const item of SIDEBAR_ITEMS) {
-      if (!ordered.find((o) => o.id === item.id)) {
-        ordered.push(item);
-      }
+    // Fallback: if config produced no items, use defaults
+    if (ordered.length === 0) {
+      return SIDEBAR_ITEMS;
     }
 
     return ordered;

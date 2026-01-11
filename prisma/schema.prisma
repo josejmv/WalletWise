@@ -228,13 +228,15 @@ model Category {
 }
 
 model Income {
-  id          String   @id @default(uuid())
-  jobId       String
-  accountId   String
-  amount      Decimal  @db.Decimal(18, 2)
-  currencyId  String
-  date        DateTime @default(now())
-  description String?
+  id           String   @id @default(uuid())
+  jobId        String
+  accountId    String
+  amount       Decimal  @db.Decimal(18, 2)
+  currencyId   String
+  officialRate Decimal? @db.Decimal(18, 8) // Tasa oficial de la API
+  customRate   Decimal? @db.Decimal(18, 8) // Tasa auxiliar del comercio
+  date         DateTime @default(now())
+  description  String?
 
   // Relations
   job      Job      @relation(fields: [jobId], references: [id])

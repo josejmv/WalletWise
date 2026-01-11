@@ -126,8 +126,12 @@ export default function TransfersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transfers"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard", "recent-transactions"],
+      });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
       toast({ title: "Transferencia eliminada" });
       setDeleteId(null);
     },
@@ -145,8 +149,12 @@ export default function TransfersPage() {
     setEditingTransfer(null);
     queryClient.invalidateQueries({ queryKey: ["transfers"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({
+      queryKey: ["dashboard", "recent-transactions"],
+    });
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
     queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
   };
 
   const handleEdit = (transfer: Transfer) => {

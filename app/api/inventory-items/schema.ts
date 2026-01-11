@@ -52,7 +52,7 @@ export const updateInventoryItemSchema = z.object({
   unit: inventoryUnitEnum.optional(),
   estimatedPrice: z
     .number()
-    .positive("El precio debe ser mayor a 0")
+    .min(0, "El precio no puede ser negativo")
     .optional(),
   currencyId: z.string().uuid("ID de moneda invalido").optional(),
   isActive: z.boolean().optional(),

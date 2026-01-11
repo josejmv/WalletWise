@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,6 @@ interface Category {
   color: string | null;
   icon: string | null;
   parentId: string | null;
-  isActive: boolean;
   parent?: { name: string } | null;
 }
 
@@ -192,11 +191,6 @@ export default function CategoriesPage() {
           )}
           {category.icon && <span className="text-lg">{category.icon}</span>}
           <span>{category.name}</span>
-          {!category.isActive && (
-            <Badge variant="secondary" className="text-xs">
-              Inactiva
-            </Badge>
-          )}
         </div>
       </TableCell>
       <TableCell>
@@ -288,7 +282,7 @@ export default function CategoriesPage() {
               <TableBody>
                 {/* Parent categories with children */}
                 {organizedCategories.parents.map((parent) => (
-                  <>
+                  <Fragment key={parent.id}>
                     {renderCategoryRow(
                       parent,
                       false,
@@ -299,7 +293,7 @@ export default function CategoriesPage() {
                       parent.children.map((child) =>
                         renderCategoryRow(child, true, false, false),
                       )}
-                  </>
+                  </Fragment>
                 ))}
                 {/* Standalone categories (no children) */}
                 {organizedCategories.standalone.map((category) =>

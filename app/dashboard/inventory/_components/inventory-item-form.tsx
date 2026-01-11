@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,14 +18,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
 
+// Schema for form validation - handles NaN from empty inputs
 const inventoryItemSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   categoryId: z.string().nullable().optional(),
-  currentQuantity: z.number().min(0),
-  maxQuantity: z.number().min(1, "La cantidad maxima debe ser mayor a 0"),
-  minQuantity: z.number().min(0),
+  currentQuantity: z.number().transform((v) => (Number.isNaN(v) ? 0 : v)),
+  maxQuantity: z
+    .number()
+    .refine(
+      (v) => !Number.isNaN(v) && v >= 1,
+      "La cantidad maxima es requerida",
+    ),
+  minQuantity: z.number().transform((v) => (Number.isNaN(v) ? 0 : v)),
   unit: z.enum(["unidades", "kg", "g", "L", "mL", "paquetes"]),
-  estimatedPrice: z.number().min(0),
+  estimatedPrice: z.number().transform((v) => (Number.isNaN(v) ? 0 : v)),
   currencyId: z.string().min(1, "La moneda es requerida"),
   isActive: z.boolean(),
   notes: z.string().optional(),
@@ -112,39 +117,34 @@ export function InventoryItemForm({
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<InventoryItemFormData>({
     resolver: zodResolver(inventoryItemSchema),
-    defaultValues: {
-      name: "",
-      categoryId: null,
-      currentQuantity: 0,
-      maxQuantity: 1,
-      minQuantity: 0,
-      unit: "unidades",
-      estimatedPrice: 0,
-      currencyId: "",
-      isActive: true,
-      notes: "",
-    },
+    defaultValues: item
+      ? {
+          name: item.name,
+          categoryId: item.category?.id ?? null,
+          currentQuantity: item.currentQuantity,
+          maxQuantity: item.maxQuantity,
+          minQuantity: item.minQuantity,
+          unit: item.unit,
+          estimatedPrice: item.estimatedPrice,
+          currencyId: item.currency.id,
+          isActive: item.isActive,
+          notes: item.notes ?? "",
+        }
+      : {
+          name: "",
+          categoryId: null,
+          currentQuantity: "" as unknown as number,
+          maxQuantity: "" as unknown as number,
+          minQuantity: "" as unknown as number,
+          unit: "unidades" as const,
+          estimatedPrice: "" as unknown as number,
+          currencyId: "",
+          isActive: true,
+          notes: "",
+        },
   });
-
-  useEffect(() => {
-    if (item) {
-      reset({
-        name: item.name,
-        categoryId: item.category?.id ?? null,
-        currentQuantity: item.currentQuantity,
-        maxQuantity: item.maxQuantity,
-        minQuantity: item.minQuantity,
-        unit: item.unit,
-        estimatedPrice: item.estimatedPrice,
-        currencyId: item.currency.id,
-        isActive: item.isActive,
-        notes: item.notes ?? "",
-      });
-    }
-  }, [item, reset]);
 
   const createMutation = useMutation({
     mutationFn: createInventoryItem,
@@ -197,7 +197,11 @@ export function InventoryItemForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      key={item?.id ?? "new"}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
         <Input id="name" placeholder="Arroz" {...register("name")} />
@@ -258,6 +262,7 @@ export function InventoryItemForm({
             id="currentQuantity"
             type="number"
             step="0.01"
+            placeholder="0"
             {...register("currentQuantity", { valueAsNumber: true })}
           />
         </div>
@@ -267,6 +272,7 @@ export function InventoryItemForm({
             id="minQuantity"
             type="number"
             step="0.01"
+            placeholder="0"
             {...register("minQuantity", { valueAsNumber: true })}
           />
         </div>
@@ -276,6 +282,7 @@ export function InventoryItemForm({
             id="maxQuantity"
             type="number"
             step="0.01"
+            placeholder="10"
             {...register("maxQuantity", { valueAsNumber: true })}
           />
           {errors.maxQuantity && (

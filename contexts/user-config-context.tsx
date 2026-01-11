@@ -72,15 +72,12 @@ const DEFAULT_CONFIG: Partial<UserConfig> = {
   theme: "system",
 };
 
+// v1.3.0: Symbols equal to currency codes for consistency
 const CURRENCY_SYMBOLS: Record<string, string> = {
-  USD: "$",
-  COP: "COP$",
-  VES: "Bs.",
+  USD: "USD",
+  COP: "COP",
+  VES: "VES",
   USDT: "USDT",
-  BTC: "BTC",
-  ETH: "ETH",
-  BNB: "BNB",
-  SOL: "SOL",
 };
 
 function getLocale(numberFormat: string): string {

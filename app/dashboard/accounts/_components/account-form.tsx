@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -101,29 +100,24 @@ export function AccountForm({
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<AccountFormData>({
     resolver: zodResolver(accountSchema),
-    defaultValues: {
-      name: "",
-      accountTypeId: "",
-      currencyId: "",
-      balance: 0,
-      isActive: true,
-    },
+    defaultValues: account
+      ? {
+          name: account.name,
+          accountTypeId: account.accountType.id,
+          currencyId: account.currency.id,
+          balance: account.balance,
+          isActive: account.isActive,
+        }
+      : {
+          name: "",
+          accountTypeId: "",
+          currencyId: "",
+          balance: "" as unknown as number,
+          isActive: true,
+        },
   });
-
-  useEffect(() => {
-    if (account) {
-      reset({
-        name: account.name,
-        accountTypeId: account.accountType.id,
-        currencyId: account.currency.id,
-        balance: account.balance,
-        isActive: account.isActive,
-      });
-    }
-  }, [account, reset]);
 
   const createMutation = useMutation({
     mutationFn: createAccount,
@@ -175,7 +169,11 @@ export function AccountForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      key={account?.id ?? "new"}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
         <Input

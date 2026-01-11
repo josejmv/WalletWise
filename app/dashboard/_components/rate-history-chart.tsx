@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -9,13 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   LineChart,
   Line,
@@ -26,8 +27,7 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { TrendingUp, ChevronDown } from "lucide-react";
 
 interface RateHistoryEntry {
   id: string;
@@ -42,6 +42,13 @@ interface Currency {
   id: string;
   code: string;
   name: string;
+}
+
+interface CurrencyPair {
+  id: string;
+  label: string;
+  fromId: string;
+  toId: string;
 }
 
 async function fetchCurrencies(): Promise<Currency[]> {
@@ -71,76 +78,122 @@ function formatDate(dateString: string): string {
   });
 }
 
-const SOURCE_COLORS: Record<string, string> = {
-  official: "#3b82f6",
-  binance: "#eab308",
-  manual: "#6b7280",
-};
+// Colors for different currency pairs
+const PAIR_COLORS = [
+  "#3b82f6", // blue
+  "#22c55e", // green
+  "#f59e0b", // amber
+  "#ef4444", // red
+  "#8b5cf6", // violet
+  "#06b6d4", // cyan
+];
 
 export function RateHistoryChart() {
-  const [fromCurrencyId, setFromCurrencyId] = useState<string>("");
-  const [toCurrencyId, setToCurrencyId] = useState<string>("");
+  const [selectedPairs, setSelectedPairs] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
 
   const { data: currencies, isLoading: loadingCurrencies } = useQuery({
     queryKey: ["currencies"],
     queryFn: fetchCurrencies,
   });
 
-  const { data: history, isLoading: loadingHistory } = useQuery({
-    queryKey: ["exchange-rates", "history", fromCurrencyId, toCurrencyId],
-    queryFn: () => fetchRateHistory(fromCurrencyId, toCurrencyId),
-    enabled: !!fromCurrencyId && !!toCurrencyId,
+  // Generate all possible currency pairs
+  const availablePairs = useMemo<CurrencyPair[]>(() => {
+    if (!currencies || currencies.length < 2) return [];
+
+    const pairs: CurrencyPair[] = [];
+    for (const from of currencies) {
+      for (const to of currencies) {
+        if (from.id !== to.id) {
+          pairs.push({
+            id: `${from.id}-${to.id}`,
+            label: `${from.code} → ${to.code}`,
+            fromId: from.id,
+            toId: to.id,
+          });
+        }
+      }
+    }
+    return pairs;
+  }, [currencies]);
+
+  // Auto-select default pairs on first load
+  useEffect(() => {
+    if (availablePairs.length > 0 && selectedPairs.length === 0) {
+      const usd = currencies?.find((c) => c.code === "USD");
+      const ves = currencies?.find((c) => c.code === "VES");
+      const cop = currencies?.find((c) => c.code === "COP");
+
+      const defaultPairs: string[] = [];
+      if (usd && ves) defaultPairs.push(`${usd.id}-${ves.id}`);
+      if (usd && cop) defaultPairs.push(`${usd.id}-${cop.id}`);
+
+      if (defaultPairs.length > 0) {
+        setSelectedPairs(defaultPairs);
+      } else if (availablePairs.length > 0) {
+        setSelectedPairs([availablePairs[0].id]);
+      }
+    }
+  }, [availablePairs, currencies, selectedPairs.length]);
+
+  // Fetch history for all selected pairs
+  const historyQueries = useQuery({
+    queryKey: ["exchange-rates", "history", "multi", selectedPairs],
+    queryFn: async () => {
+      const results: Record<string, RateHistoryEntry[]> = {};
+      for (const pairId of selectedPairs) {
+        const pair = availablePairs.find((p) => p.id === pairId);
+        if (pair) {
+          const history = await fetchRateHistory(pair.fromId, pair.toId);
+          results[pairId] = history;
+        }
+      }
+      return results;
+    },
+    enabled: selectedPairs.length > 0,
   });
 
-  // Auto-select first currency pair when currencies load
-  if (
-    currencies &&
-    currencies.length >= 2 &&
-    !fromCurrencyId &&
-    !toCurrencyId
-  ) {
-    const usd = currencies.find((c) => c.code === "USD");
-    const ves = currencies.find((c) => c.code === "VES");
-    const cop = currencies.find((c) => c.code === "COP");
-    if (usd) {
-      setFromCurrencyId(usd.id);
-      if (ves) setToCurrencyId(ves.id);
-      else if (cop) setToCurrencyId(cop.id);
-      else setToCurrencyId(currencies.find((c) => c.id !== usd.id)?.id || "");
-    }
-  }
+  const togglePair = (pairId: string) => {
+    setSelectedPairs((prev) =>
+      prev.includes(pairId)
+        ? prev.filter((id) => id !== pairId)
+        : [...prev, pairId],
+    );
+  };
 
-  // Prepare chart data - group by date and source
-  const chartData =
-    history
-      ?.slice()
-      .reverse()
-      .map((entry) => ({
-        date: formatDate(entry.fetchedAt),
-        fullDate: entry.fetchedAt,
-        [entry.source]: Number(entry.rate),
-        source: entry.source,
-      })) || [];
+  // Prepare chart data - merge all pairs by date
+  const chartData = useMemo(() => {
+    if (!historyQueries.data) return [];
 
-  // Merge entries with same date
-  const mergedData = chartData.reduce(
-    (acc, entry) => {
-      const existing = acc.find((e) => e.date === entry.date);
-      if (existing) {
-        existing[entry.source] = entry[entry.source];
-      } else {
-        acc.push({ ...entry });
+    const dateMap = new Map<
+      string,
+      { date: string; fullDate: string; [key: string]: string | number }
+    >();
+
+    for (const [pairId, entries] of Object.entries(historyQueries.data)) {
+      const pair = availablePairs.find((p) => p.id === pairId);
+      if (!pair) continue;
+
+      for (const entry of entries) {
+        const dateKey = formatDate(entry.fetchedAt);
+        const existing = dateMap.get(dateKey) || {
+          date: dateKey,
+          fullDate: entry.fetchedAt,
+        };
+        existing[pair.label] = Number(entry.rate);
+        dateMap.set(dateKey, existing);
       }
-      return acc;
-    },
-    [] as Array<{ date: string; [key: string]: string | number }>,
-  );
+    }
 
-  // Get unique sources from the data
-  const sources = Array.from(new Set(history?.map((e) => e.source) || []));
+    return Array.from(dateMap.values()).sort(
+      (a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime(),
+    );
+  }, [historyQueries.data, availablePairs]);
 
-  const fromCurrency = currencies?.find((c) => c.id === fromCurrencyId);
-  const toCurrency = currencies?.find((c) => c.id === toCurrencyId);
+  // Get labels for selected pairs
+  const selectedLabels = selectedPairs
+    .map((id) => availablePairs.find((p) => p.id === id)?.label)
+    .filter(Boolean) as string[];
 
   return (
     <Card>
@@ -152,56 +205,51 @@ export function RateHistoryChart() {
               Historial de Tasas
             </CardTitle>
             <CardDescription>
-              {fromCurrency && toCurrency
-                ? `${fromCurrency.code} a ${toCurrency.code}`
-                : "Selecciona par de monedas"}
+              {selectedLabels.length > 0
+                ? `${selectedLabels.length} par(es) seleccionado(s)`
+                : "Selecciona pares de monedas"}
             </CardDescription>
           </div>
-          <div className="flex gap-2">
-            <Select value={fromCurrencyId} onValueChange={setFromCurrencyId}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="De" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies?.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.code}
-                  </SelectItem>
+          <Popover open={isOpen} onOpenChange={setIsOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                Pares
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-2" align="end">
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {availablePairs.map((pair) => (
+                  <label
+                    key={pair.id}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-accent cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedPairs.includes(pair.id)}
+                      onCheckedChange={() => togglePair(pair.id)}
+                    />
+                    <span className="text-sm">{pair.label}</span>
+                  </label>
                 ))}
-              </SelectContent>
-            </Select>
-            <Select value={toCurrencyId} onValueChange={setToCurrencyId}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="A" />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies
-                  ?.filter((c) => c.id !== fromCurrencyId)
-                  .map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.code}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </CardHeader>
       <CardContent>
-        {loadingCurrencies ||
-        (loadingHistory && fromCurrencyId && toCurrencyId) ? (
+        {loadingCurrencies || historyQueries.isLoading ? (
           <Skeleton className="h-64" />
-        ) : !fromCurrencyId || !toCurrencyId ? (
+        ) : selectedPairs.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            Selecciona las monedas para ver el historial
+            Selecciona pares de monedas para ver el historial
           </div>
-        ) : mergedData.length === 0 ? (
+        ) : chartData.length === 0 ? (
           <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No hay historial de tasas para este par
+            No hay historial de tasas para los pares seleccionados
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={mergedData}>
+            <LineChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis
                 dataKey="date"
@@ -226,11 +274,7 @@ export function RateHistoryChart() {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 4,
                   }),
-                  name === "official"
-                    ? "Oficial"
-                    : name === "binance"
-                      ? "Binance"
-                      : "Manual",
+                  name,
                 ]}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -238,48 +282,19 @@ export function RateHistoryChart() {
                   borderRadius: "8px",
                 }}
               />
-              <Legend
-                formatter={(value) =>
-                  value === "official"
-                    ? "Oficial"
-                    : value === "binance"
-                      ? "Binance"
-                      : "Manual"
-                }
-              />
-              {sources.includes("official") && (
+              <Legend />
+              {selectedLabels.map((label, index) => (
                 <Line
+                  key={label}
                   type="monotone"
-                  dataKey="official"
-                  name="official"
-                  stroke={SOURCE_COLORS.official}
+                  dataKey={label}
+                  name={label}
+                  stroke={PAIR_COLORS[index % PAIR_COLORS.length]}
                   strokeWidth={2}
-                  dot={{ fill: SOURCE_COLORS.official, r: 4 }}
+                  dot={{ fill: PAIR_COLORS[index % PAIR_COLORS.length], r: 3 }}
                   connectNulls
                 />
-              )}
-              {sources.includes("binance") && (
-                <Line
-                  type="monotone"
-                  dataKey="binance"
-                  name="binance"
-                  stroke={SOURCE_COLORS.binance}
-                  strokeWidth={2}
-                  dot={{ fill: SOURCE_COLORS.binance, r: 4 }}
-                  connectNulls
-                />
-              )}
-              {sources.includes("manual") && (
-                <Line
-                  type="monotone"
-                  dataKey="manual"
-                  name="manual"
-                  stroke={SOURCE_COLORS.manual}
-                  strokeWidth={2}
-                  dot={{ fill: SOURCE_COLORS.manual, r: 4 }}
-                  connectNulls
-                />
-              )}
+              ))}
             </LineChart>
           </ResponsiveContainer>
         )}

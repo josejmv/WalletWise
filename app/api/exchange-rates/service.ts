@@ -250,6 +250,10 @@ export async function syncFromAPI(): Promise<SyncResult> {
 
     // Create exchange rates for all fiat currency pairs
     const now = new Date();
+
+    // Store rates for cross-rate calculation
+    const ratesFromBase: Record<string, { id: string; rate: number }> = {};
+
     for (const targetCurrency of currencies) {
       if (targetCurrency.id === baseCurrency.id) continue;
 
@@ -258,6 +262,9 @@ export async function syncFromAPI(): Promise<SyncResult> {
         errors.push(`No se encontro tasa para ${targetCurrency.code}`);
         continue;
       }
+
+      // Store for cross-rate calculation
+      ratesFromBase[targetCurrency.code] = { id: targetCurrency.id, rate };
 
       // Create rate from base to target with source=official
       await repository.create({
@@ -278,6 +285,32 @@ export async function syncFromAPI(): Promise<SyncResult> {
         fetchedAt: now,
       });
       synced++;
+    }
+
+    // v1.3.0: Calculate and store cross-rates between non-base currencies
+    // e.g., COP-VES = (USD-VES) / (USD-COP)
+    const nonBaseCurrencyCodes = Object.keys(ratesFromBase);
+    for (let i = 0; i < nonBaseCurrencyCodes.length; i++) {
+      for (let j = 0; j < nonBaseCurrencyCodes.length; j++) {
+        if (i === j) continue;
+
+        const fromCode = nonBaseCurrencyCodes[i];
+        const toCode = nonBaseCurrencyCodes[j];
+        const fromData = ratesFromBase[fromCode];
+        const toData = ratesFromBase[toCode];
+
+        // Cross rate: FROM -> TO = (BASE -> TO) / (BASE -> FROM)
+        const crossRate = toData.rate / fromData.rate;
+
+        await repository.create({
+          fromCurrencyId: fromData.id,
+          toCurrencyId: toData.id,
+          rate: crossRate,
+          source: "official",
+          fetchedAt: now,
+        });
+        synced++;
+      }
     }
 
     // Update last official sync timestamp

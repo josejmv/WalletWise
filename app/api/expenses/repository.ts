@@ -1,4 +1,8 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getUserBaseCurrencyId,
+  convertManyWithCustomRates,
+} from "@/lib/currency-utils";
 import type {
   CreateExpenseInput,
   UpdateExpenseInput,
@@ -188,6 +192,9 @@ export async function getSummary(filters?: ExpenseFilters) {
     };
   }
 
+  // Get user's base currency for conversion
+  const baseCurrencyId = await getUserBaseCurrencyId();
+
   const expenses = await prisma.expense.findMany({
     where,
     include: {
@@ -196,26 +203,46 @@ export async function getSummary(filters?: ExpenseFilters) {
     },
   });
 
+  // Convert all expenses to base currency using custom rates when available
+  const expensesForConversion = expenses.map((e) => ({
+    id: e.id,
+    amount: Number(e.amount),
+    currencyId: e.currencyId,
+    customRate: e.customRate ? Number(e.customRate) : null,
+    categoryId: e.categoryId,
+    categoryName: e.category.name,
+    currencyCode: e.currency.code,
+  }));
+
+  const convertedExpenses = await convertManyWithCustomRates(
+    expensesForConversion,
+    baseCurrencyId,
+  );
+
   const byCategory = new Map<string, { categoryName: string; total: number }>();
   const byCurrency = new Map<string, { currencyCode: string; total: number }>();
   let totalAmount = 0;
 
-  for (const expense of expenses) {
-    const amount = Number(expense.amount);
-    totalAmount += amount;
+  for (const expense of convertedExpenses) {
+    // Use converted amount for totals
+    const convertedAmount = expense.convertedAmount;
+    const originalAmount = expense.amount;
+
+    totalAmount += convertedAmount;
 
     const categoryData = byCategory.get(expense.categoryId) || {
-      categoryName: expense.category.name,
+      categoryName: expense.categoryName,
       total: 0,
     };
-    categoryData.total += amount;
+    categoryData.total += convertedAmount;
     byCategory.set(expense.categoryId, categoryData);
 
+    // For byCurrency, keep original amounts per currency
     const currencyData = byCurrency.get(expense.currencyId) || {
-      currencyCode: expense.currency.code,
+      currencyCode: expense.currencyCode,
       total: 0,
     };
-    currencyData.total += amount;
+    currencyData.total += originalAmount;
     byCurrency.set(expense.currencyId, currencyData);
   }
 

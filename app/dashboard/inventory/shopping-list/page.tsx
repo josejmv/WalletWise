@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   ShoppingCart,
@@ -110,6 +110,16 @@ export default function ShoppingListPage() {
     queryKey: ["currencies"],
     queryFn: fetchCurrencies,
   });
+
+  // Set default currency to USD when currencies load
+  useEffect(() => {
+    if (!selectedCurrencyId && currencies && currencies.length > 0) {
+      const usd = currencies.find((c) => c.code === "USD");
+      if (usd) {
+        setSelectedCurrencyId(usd.id);
+      }
+    }
+  }, [currencies, selectedCurrencyId]);
 
   const { data: exchangeRates } = useQuery({
     queryKey: ["exchange-rates"],

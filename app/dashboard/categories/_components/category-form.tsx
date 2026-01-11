@@ -180,20 +180,31 @@ export function CategoryForm({
         <Label htmlFor="parentId">Categoria Padre (opcional)</Label>
         <Select
           value={watch("parentId") || "none"}
-          onValueChange={(value) =>
-            setValue("parentId", value === "none" ? undefined : value)
-          }
+          onValueChange={(value) => {
+            setValue("parentId", value === "none" ? undefined : value);
+            // Inherit color from parent category
+            if (value !== "none") {
+              const parent = availableParents.find(
+                (c: { id: string }) => c.id === value,
+              );
+              if (parent?.color) {
+                setValue("color", parent.color);
+              }
+            }
+          }}
         >
           <SelectTrigger>
             <SelectValue placeholder="Sin categoria padre" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sin categoria padre</SelectItem>
-            {availableParents.map((cat: { id: string; name: string }) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
-              </SelectItem>
-            ))}
+            {availableParents.map(
+              (cat: { id: string; name: string; color: string | null }) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ),
+            )}
           </SelectContent>
         </Select>
       </div>

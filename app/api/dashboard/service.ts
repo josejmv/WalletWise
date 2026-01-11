@@ -325,7 +325,7 @@ export async function getBudgetProgress(): Promise<BudgetProgress[]> {
 export async function getRecentTransactions(
   limit: number = 10,
 ): Promise<RecentTransaction[]> {
-  // Get transactions from today and yesterday only
+  // Get transactions created today or yesterday (based on createdAt, not date)
   const now = new Date();
   const startOfYesterday = new Date(
     now.getFullYear(),
@@ -335,27 +335,27 @@ export async function getRecentTransactions(
 
   const [incomes, expenses, transfers, contributions] = await Promise.all([
     prisma.income.findMany({
-      where: { date: { gte: startOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday } },
       take: limit,
-      orderBy: { date: "desc" },
+      orderBy: { createdAt: "desc" },
       include: { currency: true, account: true },
     }),
     prisma.expense.findMany({
-      where: { date: { gte: startOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday } },
       take: limit,
-      orderBy: { date: "desc" },
+      orderBy: { createdAt: "desc" },
       include: { currency: true, account: true, category: true },
     }),
     prisma.transfer.findMany({
-      where: { date: { gte: startOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday } },
       take: limit,
-      orderBy: { date: "desc" },
+      orderBy: { createdAt: "desc" },
       include: { currency: true, fromAccount: true },
     }),
     prisma.budgetContribution.findMany({
-      where: { date: { gte: startOfYesterday } },
+      where: { createdAt: { gte: startOfYesterday } },
       take: limit,
-      orderBy: { date: "desc" },
+      orderBy: { createdAt: "desc" },
       include: {
         budget: { include: { currency: true } },
         fromAccount: true,
@@ -364,7 +364,8 @@ export async function getRecentTransactions(
     }),
   ]);
 
-  const transactions: RecentTransaction[] = [
+  // Add createdAt to each transaction for sorting
+  const transactionsWithCreatedAt = [
     ...incomes.map((inc) => ({
       id: inc.id,
       type: "income" as const,
@@ -373,6 +374,7 @@ export async function getRecentTransactions(
       description: inc.description,
       date: inc.date,
       account: inc.account.name,
+      createdAt: inc.createdAt,
     })),
     ...expenses.map((exp) => ({
       id: exp.id,
@@ -383,6 +385,7 @@ export async function getRecentTransactions(
       date: exp.date,
       category: exp.category.name,
       account: exp.account.name,
+      createdAt: exp.createdAt,
     })),
     ...transfers.map((tr) => ({
       id: tr.id,
@@ -392,6 +395,7 @@ export async function getRecentTransactions(
       description: tr.description,
       date: tr.date,
       account: tr.fromAccount?.name ?? "Budget",
+      createdAt: tr.createdAt,
     })),
     // Add contributions (positive amounts)
     ...contributions
@@ -405,6 +409,7 @@ export async function getRecentTransactions(
         date: c.date,
         account: c.fromAccount?.name ?? "Desconocida",
         budgetName: c.budget.name,
+        createdAt: c.createdAt,
       })),
     // Add withdrawals (negative amounts)
     ...contributions
@@ -418,12 +423,17 @@ export async function getRecentTransactions(
         date: c.date,
         account: c.toAccount?.name ?? "Desconocida",
         budgetName: c.budget.name,
+        createdAt: c.createdAt,
       })),
   ];
 
-  return transactions
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, limit);
+  // Sort by createdAt (most recent first) and remove createdAt from result
+  const transactions: RecentTransaction[] = transactionsWithCreatedAt
+    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    .slice(0, limit)
+    .map(({ createdAt, ...rest }) => rest);
+
+  return transactions;
 }
 
 export async function getDashboardSummary(

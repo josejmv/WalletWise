@@ -48,7 +48,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
-import { useFormatters } from "@/contexts/user-config-context";
+import {
+  useFormatters,
+  useUserConfigContext,
+} from "@/contexts/user-config-context";
 import { RateDetailsPopover } from "@/components/rate-details-popover";
 import { ExpenseForm } from "./_components/expense-form";
 
@@ -133,6 +136,8 @@ const periodicityLabels: Record<string, string> = {
 
 export default function ExpensesPage() {
   const { formatDate, formatCurrency } = useFormatters();
+  const { config } = useUserConfigContext();
+  const baseCurrencyCode = config?.baseCurrency?.code ?? "USD";
   const [formOpen, setFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -164,6 +169,7 @@ export default function ExpensesPage() {
       toast({ title: "Gasto procesado correctamente" });
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
     },
     onError: (error: Error) => {
       toast({
@@ -180,7 +186,11 @@ export default function ExpensesPage() {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({
+        queryKey: ["dashboard", "recent-transactions"],
+      });
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
       toast({ title: "Gasto eliminado" });
       setDeleteId(null);
     },
@@ -199,7 +209,11 @@ export default function ExpensesPage() {
     queryClient.invalidateQueries({ queryKey: ["expenses"] });
     queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({
+      queryKey: ["dashboard", "recent-transactions"],
+    });
     queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["transaction-history"] });
   };
 
   const handleEdit = (expense: Expense) => {
@@ -270,7 +284,7 @@ export default function ExpensesPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(totalExpense, "USD")}
+              {formatCurrency(totalExpense, baseCurrencyCode)}
             </div>
             <p className="text-xs text-muted-foreground">
               {totalCount} registro(s)

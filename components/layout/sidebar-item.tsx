@@ -24,8 +24,8 @@ export function SidebarItem({
   collapsed = false,
 }: SidebarItemProps) {
   const pathname = usePathname();
-  const isActive =
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+  // Use exact match for sidebar items since all pages are defined in the sidebar
+  const isActive = pathname === href;
 
   const linkContent = (
     <Link

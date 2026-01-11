@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -351,19 +352,47 @@ export default function TransactionHistoryPage() {
 
                 <div className="space-y-2">
                   <Label>Desde</Label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                  <DatePicker
+                    value={
+                      startDate ? new Date(startDate + "T12:00:00") : undefined
+                    }
+                    onChange={(date) => {
+                      if (date) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(
+                          2,
+                          "0",
+                        );
+                        const day = String(date.getDate()).padStart(2, "0");
+                        setStartDate(`${year}-${month}-${day}`);
+                      } else {
+                        setStartDate("");
+                      }
+                    }}
+                    placeholder="Fecha inicio"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Hasta</Label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
+                  <DatePicker
+                    value={
+                      endDate ? new Date(endDate + "T12:00:00") : undefined
+                    }
+                    onChange={(date) => {
+                      if (date) {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(
+                          2,
+                          "0",
+                        );
+                        const day = String(date.getDate()).padStart(2, "0");
+                        setEndDate(`${year}-${month}-${day}`);
+                      } else {
+                        setEndDate("");
+                      }
+                    }}
+                    placeholder="Fecha fin"
                   />
                 </div>
               </div>

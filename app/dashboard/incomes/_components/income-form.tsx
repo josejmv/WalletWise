@@ -8,6 +8,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ControlledDatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -91,7 +92,8 @@ async function createIncome(data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      date: new Date(data.date),
+      // Parse as noon local time to avoid timezone issues
+      date: new Date(data.date + "T12:00:00"),
     }),
   });
   const result = await res.json();
@@ -105,7 +107,8 @@ async function updateIncome(id: string, data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      date: new Date(data.date),
+      // Parse as noon local time to avoid timezone issues
+      date: new Date(data.date + "T12:00:00"),
     }),
   });
   const result = await res.json();
@@ -139,17 +142,25 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<IncomeFormData>({
     resolver: zodResolver(incomeSchema),
-    defaultValues: {
-      jobId: "",
-      accountId: "",
-      amount: 0,
-      currencyId: "",
-      date: new Date().toISOString().split("T")[0],
-      description: "",
-    },
+    defaultValues: income
+      ? {
+          jobId: income.job.id,
+          accountId: income.account.id,
+          amount: income.amount,
+          currencyId: income.currency.id,
+          date: new Date(income.date).toISOString().split("T")[0],
+          description: income.description ?? "",
+        }
+      : {
+          jobId: "",
+          accountId: "",
+          amount: "" as unknown as number,
+          currencyId: "",
+          date: new Date().toISOString().split("T")[0],
+          description: "",
+        },
   });
 
   const watchedAccountId = watch("accountId");
@@ -184,19 +195,6 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
   const handleCustomRateChange = useCallback((rate: number | null) => {
     setCustomRate(rate);
   }, []);
-
-  useEffect(() => {
-    if (income) {
-      reset({
-        jobId: income.job.id,
-        accountId: income.account.id,
-        amount: income.amount,
-        currencyId: income.currency.id,
-        date: new Date(income.date).toISOString().split("T")[0],
-        description: income.description ?? "",
-      });
-    }
-  }, [income, reset]);
 
   const createMutation = useMutation({
     mutationFn: createIncome,
@@ -264,7 +262,11 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      key={income?.id ?? "new"}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="jobId">Trabajo</Label>
         <Select
@@ -352,7 +354,13 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
         </div>
         <div className="space-y-2">
           <Label htmlFor="date">Fecha</Label>
-          <Input id="date" type="date" {...register("date")} />
+          <ControlledDatePicker
+            id="date"
+            field={{
+              value: watch("date"),
+              onChange: (value) => setValue("date", value),
+            }}
+          />
           {errors.date && (
             <p className="text-sm text-destructive">{errors.date.message}</p>
           )}

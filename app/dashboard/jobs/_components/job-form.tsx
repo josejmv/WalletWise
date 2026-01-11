@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -26,7 +25,13 @@ const jobSchema = z.object({
   currencyId: z.string().min(1, "La moneda es requerida"),
   accountId: z.string().min(1, "La cuenta es requerida"),
   periodicity: z.enum(["biweekly", "monthly", "one_time"]),
-  payDay: z.number().min(1).max(31).optional(),
+  // payDay is optional - transform NaN to undefined
+  payDay: z
+    .number()
+    .min(1, "El dia debe ser entre 1 y 31")
+    .max(31, "El dia debe ser entre 1 y 31")
+    .optional()
+    .or(z.nan().transform(() => undefined)),
   status: z.enum(["active", "archived", "pending"]).optional(),
 });
 
@@ -104,34 +109,30 @@ export function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     setValue,
     watch,
     formState: { errors },
-    reset,
   } = useForm<JobFormData>({
     resolver: zodResolver(jobSchema),
-    defaultValues: {
-      name: "",
-      type: "fixed",
-      salary: undefined as unknown as number, // Empty by default
-      currencyId: "",
-      accountId: "",
-      periodicity: "monthly",
-      status: "active",
-    },
+    defaultValues: job
+      ? {
+          name: job.name,
+          type: job.type,
+          salary: job.salary,
+          currencyId: job.currency.id,
+          accountId: job.account.id,
+          periodicity: job.periodicity,
+          payDay: job.payDay ?? undefined,
+          status: job.status,
+        }
+      : {
+          name: "",
+          type: "fixed",
+          salary: "" as unknown as number,
+          currencyId: "",
+          accountId: "",
+          periodicity: "monthly",
+          payDay: "" as unknown as number,
+          status: "active",
+        },
   });
-
-  useEffect(() => {
-    if (job) {
-      reset({
-        name: job.name,
-        type: job.type,
-        salary: job.salary,
-        currencyId: job.currency.id,
-        accountId: job.account.id,
-        periodicity: job.periodicity,
-        payDay: job.payDay ?? undefined,
-        status: job.status,
-      });
-    }
-  }, [job, reset]);
 
   const createMutation = useMutation({
     mutationFn: createJob,
@@ -183,7 +184,11 @@ export function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form
+      key={job?.id ?? "new"}
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-4"
+    >
       <div className="space-y-2">
         <Label htmlFor="name">Nombre</Label>
         <Input id="name" placeholder="Mi trabajo" {...register("name")} />

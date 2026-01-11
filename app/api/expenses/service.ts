@@ -64,6 +64,7 @@ export async function createExpense(data: CreateExpenseInput) {
 
   const account = await prisma.account.findUnique({
     where: { id: data.accountId },
+    include: { currency: true },
   });
   if (!account) {
     throw new Error("Cuenta no encontrada");
@@ -74,6 +75,18 @@ export async function createExpense(data: CreateExpenseInput) {
   });
   if (!currency) {
     throw new Error("Moneda no encontrada");
+  }
+
+  // Calculate the amount to deduct from account
+  // If currencies differ, use exchange rate to convert
+  let amountToDeduct = data.amount;
+  if (data.currencyId !== account.currencyId) {
+    // Use custom rate if available, otherwise use official rate
+    const rate = data.customRate || data.officialRate;
+    if (rate && rate > 0) {
+      // The rate converts from expense currency to account currency
+      amountToDeduct = data.amount * rate;
+    }
   }
 
   return prisma.$transaction(async (tx) => {
@@ -92,7 +105,7 @@ export async function createExpense(data: CreateExpenseInput) {
     await tx.account.update({
       where: { id: data.accountId },
       data: {
-        balance: { decrement: data.amount },
+        balance: { decrement: amountToDeduct },
       },
     });
 
@@ -106,6 +119,11 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
     throw new Error("Gasto no encontrado");
   }
 
+  // Get old account to check currency
+  const oldAccount = await prisma.account.findUnique({
+    where: { id: existingExpense.accountId },
+  });
+
   if (data.categoryId) {
     const category = await prisma.category.findUnique({
       where: { id: data.categoryId },
@@ -115,13 +133,13 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
     }
   }
 
-  if (data.accountId) {
-    const account = await prisma.account.findUnique({
-      where: { id: data.accountId },
-    });
-    if (!account) {
-      throw new Error("Cuenta no encontrada");
-    }
+  // Get new account if changed
+  const newAccountId = data.accountId || existingExpense.accountId;
+  const newAccount = await prisma.account.findUnique({
+    where: { id: newAccountId },
+  });
+  if (!newAccount) {
+    throw new Error("Cuenta no encontrada");
   }
 
   if (data.currencyId) {
@@ -133,12 +151,22 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
     }
   }
 
+  // Calculate old amount that was deducted (with conversion if currencies differed)
+  let oldAmountDeducted = Number(existingExpense.amount);
+  if (oldAccount && existingExpense.currencyId !== oldAccount.currencyId) {
+    const oldRate =
+      Number(existingExpense.customRate) ||
+      Number(existingExpense.officialRate) ||
+      1;
+    oldAmountDeducted = Number(existingExpense.amount) * oldRate;
+  }
+
   return prisma.$transaction(async (tx) => {
-    // Revert old amount to old account
+    // Revert old amount to old account (with conversion)
     await tx.account.update({
       where: { id: existingExpense.accountId },
       data: {
-        balance: { increment: Number(existingExpense.amount) },
+        balance: { increment: oldAmountDeducted },
       },
     });
 
@@ -152,11 +180,19 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
       },
     });
 
+    // Calculate new amount to deduct (with conversion if currencies differ)
+    let newAmountToDeduct = Number(expense.amount);
+    if (expense.currencyId !== newAccount.currencyId) {
+      const newRate =
+        Number(expense.customRate) || Number(expense.officialRate) || 1;
+      newAmountToDeduct = Number(expense.amount) * newRate;
+    }
+
     // Deduct new amount from new account
     await tx.account.update({
       where: { id: expense.accountId },
       data: {
-        balance: { decrement: Number(expense.amount) },
+        balance: { decrement: newAmountToDeduct },
       },
     });
 
@@ -170,11 +206,24 @@ export async function deleteExpense(id: string) {
     throw new Error("Gasto no encontrado");
   }
 
+  // Get account to check currency
+  const account = await prisma.account.findUnique({
+    where: { id: expense.accountId },
+  });
+
+  // Calculate amount that was deducted (with conversion if currencies differed)
+  let amountToRestore = Number(expense.amount);
+  if (account && expense.currencyId !== account.currencyId) {
+    const rate =
+      Number(expense.customRate) || Number(expense.officialRate) || 1;
+    amountToRestore = Number(expense.amount) * rate;
+  }
+
   return prisma.$transaction(async (tx) => {
     await tx.account.update({
       where: { id: expense.accountId },
       data: {
-        balance: { increment: Number(expense.amount) },
+        balance: { increment: amountToRestore },
       },
     });
 
@@ -215,6 +264,19 @@ export async function processRecurringExpense(id: string) {
     throw new Error("El gasto no es recurrente");
   }
 
+  // Get account to check currency
+  const account = await prisma.account.findUnique({
+    where: { id: expense.accountId },
+  });
+
+  // Calculate amount to deduct (with conversion if currencies differ)
+  let amountToDeduct = Number(expense.amount);
+  if (account && expense.currencyId !== account.currencyId) {
+    const rate =
+      Number(expense.customRate) || Number(expense.officialRate) || 1;
+    amountToDeduct = Number(expense.amount) * rate;
+  }
+
   return prisma.$transaction(async (tx) => {
     // Create new expense entry
     const newExpense = await tx.expense.create({
@@ -236,11 +298,11 @@ export async function processRecurringExpense(id: string) {
       },
     });
 
-    // Deduct from account
+    // Deduct from account (with conversion)
     await tx.account.update({
       where: { id: expense.accountId },
       data: {
-        balance: { decrement: Number(expense.amount) },
+        balance: { decrement: amountToDeduct },
       },
     });
 

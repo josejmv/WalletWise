@@ -13,6 +13,8 @@ export interface CreateIncomeInput {
   accountId: string;
   amount: number;
   currencyId: string;
+  officialRate?: number;
+  customRate?: number;
   date?: Date;
   description?: string;
 }
@@ -22,6 +24,8 @@ export interface UpdateIncomeInput {
   accountId?: string;
   amount?: number;
   currencyId?: string;
+  officialRate?: number | null;
+  customRate?: number | null;
   date?: Date;
   description?: string | null;
 }

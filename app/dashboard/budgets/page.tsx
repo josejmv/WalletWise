@@ -341,6 +341,9 @@ export default function BudgetsPage() {
             queryClient.invalidateQueries({ queryKey: ["budgets"] });
             queryClient.invalidateQueries({ queryKey: ["accounts"] });
             queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+            queryClient.invalidateQueries({
+              queryKey: ["transaction-history"],
+            });
           }}
         />
       )}
@@ -354,6 +357,9 @@ export default function BudgetsPage() {
             queryClient.invalidateQueries({ queryKey: ["budgets"] });
             queryClient.invalidateQueries({ queryKey: ["accounts"] });
             queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+            queryClient.invalidateQueries({
+              queryKey: ["transaction-history"],
+            });
           }}
         />
       )}

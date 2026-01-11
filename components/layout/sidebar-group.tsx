@@ -41,12 +41,8 @@ export function SidebarGroup({
   const pathname = usePathname();
   const [isOpen, setIsOpen] = React.useState(defaultOpen);
 
-  // Check if any child is active
-  const hasActiveChild = items.some(
-    (item) =>
-      pathname === item.href ||
-      (item.href !== "/dashboard" && pathname.startsWith(item.href)),
-  );
+  // Check if any child is active (exact match only)
+  const hasActiveChild = items.some((item) => pathname === item.href);
 
   // Auto-open if a child is active
   React.useEffect(() => {
@@ -74,14 +70,12 @@ export function SidebarGroup({
         </TooltipTrigger>
         <TooltipContent side="right" className="flex flex-col gap-1 p-2">
           <span className="font-medium mb-1">{title}</span>
-          {items.map((item) => {
+          {items.map((item, index) => {
             const ItemIcon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const isActive = pathname === item.href;
             return (
               <Link
-                key={item.href}
+                key={item.href || `collapsed-item-${index}`}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-2 rounded px-2 py-1 text-sm",
@@ -121,14 +115,12 @@ export function SidebarGroup({
       </CollapsibleTrigger>
       <CollapsibleContent>
         <div className="ml-4 space-y-1 border-l pl-4">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const ItemIcon = item.icon;
-            const isActive =
-              pathname === item.href ||
-              (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            const isActive = pathname === item.href;
             return (
               <Link
-                key={item.href}
+                key={item.href || `expanded-item-${index}`}
                 href={item.href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",

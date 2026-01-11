@@ -41,7 +41,8 @@ interface CooldownStatus {
 }
 
 async function fetchExchangeRates(): Promise<ExchangeRate[]> {
-  const res = await fetch("/api/exchange-rates");
+  // v1.3.0: Use latest=true to get only the most recent rate per currency pair
+  const res = await fetch("/api/exchange-rates?latest=true");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
