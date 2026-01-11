@@ -1,4 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getUserBaseCurrencyId,
+  getUserBaseCurrency,
+  convertManyToBaseCurrency,
+  calculateSavings,
+  isSavingsRate,
+} from "@/lib/currency-utils";
 import type {
   DashboardKPIs,
   BalanceByAccount,
@@ -20,28 +27,53 @@ export async function getKPIs(
     ...(filters?.endDate && { lte: filters.endDate }),
   };
 
+  // Get user's base currency for conversions
+  const baseCurrencyId = await getUserBaseCurrencyId();
+
   const [accounts, incomes, expenses, activeJobs, activeBudgets] =
     await Promise.all([
-      prisma.account.findMany({ where: { isActive: true } }),
+      prisma.account.findMany({
+        where: { isActive: true },
+        select: { id: true, balance: true, currencyId: true },
+      }),
       prisma.income.findMany({
         where:
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+        select: { id: true, amount: true, currencyId: true },
       }),
       prisma.expense.findMany({
         where:
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+        select: { id: true, amount: true, currencyId: true },
       }),
       prisma.job.count({ where: { status: "active" } }),
       prisma.budget.count({ where: { status: "active" } }),
     ]);
 
-  const totalBalance = accounts.reduce(
-    (sum, acc) => sum + Number(acc.balance),
+  // Convert all amounts to base currency
+  const accountsConverted = await convertManyToBaseCurrency(
+    accounts.map((a) => ({ ...a, amount: Number(a.balance) })),
+    baseCurrencyId,
+  );
+  const incomesConverted = await convertManyToBaseCurrency(
+    incomes.map((i) => ({ ...i, amount: Number(i.amount) })),
+    baseCurrencyId,
+  );
+  const expensesConverted = await convertManyToBaseCurrency(
+    expenses.map((e) => ({ ...e, amount: Number(e.amount) })),
+    baseCurrencyId,
+  );
+
+  const totalBalance = accountsConverted.reduce(
+    (sum, acc) => sum + acc.convertedAmount,
     0,
   );
-  const totalIncome = incomes.reduce((sum, inc) => sum + Number(inc.amount), 0);
-  const totalExpenses = expenses.reduce(
-    (sum, exp) => sum + Number(exp.amount),
+  const totalIncome = incomesConverted.reduce(
+    (sum, inc) => sum + inc.convertedAmount,
+    0,
+  );
+  const totalExpenses = expensesConverted.reduce(
+    (sum, exp) => sum + exp.convertedAmount,
     0,
   );
   const netSavings = totalIncome - totalExpenses;
@@ -79,26 +111,45 @@ export async function getBalanceByAccount(): Promise<BalanceByAccount[]> {
 }
 
 export async function getBalanceByCurrency(): Promise<BalanceByCurrency[]> {
-  const accounts = await prisma.account.findMany({
-    where: { isActive: true },
-    include: { currency: true },
-  });
+  const [accounts, baseCurrencyId] = await Promise.all([
+    prisma.account.findMany({
+      where: { isActive: true },
+      include: { currency: true },
+    }),
+    getUserBaseCurrencyId(),
+  ]);
 
-  const byCurrency = new Map<string, { currencyCode: string; total: number }>();
+  const byCurrency = new Map<
+    string,
+    { currencyCode: string; total: number; currencyId: string }
+  >();
 
   for (const account of accounts) {
     const data = byCurrency.get(account.currencyId) || {
       currencyCode: account.currency.code,
+      currencyId: account.currencyId,
       total: 0,
     };
     data.total += Number(account.balance);
     byCurrency.set(account.currencyId, data);
   }
 
-  return Array.from(byCurrency.entries()).map(([currencyId, data]) => ({
-    currencyId,
-    currencyCode: data.currencyCode,
-    totalBalance: data.total,
+  // Convert each currency total to base currency
+  const entries = Array.from(byCurrency.entries());
+  const converted = await convertManyToBaseCurrency(
+    entries.map(([, data]) => ({
+      amount: data.total,
+      currencyId: data.currencyId,
+      currencyCode: data.currencyCode,
+    })),
+    baseCurrencyId,
+  );
+
+  return converted.map((item) => ({
+    currencyId: item.currencyId,
+    currencyCode: item.currencyCode,
+    totalBalance: item.amount, // Original amount in that currency
+    convertedBalance: item.convertedAmount, // Amount in base currency
   }));
 }
 
@@ -110,11 +161,29 @@ export async function getExpensesByCategory(
     ...(filters?.endDate && { lte: filters.endDate }),
   };
 
-  const expenses = await prisma.expense.findMany({
-    where:
-      Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
-    include: { category: true },
-  });
+  const [expenses, baseCurrencyId] = await Promise.all([
+    prisma.expense.findMany({
+      where:
+        Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+      select: {
+        id: true,
+        amount: true,
+        currencyId: true,
+        categoryId: true,
+        category: { select: { name: true, color: true } },
+      },
+    }),
+    getUserBaseCurrencyId(),
+  ]);
+
+  // Convert all expenses to base currency
+  const expensesConverted = await convertManyToBaseCurrency(
+    expenses.map((e) => ({
+      ...e,
+      amount: Number(e.amount),
+    })),
+    baseCurrencyId,
+  );
 
   const byCategory = new Map<
     string,
@@ -123,8 +192,8 @@ export async function getExpensesByCategory(
 
   let totalExpenses = 0;
 
-  for (const expense of expenses) {
-    const amount = Number(expense.amount);
+  for (const expense of expensesConverted) {
+    const amount = expense.convertedAmount;
     totalExpenses += amount;
 
     const data = byCategory.get(expense.categoryId) || {
@@ -153,14 +222,33 @@ export async function getMonthlyTrend(
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
 
-  const [incomes, expenses] = await Promise.all([
+  const [incomes, expenses, baseCurrencyId] = await Promise.all([
     prisma.income.findMany({
       where: { date: { gte: startDate } },
+      select: { id: true, date: true, amount: true, currencyId: true },
     }),
     prisma.expense.findMany({
       where: { date: { gte: startDate } },
+      select: { id: true, date: true, amount: true, currencyId: true },
     }),
+    getUserBaseCurrencyId(),
   ]);
+
+  // Convert all amounts to base currency
+  const incomesConverted = await convertManyToBaseCurrency(
+    incomes.map((i) => ({
+      ...i,
+      amount: Number(i.amount),
+    })),
+    baseCurrencyId,
+  );
+  const expensesConverted = await convertManyToBaseCurrency(
+    expenses.map((e) => ({
+      ...e,
+      amount: Number(e.amount),
+    })),
+    baseCurrencyId,
+  );
 
   const monthlyData = new Map<string, { income: number; expenses: number }>();
 
@@ -171,21 +259,21 @@ export async function getMonthlyTrend(
     monthlyData.set(key, { income: 0, expenses: 0 });
   }
 
-  for (const income of incomes) {
+  for (const income of incomesConverted) {
     const date = new Date(income.date);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const data = monthlyData.get(key);
     if (data) {
-      data.income += Number(income.amount);
+      data.income += income.convertedAmount;
     }
   }
 
-  for (const expense of expenses) {
+  for (const expense of expensesConverted) {
     const date = new Date(expense.date);
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
     const data = monthlyData.get(key);
     if (data) {
-      data.expenses += Number(expense.amount);
+      data.expenses += expense.convertedAmount;
     }
   }
 
@@ -227,21 +315,42 @@ export async function getBudgetProgress(): Promise<BudgetProgress[]> {
 export async function getRecentTransactions(
   limit: number = 10,
 ): Promise<RecentTransaction[]> {
-  const [incomes, expenses, transfers] = await Promise.all([
+  // Get transactions from today and yesterday only
+  const now = new Date();
+  const startOfYesterday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate() - 1,
+  );
+
+  const [incomes, expenses, transfers, contributions] = await Promise.all([
     prisma.income.findMany({
+      where: { date: { gte: startOfYesterday } },
       take: limit,
       orderBy: { date: "desc" },
       include: { currency: true, account: true },
     }),
     prisma.expense.findMany({
+      where: { date: { gte: startOfYesterday } },
       take: limit,
       orderBy: { date: "desc" },
       include: { currency: true, account: true, category: true },
     }),
     prisma.transfer.findMany({
+      where: { date: { gte: startOfYesterday } },
       take: limit,
       orderBy: { date: "desc" },
       include: { currency: true, fromAccount: true },
+    }),
+    prisma.budgetContribution.findMany({
+      where: { date: { gte: startOfYesterday } },
+      take: limit,
+      orderBy: { date: "desc" },
+      include: {
+        budget: { include: { currency: true } },
+        fromAccount: true,
+        toAccount: true,
+      },
     }),
   ]);
 
@@ -274,6 +383,32 @@ export async function getRecentTransactions(
       date: tr.date,
       account: tr.fromAccount?.name ?? "Budget",
     })),
+    // Add contributions (positive amounts)
+    ...contributions
+      .filter((c) => Number(c.amount) > 0)
+      .map((c) => ({
+        id: c.id,
+        type: "contribution" as const,
+        amount: Math.abs(Number(c.amount)),
+        currencyCode: c.budget.currency.code,
+        description: c.description,
+        date: c.date,
+        account: c.fromAccount?.name ?? "Desconocida",
+        budgetName: c.budget.name,
+      })),
+    // Add withdrawals (negative amounts)
+    ...contributions
+      .filter((c) => Number(c.amount) < 0)
+      .map((c) => ({
+        id: c.id,
+        type: "withdrawal" as const,
+        amount: Math.abs(Number(c.amount)),
+        currencyCode: c.budget.currency.code,
+        description: c.description,
+        date: c.date,
+        account: c.toAccount?.name ?? "Desconocida",
+        budgetName: c.budget.name,
+      })),
   ];
 
   return transactions
@@ -315,59 +450,69 @@ export async function getDashboardSummary(
 
 /**
  * Calculate savings from using custom exchange rates vs official rates
- * Positive = saved money, Negative = paid extra
+ *
+ * FORMULA CORREGIDA:
+ * - En Venezuela, los precios estan en USD pero se paga en VES
+ * - Tasa oficial ejemplo: 50 VES/USD
+ * - Tasa custom ejemplo: 45 VES/USD (mejor tasa del comercio)
+ * - Producto de 100 USD:
+ *   - A tasa oficial pagaria: 100 * 50 = 5000 VES
+ *   - A tasa custom paga: 100 * 45 = 4500 VES
+ *   - Ahorro: 5000 - 4500 = 500 VES
+ *
+ * REGLA: Si tasa_custom < tasa_oficial = AHORRO (pagas menos VES)
+ * Savings = amount * (officialRate - customRate)
+ * - Positivo = dinero ahorrado
+ * - Negativo = dinero extra pagado
  */
 export async function getSavingsData(): Promise<SavingsData> {
   // Get expenses with both official and custom rates
-  const expenses = await prisma.expense.findMany({
-    where: {
-      AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
-    },
-    include: {
-      account: {
-        include: { currency: true },
+  const [expenses, transfers, baseCurrency] = await Promise.all([
+    prisma.expense.findMany({
+      where: {
+        AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
-    },
-  });
-
-  // Get transfers with both official and custom rates
-  const transfers = await prisma.transfer.findMany({
-    where: {
-      AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
-    },
-    include: {
-      toAccount: {
-        include: { currency: true },
+      select: {
+        id: true,
+        amount: true,
+        officialRate: true,
+        customRate: true,
       },
-    },
-  });
+    }),
+    prisma.transfer.findMany({
+      where: {
+        AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
+      },
+      select: {
+        id: true,
+        amount: true,
+        officialRate: true,
+        customRate: true,
+      },
+    }),
+    getUserBaseCurrency(),
+  ]);
 
-  // Calculate savings for expenses
-  // For expenses: if custom rate is higher, you get more local currency for same USD = savings
+  // Calculate savings for expenses using corrected formula
   let expenseSavings = 0;
   for (const expense of expenses) {
     const amount = Number(expense.amount);
     const officialRate = Number(expense.officialRate);
     const customRate = Number(expense.customRate);
-    // If paying in foreign currency, higher rate means better value
-    // Savings = amount * (customRate - officialRate)
-    expenseSavings += amount * (customRate - officialRate);
+    // Savings = what you would pay at official - what you paid at custom
+    // If positive = saved money (custom was lower)
+    // If negative = paid extra (custom was higher)
+    expenseSavings += calculateSavings(amount, officialRate, customRate);
   }
 
-  // Calculate savings for transfers
+  // Calculate savings for transfers using same corrected formula
   let transferSavings = 0;
   for (const transfer of transfers) {
     const amount = Number(transfer.amount);
     const officialRate = Number(transfer.officialRate);
     const customRate = Number(transfer.customRate);
-    // Similar logic for transfers
-    transferSavings += amount * (customRate - officialRate);
+    transferSavings += calculateSavings(amount, officialRate, customRate);
   }
-
-  // Get base currency for display
-  const baseCurrency = await prisma.currency.findFirst({
-    where: { isBase: true },
-  });
 
   const totalSavings = expenseSavings + transferSavings;
   const transactionCount = expenses.length + transfers.length;
@@ -380,6 +525,6 @@ export async function getSavingsData(): Promise<SavingsData> {
       expenses: { savings: expenseSavings, count: expenses.length },
       transfers: { savings: transferSavings, count: transfers.length },
     },
-    currencyCode: baseCurrency?.code || "USD",
+    currencyCode: baseCurrency.code,
   };
 }

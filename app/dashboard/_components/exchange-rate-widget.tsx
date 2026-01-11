@@ -130,6 +130,7 @@ export function ExchangeRateWidget() {
     mutationFn: syncOfficial,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["exchange-rate"] });
       toast({
         title: "Tasas sincronizadas",
         description: `${data.synced} tasas oficiales actualizadas`,
@@ -148,6 +149,7 @@ export function ExchangeRateWidget() {
     mutationFn: syncBinance,
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["exchange-rates"] });
+      queryClient.invalidateQueries({ queryKey: ["exchange-rate"] });
       toast({
         title: "Tasas sincronizadas",
         description: `${data.synced} tasas de Binance actualizadas`,

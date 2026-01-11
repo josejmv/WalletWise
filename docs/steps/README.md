@@ -6,11 +6,38 @@
 
 ## Versiones
 
-| Version               | Nombre                | Estado      | Descripcion                               |
-| --------------------- | --------------------- | ----------- | ----------------------------------------- |
-| [v1.0.0](./v1.0.0.md) | Single User Edition   | Completado  | Dashboard de finanzas personales completo |
-| [v1.1.0](./v1.1.0.md) | Mejoras Incrementales | Planificado | Binance P2P, mejoras UX, optimizaciones   |
-| [v2.0.0](./v2.0.0.md) | Multi-User Edition    | Planificado | Autenticacion y soporte multi-usuario     |
+| Version               | Nombre              | Estado      | Descripcion                               |
+| --------------------- | ------------------- | ----------- | ----------------------------------------- |
+| [v1.x](./v1.md)       | Single User Edition | Completado  | Dashboard de finanzas personales completo |
+| [v1.2.0](./v1.2.0.md) | Bugfixes & UX       | Completado  | Correcciones y mejoras de UX              |
+| [v2.0.0](./v2.0.0.md) | Multi-User Edition  | Planificado | Autenticacion y soporte multi-usuario     |
+
+---
+
+## Version Actual: v1.2.0 (Completado)
+
+La version 1.x incluye todas las funcionalidades base mas las mejoras incrementales:
+
+- Dashboard con KPIs y graficos
+- Gestion de cuentas multi-moneda (fiat y crypto)
+- Ingresos, gastos y transferencias
+- Presupuestos con bloqueo de saldo
+- Sistema de tasas de cambio (API oficial + Binance P2P)
+- Inventario y lista de compras
+- Reportes con export PDF/CSV
+- Configuracion de usuario personalizable
+
+---
+
+## Proxima Version: v2.0.0
+
+La version 2.0.0 agregara:
+
+- Sistema de autenticacion (login/registro)
+- Soporte multi-usuario
+- Aislamiento de datos por usuario
+- Landing page publica
+- OAuth providers (Google, GitHub)
 
 ---
 
@@ -22,25 +49,8 @@ Cada archivo de version contiene:
 2. **Features** - Lista de funcionalidades incluidas
 3. **Stack** - Tecnologias utilizadas
 4. **Arquitectura** - Estructura de carpetas y modelos
-5. **Cambios** - Modificaciones respecto a la version anterior
-6. **Fases** - Pasos de implementacion
-7. **Estimacion** - Tiempo estimado de desarrollo
-
----
-
-## Como usar esta documentacion
-
-### Para desarrolladores
-
-1. Revisar la version actual para entender el estado del proyecto
-2. Consultar la proxima version para planificar el desarrollo
-3. Seguir las fases de implementacion en orden
-
-### Para el roadmap
-
-- Cada version representa un milestone del proyecto
-- Las versiones futuras son planificaciones, no compromisos
-- Las estimaciones son aproximadas y pueden variar
+5. **Endpoints** - APIs disponibles
+6. **Componentes** - Componentes principales
 
 ---
 
@@ -52,13 +62,14 @@ Seguimos [SemVer](https://semver.org/):
 - **MINOR** (0.X.0): Nuevas features retrocompatibles
 - **PATCH** (0.0.X): Bugfixes retrocompatibles
 
-### Ejemplos
+### Historial
 
-| Version       | Tipo  | Ejemplo                             |
-| ------------- | ----- | ----------------------------------- |
-| 1.0.0 → 2.0.0 | MAJOR | Agregar autenticacion multi-usuario |
-| 1.0.0 → 1.1.0 | MINOR | Agregar graficos nuevos             |
-| 1.0.0 → 1.0.1 | PATCH | Corregir bug en calculos            |
+| Version | Tipo  | Descripcion                                   |
+| ------- | ----- | --------------------------------------------- |
+| 1.0.0   | MAJOR | Version inicial single-user                   |
+| 1.1.0   | MINOR | Crypto, tasas mejoradas, budgets, settings    |
+| 1.2.0   | MINOR | Bugfixes, cache, tasas inversas, UI mejorada  |
+| 2.0.0   | MAJOR | Multi-usuario con autenticacion (planificado) |
 
 ---
 

@@ -113,7 +113,8 @@ export async function getAccountWithBlockedBalance(id: string) {
   );
 
   const totalBalance = Number(account.balance);
-  const availableBalance = totalBalance - blockedBalance;
+  // Available balance should never be negative (minimum 0)
+  const availableBalance = Math.max(0, totalBalance - blockedBalance);
 
   return {
     ...account,
@@ -158,7 +159,8 @@ export async function getAccountsWithBlockedBalances() {
       0,
     );
     const totalBalance = Number(account.balance);
-    const availableBalance = totalBalance - blockedBalance;
+    // Available balance should never be negative (minimum 0)
+    const availableBalance = Math.max(0, totalBalance - blockedBalance);
 
     return {
       ...account,

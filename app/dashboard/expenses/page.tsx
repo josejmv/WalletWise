@@ -179,6 +179,8 @@ export default function ExpensesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast({ title: "Gasto eliminado" });
       setDeleteId(null);
     },
@@ -196,6 +198,8 @@ export default function ExpensesPage() {
     setEditingExpense(null);
     queryClient.invalidateQueries({ queryKey: ["expenses"] });
     queryClient.invalidateQueries({ queryKey: ["expenses-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   const handleEdit = (expense: Expense) => {

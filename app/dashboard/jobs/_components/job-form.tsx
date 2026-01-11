@@ -17,11 +17,12 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { InlineAccountModal } from "@/components/inline-account-modal";
 
 const jobSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: z.enum(["fixed", "freelance"]),
-  salary: z.number().min(0),
+  salary: z.number().min(0.01, "El salario es requerido"),
   currencyId: z.string().min(1, "La moneda es requerida"),
   accountId: z.string().min(1, "La cuenta es requerida"),
   periodicity: z.enum(["biweekly", "monthly", "one_time"]),
@@ -109,7 +110,7 @@ export function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
     defaultValues: {
       name: "",
       type: "fixed",
-      salary: 0,
+      salary: undefined as unknown as number, // Empty by default
       currencyId: "",
       accountId: "",
       periodicity: "monthly",
@@ -286,21 +287,26 @@ export function JobForm({ job, onSuccess, onCancel }: JobFormProps) {
 
       <div className="space-y-2">
         <Label htmlFor="accountId">Cuenta de Deposito</Label>
-        <Select
-          value={watch("accountId")}
-          onValueChange={(value) => setValue("accountId", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona una cuenta" />
-          </SelectTrigger>
-          <SelectContent>
-            {accounts?.map((account: { id: string; name: string }) => (
-              <SelectItem key={account.id} value={account.id}>
-                {account.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select
+            value={watch("accountId")}
+            onValueChange={(value) => setValue("accountId", value)}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue placeholder="Selecciona una cuenta" />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts?.map((account: { id: string; name: string }) => (
+                <SelectItem key={account.id} value={account.id}>
+                  {account.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <InlineAccountModal
+            onAccountCreated={(accountId) => setValue("accountId", accountId)}
+          />
+        </div>
         {errors.accountId && (
           <p className="text-sm text-destructive">{errors.accountId.message}</p>
         )}

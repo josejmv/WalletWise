@@ -120,6 +120,8 @@ export default function IncomesPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incomes"] });
       queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
       toast({ title: "Ingreso eliminado" });
       setDeleteId(null);
     },
@@ -137,6 +139,8 @@ export default function IncomesPage() {
     setEditingIncome(null);
     queryClient.invalidateQueries({ queryKey: ["incomes"] });
     queryClient.invalidateQueries({ queryKey: ["incomes-summary"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
   };
 
   const handleEdit = (income: Income) => {

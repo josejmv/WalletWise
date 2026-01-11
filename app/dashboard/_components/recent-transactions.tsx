@@ -18,19 +18,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, ArrowLeftRight } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  ArrowLeftRight,
+  PiggyBank,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useFormatters } from "@/contexts/user-config-context";
 
 interface Transaction {
   id: string;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense" | "transfer" | "contribution" | "withdrawal";
   amount: number;
   currencyCode: string;
   description: string | null;
   date: string;
   category?: string;
   account: string;
+  budgetName?: string;
 }
 
 async function fetchRecentTransactions(): Promise<Transaction[]> {
@@ -60,6 +66,18 @@ const typeConfig = {
     icon: ArrowLeftRight,
     variant: "secondary" as const,
     className: "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20",
+  },
+  contribution: {
+    label: "Contribucion",
+    icon: PiggyBank,
+    variant: "default" as const,
+    className: "bg-purple-500/10 text-purple-500 hover:bg-purple-500/20",
+  },
+  withdrawal: {
+    label: "Retiro",
+    icon: PiggyBank,
+    variant: "default" as const,
+    className: "bg-orange-500/10 text-orange-500 hover:bg-orange-500/20",
   },
 };
 
@@ -150,7 +168,9 @@ export function RecentTransactions() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {transaction.description || transaction.category || "-"}
+                    {transaction.budgetName
+                      ? `${transaction.budgetName}${transaction.description ? ` - ${transaction.description}` : ""}`
+                      : transaction.description || transaction.category || "-"}
                   </TableCell>
                   <TableCell>{transaction.account}</TableCell>
                   <TableCell
@@ -158,9 +178,13 @@ export function RecentTransactions() {
                       "text-right font-medium",
                       transaction.type === "income" && "text-green-500",
                       transaction.type === "expense" && "text-red-500",
+                      transaction.type === "contribution" && "text-purple-500",
+                      transaction.type === "withdrawal" && "text-orange-500",
                     )}
                   >
-                    {transaction.type === "expense" && "-"}
+                    {(transaction.type === "expense" ||
+                      transaction.type === "withdrawal") &&
+                      "-"}
                     {formatCurrency(
                       transaction.amount,
                       transaction.currencyCode,

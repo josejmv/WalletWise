@@ -66,6 +66,7 @@ export async function updateUserConfig(data: UpdateUserConfigInput) {
   });
 }
 
+// Legacy function - updates both timestamps for backwards compatibility
 export async function updateLastRateSyncAt() {
   const config = await getUserConfig();
 
@@ -77,6 +78,33 @@ export async function updateLastRateSyncAt() {
   });
 }
 
+// Update official API sync timestamp
+export async function updateLastOfficialSyncAt() {
+  const config = await getUserConfig();
+
+  return prisma.userConfig.update({
+    where: { id: config.id },
+    data: {
+      lastOfficialSyncAt: new Date(),
+      lastRateSyncAt: new Date(), // Keep legacy field updated
+    },
+  });
+}
+
+// Update Binance P2P sync timestamp
+export async function updateLastBinanceSyncAt() {
+  const config = await getUserConfig();
+
+  return prisma.userConfig.update({
+    where: { id: config.id },
+    data: {
+      lastBinanceSyncAt: new Date(),
+      lastRateSyncAt: new Date(), // Keep legacy field updated
+    },
+  });
+}
+
+// Legacy function - checks general cooldown (uses most recent sync)
 export async function canSyncRates(): Promise<{
   canSync: boolean;
   nextSyncAt?: Date;
@@ -101,6 +129,64 @@ export async function canSyncRates(): Promise<{
   return {
     canSync: false,
     lastSyncAt: config.lastRateSyncAt,
+    nextSyncAt,
+  };
+}
+
+// Check if official API sync is allowed (separate 6h cooldown)
+export async function canSyncOfficialRates(): Promise<{
+  canSync: boolean;
+  nextSyncAt?: Date;
+  lastSyncAt?: Date;
+}> {
+  const config = await getUserConfig();
+
+  if (!config.lastOfficialSyncAt) {
+    return { canSync: true };
+  }
+
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const canSync = config.lastOfficialSyncAt < sixHoursAgo;
+
+  if (canSync) {
+    return { canSync: true, lastSyncAt: config.lastOfficialSyncAt };
+  }
+
+  const nextSyncAt = new Date(
+    config.lastOfficialSyncAt.getTime() + 6 * 60 * 60 * 1000,
+  );
+  return {
+    canSync: false,
+    lastSyncAt: config.lastOfficialSyncAt,
+    nextSyncAt,
+  };
+}
+
+// Check if Binance P2P sync is allowed (separate 6h cooldown)
+export async function canSyncBinanceRates(): Promise<{
+  canSync: boolean;
+  nextSyncAt?: Date;
+  lastSyncAt?: Date;
+}> {
+  const config = await getUserConfig();
+
+  if (!config.lastBinanceSyncAt) {
+    return { canSync: true };
+  }
+
+  const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000);
+  const canSync = config.lastBinanceSyncAt < sixHoursAgo;
+
+  if (canSync) {
+    return { canSync: true, lastSyncAt: config.lastBinanceSyncAt };
+  }
+
+  const nextSyncAt = new Date(
+    config.lastBinanceSyncAt.getTime() + 6 * 60 * 60 * 1000,
+  );
+  return {
+    canSync: false,
+    lastSyncAt: config.lastBinanceSyncAt,
     nextSyncAt,
   };
 }

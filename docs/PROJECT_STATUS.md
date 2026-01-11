@@ -1,194 +1,81 @@
 # WalletWise - Estado del Proyecto
 
-> Resumen del progreso de desarrollo del proyecto
+> Resumen del progreso de desarrollo
 
 ---
 
-## Resumen Ejecutivo
+## Version Actual
 
-| Metrica              | Estado |
-| -------------------- | ------ |
-| Fases Completadas    | 5 de 5 |
-| Features Core        | 100%   |
-| Features Adicionales | 100%   |
-| Build Status         | OK     |
-
----
-
-## Grafo de Dependencias
-
-```
-                    +---------------------------------------------+
-                    |           NIVEL 4 - CONSUMIDORES            |
-                    |         Dashboard  |  Reports               |
-                    +----------+---------+--------+---------------+
-                               |                  |
-        +----------------------+------------------+--------------------+
-        |                     NIVEL 3 - TRANSACCIONES                  |
-        |   Income  |  Expense  |  Transfer  |  BudgetContribution     |
-        +-----+-----+-----+-----+------+-----+--------+----------------+
-              |           |            |              |
-        +-----+-----------+------------+--------------+-----+
-        |              NIVEL 2 - ENTIDADES SECUNDARIAS      |
-        |    Job    |    Budget    |   InventoryPriceHistory |
-        +-----+-----+-------+------+------------+-----------+
-              |             |                   |
-        +-----+-------------+-------------------+-----------+
-        |              NIVEL 1 - ENTIDADES PRIMARIAS        |
-        |   Account   |   ExchangeRate   |   InventoryItem  |
-        +------+------+---------+--------+--------+---------+
-               |                |                 |
-        +------+----------------+-----------------+---------+
-        |              NIVEL 0 - RAICES (SIN DEPENDENCIAS)  |
-        | Currency | AccountType | Category | InventoryCategory |
-        +---------------------------------------------------+
-```
+| Metrica      | Valor      |
+| ------------ | ---------- |
+| Version      | 1.2.0      |
+| Estado       | Completado |
+| Build Status | OK         |
 
 ---
 
-## Fases Completadas
+## Funcionalidades Implementadas
 
-### FASE 0: Infraestructura Base
+### Core (v1.0.0)
 
-| Tarea                                                           | Estado     |
-| --------------------------------------------------------------- | ---------- |
-| Componentes UI base (Button, Input, Select, Card, Modal, Table) | COMPLETADO |
-| Layout del Dashboard (Sidebar, Header)                          | COMPLETADO |
-| Componentes de formulario                                       | COMPLETADO |
-| Sistema de notificaciones/toasts                                | COMPLETADO |
-| DatePicker                                                      | COMPLETADO |
-| Loading states (Skeleton, Spinner)                              | COMPLETADO |
-| Empty states                                                    | COMPLETADO |
+- [x] Dashboard con KPIs y graficos
+- [x] Gestion de cuentas (banco, efectivo, digital, credito)
+- [x] Registro de ingresos con trabajos
+- [x] Registro de gastos unicos y recurrentes
+- [x] Transferencias entre cuentas
+- [x] Presupuestos (goal y envelope)
+- [x] Categorias jerarquicas
+- [x] Inventario con historial de precios
+- [x] Lista de compras
+- [x] Backup/restore completo
+- [x] Export PDF/CSV/JSON
+- [x] Paginacion en listados
 
----
+### Mejoras (v1.1.0)
 
-### FASE 1: Nivel 0 - Modulos Raiz
+- [x] Criptomonedas (USDT, BTC, ETH, BNB, SOL)
+- [x] Tasas Binance P2P
+- [x] Cooldown 6 horas en sync
+- [x] Tasa custom en formularios
+- [x] Sidebar con dropdowns
+- [x] Dashboard mejorado (quick actions, widgets)
+- [x] Budgets con bloqueo de saldo
+- [x] Transfers account-budget
+- [x] Vista cuentas con disponible/bloqueado
+- [x] Settings (moneda base, formato fecha/numeros, tema)
+- [x] Formatters centralizados (UserConfigContext)
+- [x] Historial con tasas (columna + popover)
 
-| Modulo            | API              | UI    | Seed                                    | Estado     |
-| ----------------- | ---------------- | ----- | --------------------------------------- | ---------- |
-| Currency          | CRUD             | Lista | USD, COP, VES                           | COMPLETADO |
-| AccountType       | CRUD             | Lista | bank, cash, digital_wallet, credit_card | COMPLETADO |
-| Category          | CRUD + jerarquia | Lista | Categorias predefinidas                 | COMPLETADO |
-| InventoryCategory | CRUD             | Lista | Despensa, Limpieza, etc                 | COMPLETADO |
+### Correcciones y UX (v1.2.0)
 
----
-
-### FASE 2: Nivel 1 - Entidades Primarias
-
-| Modulo        | API         | UI                | Extras                        | Estado     |
-| ------------- | ----------- | ----------------- | ----------------------------- | ---------- |
-| Account       | CRUD        | Lista, Formulario | Balance tracking              | COMPLETADO |
-| ExchangeRate  | CRUD + sync | Lista, Historial  | API externa (open.er-api.com) | COMPLETADO |
-| InventoryItem | CRUD        | Lista, Formulario | Quick quantity update         | COMPLETADO |
-
----
-
-### FASE 3: Nivel 2 - Entidades Secundarias
-
-| Modulo                | API            | UI                | Extras                  | Estado     |
-| --------------------- | -------------- | ----------------- | ----------------------- | ---------- |
-| Job                   | CRUD + archive | Lista, Formulario | Tipos: fixed, freelance | COMPLETADO |
-| Budget                | CRUD           | Lista, Goals      | Progress indicators     | COMPLETADO |
-| InventoryPriceHistory | CRUD           | -                 | Stats de inventario     | COMPLETADO |
-
----
-
-### FASE 4: Nivel 3 - Transacciones
-
-| Modulo             | API            | UI                            | Extras                     | Estado     |
-| ------------------ | -------------- | ----------------------------- | -------------------------- | ---------- |
-| Income             | CRUD           | Lista, Formulario, Paginacion | Auto-generation desde Job  | COMPLETADO |
-| Expense            | CRUD + process | Lista, Formulario, Paginacion | Recurrentes, Tasa auxiliar | COMPLETADO |
-| Transfer           | CRUD           | Lista, Formulario, Paginacion | Conversion multi-moneda    | COMPLETADO |
-| BudgetContribution | CRUD           | -                             | Contribute, withdraw       | COMPLETADO |
+- [x] Cache e invalidacion de queries (dashboard, accounts, budgets)
+- [x] Tasas de cambio mejoradas (sync todo, inversas automaticas, cooldown separado)
+- [x] Conversiones a moneda base (KPIs, tendencias, reportes)
+- [x] Formula de ahorro corregida (custom < oficial = ahorro)
+- [x] Calculo disponible corregido (max 0)
+- [x] Transacciones recientes con contribuciones/retiros budget
+- [x] Tema persistente (sincronizado con BD, deteccion sistema)
+- [x] InlineAccountModal (crear cuenta desde formularios)
+- [x] Inputs de monto sin valor por defecto
+- [x] Cuentas en formato tabla
+- [x] Categorias expandibles
+- [x] Inventario con categoria opcional
+- [x] Shopping list multi-moneda
 
 ---
 
-### FASE 5: Nivel 4 - Agregadores
+## Stack Tecnologico
 
-| Modulo            | Funcionalidad                                                       | Estado     |
-| ----------------- | ------------------------------------------------------------------- | ---------- |
-| Dashboard         | KPIs, Balance, Ingresos, Gastos, Ahorro                             | COMPLETADO |
-| Graficos          | Donut (gastos), Line (tendencia), Bar (cuentas), Progress (budgets) | COMPLETADO |
-| Gastos Pendientes | Card en dashboard, Seccion en expenses                              | COMPLETADO |
-| Shopping List     | API + UI (generar, completar)                                       | COMPLETADO |
-| Reports           | Summary, Export CSV, Export JSON, Export PDF                        | COMPLETADO |
-
----
-
-## Features Adicionales Implementadas
-
-### 1. Paginacion en Endpoints
-
-**Archivos clave:**
-
-- `lib/pagination.ts` - Utilidades de paginacion
-- `components/ui/pagination.tsx` - Componente UI
-
-**Endpoints con paginacion:**
-
-- `GET /api/expenses?paginated=true&page=1&limit=10`
-- `GET /api/incomes?paginated=true&page=1&limit=10`
-- `GET /api/transfers?paginated=true&page=1&limit=10`
-
----
-
-### 2. Backup/Restore
-
-**Archivos clave:**
-
-- `app/api/backup/service.ts` - Logica de export/import
-- `app/api/backup/route.ts` - Endpoints
-- `components/backup-modal.tsx` - Modal UI
-
-**Funcionalidades:**
-
-- Export JSON completo
-- Export CSV (formato legible)
-- Import JSON con upsert
-- Orden de import por dependencias
-
----
-
-### 3. Sincronizacion de Tasas de Cambio
-
-**Archivos clave:**
-
-- `app/api/exchange-rates/service.ts` - `syncFromAPI()`
-- `app/api/exchange-rates/sync/route.ts` - Endpoint POST
-
-**API utilizada:** `https://open.er-api.com/v6/latest/{base}`
-
----
-
-### 4. UI de Gastos Recurrentes
-
-**Archivos clave:**
-
-- `app/api/expenses/[id]/process/route.ts` - Procesar gasto recurrente
-- `app/(dashboard)/_components/pending-expenses.tsx` - Card en dashboard
-- `app/(dashboard)/expenses/page.tsx` - Seccion de recurrentes
-
-**Funcionalidades:**
-
-- Ver gastos recurrentes pendientes
-- Procesar (pagar) gasto individual
-- Toggle entre todos/recurrentes
-- Indicador visual de vencidos
-
----
-
-### 5. Export PDF en Reportes
-
-**Archivos clave:**
-
-- `lib/export-utils.ts` - Funciones de exportacion
-- `app/(dashboard)/reports/page.tsx` - Boton de exportar PDF
-
-**Dependencias:**
-
-- `jspdf`
-- `jspdf-autotable`
+| Tecnologia     | Version |
+| -------------- | ------- |
+| Next.js        | 16      |
+| React          | 19      |
+| TypeScript     | 5.x     |
+| Tailwind CSS   | 4       |
+| TanStack Query | 5.x     |
+| Prisma         | 6       |
+| PostgreSQL     | 16      |
+| Recharts       | 2.x     |
 
 ---
 
@@ -196,9 +83,9 @@
 
 ```
 app/
-├── (dashboard)/          # Rutas del dashboard
-│   ├── page.tsx          # Dashboard principal
-│   ├── _components/      # Componentes del dashboard
+├── dashboard/              # Rutas del dashboard
+│   ├── page.tsx            # Dashboard principal
+│   ├── _components/        # Componentes del dashboard
 │   ├── accounts/
 │   ├── budgets/
 │   ├── categories/
@@ -206,124 +93,90 @@ app/
 │   ├── exchange-rates/
 │   ├── expenses/
 │   ├── incomes/
+│   ├── inventory/
 │   ├── jobs/
 │   ├── reports/
+│   ├── settings/
 │   └── transfers/
-└── api/                  # REST endpoints
-    ├── accounts/
-    ├── backup/
-    ├── budgets/
-    ├── categories/
-    ├── currencies/
-    ├── dashboard/
-    ├── exchange-rates/
-    │   └── sync/
-    ├── expenses/
-    │   └── [id]/process/
-    ├── incomes/
-    ├── inventory-*/
-    ├── jobs/
-    ├── reports/
-    ├── shopping-list/
-    └── transfers/
+└── api/                    # REST endpoints
+    └── [modulo]/
+        ├── route.ts
+        ├── [id]/route.ts
+        ├── service.ts
+        ├── repository.ts
+        ├── schema.ts
+        └── types.ts
 
 lib/
-├── prisma.ts             # Cliente Prisma singleton
-├── pagination.ts         # Utilidades de paginacion
-├── export-utils.ts       # Funciones de export PDF/CSV
-└── utils.ts              # Utilidades generales
+├── prisma.ts
+├── pagination.ts
+├── export-utils.ts
+├── binance-p2p.ts
+├── currency-utils.ts       # NUEVO en v1.2.0
+├── date-utils.ts
+├── number-utils.ts
+└── utils.ts
+
+contexts/
+└── user-config-context.tsx
 
 components/
-├── ui/                   # Componentes base (shadcn/ui)
-├── layout/               # Sidebar, Header
-└── backup-modal.tsx      # Modal de backup
-
-prisma/
-├── schema.prisma         # Schema de la BD
-└── seed.ts               # Datos iniciales
+├── ui/
+├── layout/
+├── exchange-rate-display.tsx
+├── rate-details-popover.tsx
+├── inline-account-modal.tsx  # NUEVO en v1.2.0
+└── backup-modal.tsx
 ```
 
 ---
 
-## Arquitectura por Modulo (API)
+## Proximos Pasos
 
-```
-app/api/[modulo]/
-├── route.ts        # GET (list), POST (create)
-├── [id]/
-│   └── route.ts    # GET (one), PUT (update), DELETE
-├── service.ts      # Logica de negocio
-├── repository.ts   # Queries Prisma
-├── schema.ts       # Validacion Zod
-└── types.ts        # Interfaces TypeScript
-```
+Version 2.0.0 (planificada):
+
+- Sistema de autenticacion
+- Soporte multi-usuario
+- Landing page publica
+- OAuth providers
+
+Ver [docs/steps/v2.0.0.md](./steps/v2.0.0.md) para detalles.
 
 ---
 
-## Stack Tecnologico
+## Documentacion
 
-| Capa            | Tecnologia                       |
-| --------------- | -------------------------------- |
-| Frontend        | Next.js 16, React 19, TypeScript |
-| Estilos         | Tailwind CSS 4                   |
-| Estado/Fetching | TanStack Query                   |
-| Backend         | Next.js API Routes               |
-| ORM             | Prisma 6                         |
-| Base de Datos   | PostgreSQL 16                    |
-| Graficos        | Recharts                         |
-| PDF             | jsPDF + jspdf-autotable          |
-| Contenedores    | Docker Compose                   |
+| Documento                            | Descripcion              |
+| ------------------------------------ | ------------------------ |
+| [README.md](./README.md)             | Indice de documentacion  |
+| [SETUP.md](./SETUP.md)               | Guia de instalacion      |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Arquitectura             |
+| [API.md](./API.md)                   | Referencia de endpoints  |
+| [steps/v1.md](./steps/v1.md)         | Detalles de v1.0.0-1.1.0 |
+| [steps/v1.2.0.md](./steps/v1.2.0.md) | Detalles de v1.2.0       |
+| [steps/v2.0.0.md](./steps/v2.0.0.md) | Roadmap v2.0.0           |
 
 ---
 
-## Comandos Utiles
+## Comandos
 
 ```bash
 # Desarrollo
-yarn dev              # Servidor de desarrollo
-yarn build            # Build de produccion
+yarn dev              # Servidor desarrollo
+yarn build            # Build produccion
 yarn lint             # Linter
+yarn typecheck        # Verificar tipos
 
 # Base de datos
 yarn db:generate      # Generar cliente Prisma
 yarn db:migrate       # Aplicar migraciones
-yarn db:seed          # Seed de datos iniciales
-yarn db:studio        # Prisma Studio (UI)
+yarn db:seed          # Datos iniciales
+yarn db:studio        # Prisma Studio
 
 # Docker
 docker-compose up -d  # Levantar PostgreSQL
-docker-compose down   # Detener servicios
 ```
 
 ---
 
-## Pendientes Futuros (Nice to have)
-
-Estas son features opcionales que podrian implementarse en el futuro:
-
-| Feature               | Descripcion                        | Complejidad |
-| --------------------- | ---------------------------------- | ----------- |
-| Autenticacion         | Login/registro de usuarios         | Alta        |
-| Multi-usuario         | Soporte para multiples usuarios    | Alta        |
-| Notificaciones push   | Alertas de gastos pendientes       | Media       |
-| Modo oscuro           | Toggle de tema claro/oscuro        | Baja        |
-| PWA                   | App instalable en movil            | Media       |
-| Graficos avanzados    | Comparativas anuales, proyecciones | Media       |
-| Importar desde bancos | Parsear extractos bancarios        | Alta        |
-
----
-
-## Enlaces de Documentacion
-
-| Documento                            | Descripcion               |
-| ------------------------------------ | ------------------------- |
-| [README.md](./README.md)             | Indice principal          |
-| [CONTEXT.md](./CONTEXT.md)           | Contexto del proyecto     |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Arquitectura y estandares |
-| [API.md](./API.md)                   | Referencia de endpoints   |
-| [SETUP.md](./SETUP.md)               | Guia de instalacion       |
-| [CHARTS.md](./CHARTS.md)             | Sistema de graficos       |
-
----
-
-_Ultima actualizacion: Enero 2026_
+_WalletWise v1.2.0 - Estado del Proyecto_

@@ -20,6 +20,22 @@ export const metadata: Metadata = {
     "Gestiona tus finanzas personales con soporte multi-moneda, seguimiento de gastos e ingresos, y metas de ahorro.",
 };
 
+// Script to prevent theme flash - applies system preference before React hydration
+const themeScript = `
+  (function() {
+    try {
+      var theme = localStorage.getItem('walletwise-theme');
+      if (!theme || theme === 'system') {
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      } else if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      }
+    } catch (e) {}
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -27,6 +43,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

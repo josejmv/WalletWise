@@ -21,6 +21,7 @@ export interface BalanceByCurrency {
   currencyId: string;
   currencyCode: string;
   totalBalance: number;
+  convertedBalance?: number; // Amount converted to user's base currency
 }
 
 export interface ExpensesByCategory {
@@ -67,13 +68,14 @@ export interface DashboardSummary {
 
 export interface RecentTransaction {
   id: string;
-  type: "income" | "expense" | "transfer";
+  type: "income" | "expense" | "transfer" | "contribution" | "withdrawal";
   amount: number;
   currencyCode: string;
   description: string | null;
   date: Date;
   category?: string;
   account: string;
+  budgetName?: string; // For contributions and withdrawals
 }
 
 export interface SavingsBreakdown {

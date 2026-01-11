@@ -1,6 +1,6 @@
 # WalletWise - Documentacion
 
-> Documentacion tecnica para el proyecto WalletWise - Dashboard de finanzas personales
+> Documentacion tecnica para WalletWise - Dashboard de finanzas personales
 
 ---
 
@@ -8,10 +8,10 @@
 
 ### Estado del Proyecto
 
-| Documento                                | Descripcion                                   |
-| ---------------------------------------- | --------------------------------------------- |
-| [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Resumen de lo completado y pendientes futuros |
-| [steps/](./steps/)                       | Versiones del proyecto (v1.0.0, v2.0.0, etc)  |
+| Documento                                | Descripcion                   |
+| ---------------------------------------- | ----------------------------- |
+| [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Estado actual del proyecto    |
+| [steps/](./steps/)                       | Versiones (v1.x, v2.0.0, etc) |
 
 ### Contexto y Configuracion
 
@@ -22,10 +22,11 @@
 
 ### Arquitectura y Estandares
 
-| Documento                            | Descripcion                                  |
-| ------------------------------------ | -------------------------------------------- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Frontend, Backend, Base de Datos, Estandares |
-| [API.md](./API.md)                   | Referencia completa de todos los endpoints   |
+| Documento                            | Descripcion                       |
+| ------------------------------------ | --------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | Frontend, Backend, DB, Estandares |
+| [API.md](./API.md)                   | Referencia completa de endpoints  |
+| [CHARTS.md](./CHARTS.md)             | Sistema de graficos e indicadores |
 
 ### Modulos del Sistema
 
@@ -41,6 +42,7 @@
 | Transfers      | Transferencias entre cuentas        | [README](./modules/transfers/README.md)      |
 | Budgets        | Presupuestos y metas de ahorro      | [README](./modules/budgets/README.md)        |
 | Reports        | Reportes y exportacion              | [README](./modules/reports/README.md)        |
+| Inventory      | Gestion de inventario               | [README](./modules/inventory/README.md)      |
 
 ---
 
@@ -57,7 +59,7 @@ yarn install
 yarn db:generate
 
 # Aplicar schema de base de datos
-yarn db:migrate
+yarn db:push
 
 # Seed de datos iniciales
 yarn db:seed
@@ -78,6 +80,7 @@ yarn dev
 | Backend         | Next.js API Routes               |
 | ORM             | Prisma 6                         |
 | Base de Datos   | PostgreSQL 16                    |
+| Graficos        | Recharts                         |
 | Contenedores    | Docker Compose                   |
 
 ---
@@ -86,42 +89,49 @@ yarn dev
 
 ```
 app/
-├── (dashboard)/          # Rutas del dashboard
-│   ├── page.tsx          # Dashboard principal
-│   ├── jobs/
+├── dashboard/              # Rutas del dashboard
+│   ├── page.tsx            # Dashboard principal
+│   ├── _components/        # Componentes dashboard
 │   ├── accounts/
-│   ├── categories/
-│   ├── exchange-rates/
-│   ├── incomes/
-│   ├── expenses/
-│   ├── transfers/
 │   ├── budgets/
-│   └── reports/
-└── api/                  # REST endpoints
-    ├── accounts/
-    ├── budgets/
-    ├── categories/
-    ├── dashboard/
-    ├── exchange-rates/
-    ├── expenses/
-    ├── incomes/
-    ├── jobs/
-    ├── reports/
-    └── transfers/
+│   ├── categories/
+│   ├── currencies/
+│   ├── exchange-rates/
+│   ├── expenses/
+│   ├── incomes/
+│   ├── inventory/
+│   ├── jobs/
+│   ├── reports/
+│   ├── settings/
+│   └── transfers/
+└── api/                    # REST endpoints
+    └── [modulo]/
+        ├── route.ts
+        ├── service.ts
+        ├── repository.ts
+        └── types.ts
 
 lib/
-├── prisma.ts             # Cliente Prisma singleton
+├── prisma.ts
+├── pagination.ts
+├── export-utils.ts
+├── binance-p2p.ts
+└── utils.ts
 
-prisma/
-├── schema.prisma         # Definicion del schema
-└── seed.ts               # Datos iniciales
+contexts/
+└── user-config-context.tsx
 
-docs/                     # Documentacion
+components/
+├── ui/
+├── layout/
+└── ...
 ```
 
 ---
 
 ## Sistema Multi-Moneda
+
+### Monedas Fiat
 
 | Moneda | Codigo | Rol                     |
 | ------ | ------ | ----------------------- |
@@ -129,12 +139,21 @@ docs/                     # Documentacion
 | COP    | COP    | Peso colombiano         |
 | VES    | VES    | Bolivar venezolano      |
 
-**Caracteristicas:**
+### Criptomonedas
 
-- Conversion automatica a moneda base
-- Tasa de cambio oficial via Exchange Rate API
-- Tasa auxiliar por transaccion para comparar con comercios
-- Calculo de diferencia (ahorro/gasto extra)
+| Moneda   | Codigo |
+| -------- | ------ |
+| Tether   | USDT   |
+| Bitcoin  | BTC    |
+| Ethereum | ETH    |
+| Binance  | BNB    |
+| Solana   | SOL    |
+
+### Fuentes de Tasas
+
+- **API Oficial**: ExchangeRate-API para fiat
+- **Binance P2P**: Para cryptos y pares adicionales
+- **Manual**: Tasa custom ingresada por usuario
 
 ---
 
@@ -156,14 +175,20 @@ docs/                     # Documentacion
 | `fixed`     | Trabajo fijo con sueldo periodico |
 | `freelance` | Proyecto freelance con pago unico |
 
-### Periodicidad
+### Tipos de Budget
 
-| Tipo       | Descripcion                          |
-| ---------- | ------------------------------------ |
-| `biweekly` | Quincenal (dias 15 y ultimo del mes) |
-| `monthly`  | Mensual (dia configurado)            |
-| `weekly`   | Semanal                              |
-| `yearly`   | Anual                                |
+| Tipo       | Descripcion                     |
+| ---------- | ------------------------------- |
+| `goal`     | Meta de ahorro con deadline     |
+| `envelope` | Sobre virtual que bloquea saldo |
+
+### Tipos de Transfer
+
+| Tipo                 | Descripcion          |
+| -------------------- | -------------------- |
+| `account_to_account` | Entre cuentas        |
+| `account_to_budget`  | Cuenta a presupuesto |
+| `budget_to_account`  | Presupuesto a cuenta |
 
 ---
 
@@ -173,3 +198,4 @@ docs/                     # Documentacion
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - Arquitectura y estandares
 - [API.md](./API.md) - Referencia de APIs
 - [SETUP.md](./SETUP.md) - Guia de instalacion
+- [steps/v1.md](./steps/v1.md) - Detalles de version 1.x

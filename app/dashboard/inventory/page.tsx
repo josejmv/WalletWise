@@ -52,7 +52,7 @@ interface InventoryItem {
   estimatedPrice: number;
   isActive: boolean;
   notes: string | null;
-  category: { id: string; name: string };
+  category: { id: string; name: string } | null;
   currency: { id: string; code: string; symbol: string };
 }
 
@@ -222,7 +222,13 @@ export default function InventoryPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell>{item.category.name}</TableCell>
+                      <TableCell>
+                        {item.category?.name ?? (
+                          <span className="text-muted-foreground italic">
+                            Sin categoria
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="space-y-1 w-32">
                           <div className="flex justify-between text-xs">

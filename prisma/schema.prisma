@@ -368,13 +368,15 @@ model BudgetContribution {
 // ============================================
 
 model UserConfig {
-  id             String    @id @default(uuid())
-  baseCurrencyId String
-  dateFormat     String    @default("DD/MM/YYYY") // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
-  numberFormat   String    @default("es-CO") // es-CO, en-US
-  theme          String    @default("system") // system, light, dark
-  sidebarConfig  Json      @default("[]")
-  lastRateSyncAt DateTime?
+  id                 String    @id @default(uuid())
+  baseCurrencyId     String
+  dateFormat         String    @default("DD/MM/YYYY") // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
+  numberFormat       String    @default("es-CO") // es-CO, en-US
+  theme              String    @default("system") // system, light, dark
+  sidebarConfig      Json      @default("[]")
+  lastRateSyncAt     DateTime? // Legacy - for backwards compatibility
+  lastOfficialSyncAt DateTime? // Cooldown for official API sync
+  lastBinanceSyncAt  DateTime? // Cooldown for Binance P2P sync
 
   // Relations
   baseCurrency Currency @relation(fields: [baseCurrencyId], references: [id])
@@ -408,7 +410,7 @@ model InventoryCategory {
 model InventoryItem {
   id              String        @id @default(uuid())
   name            String
-  categoryId      String
+  categoryId      String?
   currentQuantity Decimal       @default(0) @db.Decimal(10, 2)
   maxQuantity     Decimal       @db.Decimal(10, 2)
   minQuantity     Decimal       @default(0) @db.Decimal(10, 2)
@@ -419,7 +421,7 @@ model InventoryItem {
   notes           String?
 
   // Relations
-  category     InventoryCategory       @relation(fields: [categoryId], references: [id])
+  category     InventoryCategory?      @relation(fields: [categoryId], references: [id])
   currency     Currency                @relation(fields: [currencyId], references: [id])
   priceHistory InventoryPriceHistory[]
 

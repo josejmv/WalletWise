@@ -99,6 +99,8 @@ export default function BudgetsPage() {
     mutationFn: deleteBudget,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["budgets"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       toast({ title: "Presupuesto eliminado" });
       setDeleteId(null);
     },
@@ -115,6 +117,8 @@ export default function BudgetsPage() {
     setFormOpen(false);
     setEditingBudget(null);
     queryClient.invalidateQueries({ queryKey: ["budgets"] });
+    queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
   const handleEdit = (budget: Budget) => {
@@ -318,6 +322,7 @@ export default function BudgetsPage() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["budgets"] });
             queryClient.invalidateQueries({ queryKey: ["accounts"] });
+            queryClient.invalidateQueries({ queryKey: ["dashboard"] });
           }}
         />
       )}
@@ -330,6 +335,7 @@ export default function BudgetsPage() {
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ["budgets"] });
             queryClient.invalidateQueries({ queryKey: ["accounts"] });
+            queryClient.invalidateQueries({ queryKey: ["dashboard"] });
           }}
         />
       )}

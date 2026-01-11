@@ -1,4 +1,9 @@
 import { prisma } from "@/lib/prisma";
+import {
+  getUserBaseCurrencyId,
+  getUserBaseCurrency,
+  convertManyToBaseCurrency,
+} from "@/lib/currency-utils";
 import type {
   ReportFilters,
   MonthlyReport,
@@ -27,44 +32,73 @@ export async function getMonthlyReport(
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
 
-  const [incomes, expenses, transfers] = await Promise.all([
+  const [incomes, expenses, transfers, baseCurrencyId] = await Promise.all([
     prisma.income.findMany({
       where: { date: { gte: startDate, lte: endDate } },
-      include: { job: true },
+      select: {
+        id: true,
+        amount: true,
+        currencyId: true,
+        job: { select: { name: true } },
+      },
     }),
     prisma.expense.findMany({
       where: { date: { gte: startDate, lte: endDate } },
-      include: { category: true },
+      select: {
+        id: true,
+        amount: true,
+        currencyId: true,
+        category: { select: { name: true } },
+      },
     }),
     prisma.transfer.findMany({
       where: { date: { gte: startDate, lte: endDate } },
+      select: { id: true, amount: true, currencyId: true },
     }),
+    getUserBaseCurrencyId(),
   ]);
 
-  const totalIncome = incomes.reduce((sum, inc) => sum + Number(inc.amount), 0);
-  const totalExpenses = expenses.reduce(
-    (sum, exp) => sum + Number(exp.amount),
+  // Convert all amounts to base currency
+  const incomesConverted = await convertManyToBaseCurrency(
+    incomes.map((i) => ({ ...i, amount: Number(i.amount) })),
+    baseCurrencyId,
+  );
+  const expensesConverted = await convertManyToBaseCurrency(
+    expenses.map((e) => ({ ...e, amount: Number(e.amount) })),
+    baseCurrencyId,
+  );
+  const transfersConverted = await convertManyToBaseCurrency(
+    transfers.map((t) => ({ ...t, amount: Number(t.amount) })),
+    baseCurrencyId,
+  );
+
+  const totalIncome = incomesConverted.reduce(
+    (sum, inc) => sum + inc.convertedAmount,
     0,
   );
-  const totalTransfers = transfers.reduce(
-    (sum, tr) => sum + Number(tr.amount),
+  const totalExpenses = expensesConverted.reduce(
+    (sum, exp) => sum + exp.convertedAmount,
+    0,
+  );
+  const totalTransfers = transfersConverted.reduce(
+    (sum, tr) => sum + tr.convertedAmount,
     0,
   );
 
-  // Group income by job
+  // Group income by job (using converted amounts)
   const incomeByJob = new Map<string, number>();
-  for (const income of incomes) {
+  for (const income of incomesConverted) {
     const current = incomeByJob.get(income.job.name) || 0;
-    incomeByJob.set(income.job.name, current + Number(income.amount));
+    incomeByJob.set(income.job.name, current + income.convertedAmount);
   }
 
-  // Group expenses by category
+  // Group expenses by category (using converted amounts)
   const expenseByCategory = new Map<string, number>();
-  for (const expense of expenses) {
+  for (const expense of expensesConverted) {
     const current = expenseByCategory.get(expense.category.name) || 0;
     expenseByCategory.set(
       expense.category.name,
-      current + Number(expense.amount),
+      current + expense.convertedAmount,
     );
   }
 
@@ -282,39 +316,64 @@ export async function getFinancialSummary(
 ): Promise<FinancialSummary> {
   const { startDate, endDate } = getDateRange(filters);
 
-  const [incomes, expenses, accounts, budgets] = await Promise.all([
-    prisma.income.findMany({
-      where: { date: { gte: startDate, lte: endDate } },
-      include: { job: true },
-    }),
-    prisma.expense.findMany({
-      where: { date: { gte: startDate, lte: endDate } },
-      include: { category: true },
-    }),
-    prisma.account.findMany({
-      where: { isActive: true },
-      include: { currency: true },
-    }),
-    prisma.budget.findMany({
-      where: { status: "active" },
-    }),
-  ]);
+  const [incomes, expenses, accounts, budgets, baseCurrencyId] =
+    await Promise.all([
+      prisma.income.findMany({
+        where: { date: { gte: startDate, lte: endDate } },
+        select: {
+          id: true,
+          amount: true,
+          currencyId: true,
+          job: { select: { name: true } },
+        },
+      }),
+      prisma.expense.findMany({
+        where: { date: { gte: startDate, lte: endDate } },
+        select: {
+          id: true,
+          amount: true,
+          currencyId: true,
+          category: { select: { name: true } },
+        },
+      }),
+      prisma.account.findMany({
+        where: { isActive: true },
+        include: { currency: true },
+      }),
+      prisma.budget.findMany({
+        where: { status: "active" },
+      }),
+      getUserBaseCurrencyId(),
+    ]);
 
-  const totalIncome = incomes.reduce((sum, inc) => sum + Number(inc.amount), 0);
-  const totalExpenses = expenses.reduce(
-    (sum, exp) => sum + Number(exp.amount),
+  // Convert all amounts to base currency
+  const incomesConverted = await convertManyToBaseCurrency(
+    incomes.map((i) => ({ ...i, amount: Number(i.amount) })),
+    baseCurrencyId,
+  );
+  const expensesConverted = await convertManyToBaseCurrency(
+    expenses.map((e) => ({ ...e, amount: Number(e.amount) })),
+    baseCurrencyId,
+  );
+
+  const totalIncome = incomesConverted.reduce(
+    (sum, inc) => sum + inc.convertedAmount,
+    0,
+  );
+  const totalExpenses = expensesConverted.reduce(
+    (sum, exp) => sum + exp.convertedAmount,
     0,
   );
   const netSavings = totalIncome - totalExpenses;
   const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
 
-  // Top expense categories
+  // Top expense categories (using converted amounts)
   const expenseByCategory = new Map<string, number>();
-  for (const expense of expenses) {
+  for (const expense of expensesConverted) {
     const current = expenseByCategory.get(expense.category.name) || 0;
     expenseByCategory.set(
       expense.category.name,
-      current + Number(expense.amount),
+      current + expense.convertedAmount,
     );
   }
 
@@ -327,11 +386,11 @@ export async function getFinancialSummary(
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  // Top income jobs
+  // Top income jobs (using converted amounts)
   const incomeByJob = new Map<string, number>();
-  for (const income of incomes) {
+  for (const income of incomesConverted) {
     const current = incomeByJob.get(income.job.name) || 0;
-    incomeByJob.set(income.job.name, current + Number(income.amount));
+    incomeByJob.set(income.job.name, current + income.convertedAmount);
   }
 
   const topIncomeJobs = Array.from(incomeByJob.entries())

@@ -2,15 +2,9 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, LayoutGrid, List } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -29,9 +23,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountForm } from "./_components/account-form";
-import { AccountCard } from "./_components/account-card";
 import { useToast } from "@/components/ui/use-toast";
 import { useFormatters } from "@/contexts/user-config-context";
 
@@ -224,25 +226,97 @@ export default function AccountsPage() {
         </div>
       )}
 
-      {/* Accounts grid */}
-      {accounts && accounts.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {accounts.map((account) => (
-            <AccountCard
-              key={account.id}
-              account={account}
-              onEdit={() => handleEdit(account)}
-              onDelete={() => setDeleteId(account.id)}
-            />
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="text-center py-12 text-muted-foreground">
-            No hay cuentas registradas. Crea tu primera cuenta.
-          </CardContent>
-        </Card>
-      )}
+      {/* Accounts table */}
+      <Card>
+        <CardContent className="p-0">
+          {accounts && accounts.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Moneda</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead className="text-right">Disponible</TableHead>
+                  <TableHead className="text-right">Bloqueado</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {accounts.map((account) => (
+                  <TableRow key={account.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {account.name}
+                        {!account.isActive && (
+                          <Badge variant="secondary" className="text-xs">
+                            Inactiva
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {account.accountType.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{account.currency.code}</TableCell>
+                    <TableCell className="text-right font-mono">
+                      {formatCurrency(
+                        account.totalBalance,
+                        account.currency.code,
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-green-600">
+                      {formatCurrency(
+                        account.availableBalance,
+                        account.currency.code,
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {account.blockedBalance > 0 ? (
+                        <span className="text-amber-600">
+                          {formatCurrency(
+                            account.blockedBalance,
+                            account.currency.code,
+                          )}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(account)}
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setDeleteId(account.id)}
+                          title="Eliminar"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No hay cuentas registradas. Crea tu primera cuenta.
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Delete confirmation dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

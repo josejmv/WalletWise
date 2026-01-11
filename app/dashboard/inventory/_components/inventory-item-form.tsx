@@ -21,7 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 const inventoryItemSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
-  categoryId: z.string().min(1, "La categoria es requerida"),
+  categoryId: z.string().nullable().optional(),
   currentQuantity: z.number().min(0),
   maxQuantity: z.number().min(1, "La cantidad maxima debe ser mayor a 0"),
   minQuantity: z.number().min(0),
@@ -45,7 +45,7 @@ interface InventoryItemFormProps {
     estimatedPrice: number;
     isActive: boolean;
     notes: string | null;
-    category: { id: string };
+    category: { id: string } | null;
     currency: { id: string };
   } | null;
   onSuccess: () => void;
@@ -117,7 +117,7 @@ export function InventoryItemForm({
     resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       name: "",
-      categoryId: "",
+      categoryId: null,
       currentQuantity: 0,
       maxQuantity: 1,
       minQuantity: 0,
@@ -133,7 +133,7 @@ export function InventoryItemForm({
     if (item) {
       reset({
         name: item.name,
-        categoryId: item.category.id,
+        categoryId: item.category?.id ?? null,
         currentQuantity: item.currentQuantity,
         maxQuantity: item.maxQuantity,
         minQuantity: item.minQuantity,
@@ -208,15 +208,18 @@ export function InventoryItemForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="categoryId">Categoria</Label>
+          <Label htmlFor="categoryId">Categoria (opcional)</Label>
           <Select
-            value={watch("categoryId")}
-            onValueChange={(value) => setValue("categoryId", value)}
+            value={watch("categoryId") ?? "__none__"}
+            onValueChange={(value) =>
+              setValue("categoryId", value === "__none__" ? null : value)
+            }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Categoria" />
+              <SelectValue placeholder="Sin categoria" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__none__">Sin categoria</SelectItem>
               {categories?.map((cat: { id: string; name: string }) => (
                 <SelectItem key={cat.id} value={cat.id}>
                   {cat.name}
@@ -224,11 +227,6 @@ export function InventoryItemForm({
               ))}
             </SelectContent>
           </Select>
-          {errors.categoryId && (
-            <p className="text-sm text-destructive">
-              {errors.categoryId.message}
-            </p>
-          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="unit">Unidad</Label>

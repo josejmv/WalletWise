@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -35,9 +35,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/use-toast";
 import { CategoryForm } from "./_components/category-form";
+import { cn } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -47,6 +49,10 @@ interface Category {
   parentId: string | null;
   isActive: boolean;
   parent?: { name: string } | null;
+}
+
+interface CategoryWithChildren extends Category {
+  children: Category[];
 }
 
 async function fetchCategories(): Promise<Category[]> {
@@ -66,6 +72,7 @@ export default function CategoriesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -73,6 +80,41 @@ export default function CategoriesPage() {
     queryKey: ["categories"],
     queryFn: fetchCategories,
   });
+
+  // Organize categories into parent-children structure
+  const organizedCategories = useMemo(() => {
+    if (!categories) return { parents: [], standalone: [] };
+
+    const parentMap = new Map<string, CategoryWithChildren>();
+    const childrenByParent = new Map<string, Category[]>();
+    const standalone: Category[] = [];
+
+    // First pass: identify all categories and their children
+    categories.forEach((cat) => {
+      if (cat.parentId) {
+        const children = childrenByParent.get(cat.parentId) || [];
+        children.push(cat);
+        childrenByParent.set(cat.parentId, children);
+      }
+    });
+
+    // Second pass: create parent categories with their children
+    categories.forEach((cat) => {
+      if (!cat.parentId) {
+        const children = childrenByParent.get(cat.id) || [];
+        if (children.length > 0) {
+          parentMap.set(cat.id, { ...cat, children });
+        } else {
+          standalone.push(cat);
+        }
+      }
+    });
+
+    return {
+      parents: Array.from(parentMap.values()),
+      standalone,
+    };
+  }, [categories]);
 
   const deleteMutation = useMutation({
     mutationFn: deleteCategory,
@@ -106,6 +148,91 @@ export default function CategoriesPage() {
     setEditingCategory(null);
   };
 
+  const toggleExpanded = (id: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const renderCategoryRow = (
+    category: Category,
+    isChild: boolean = false,
+    hasChildren: boolean = false,
+    isExpanded: boolean = false,
+  ) => (
+    <TableRow key={category.id} className={cn(isChild && "bg-muted/30")}>
+      <TableCell className="font-medium">
+        <div className={cn("flex items-center gap-2", isChild && "pl-8")}>
+          {hasChildren && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => toggleExpanded(category.id)}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+            </Button>
+          )}
+          {!hasChildren && !isChild && <div className="w-6" />}
+          {category.color && (
+            <div
+              className="w-3 h-3 rounded-full shrink-0"
+              style={{ backgroundColor: category.color }}
+            />
+          )}
+          {category.icon && <span className="text-lg">{category.icon}</span>}
+          <span>{category.name}</span>
+          {!category.isActive && (
+            <Badge variant="secondary" className="text-xs">
+              Inactiva
+            </Badge>
+          )}
+        </div>
+      </TableCell>
+      <TableCell>
+        {hasChildren && (
+          <Badge variant="outline" className="text-xs">
+            {(category as CategoryWithChildren).children.length} subcategorias
+          </Badge>
+        )}
+        {isChild && (
+          <span className="text-muted-foreground text-sm">Subcategoria</span>
+        )}
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => handleEdit(category)}
+            title="Editar"
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setDeleteId(category.id)}
+            title="Eliminar"
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -120,6 +247,10 @@ export default function CategoriesPage() {
       </div>
     );
   }
+
+  const totalCategories = categories?.length || 0;
+  const parentCount = organizedCategories.parents.length;
+  const standaloneCount = organizedCategories.standalone.length;
 
   return (
     <div className="space-y-6">
@@ -140,59 +271,40 @@ export default function CategoriesPage() {
         <CardHeader>
           <CardTitle>Todas las Categorias</CardTitle>
           <CardDescription>
-            {categories?.length || 0} categoria(s)
+            {totalCategories} categoria(s) total - {parentCount} con
+            subcategorias, {standaloneCount} independientes
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {categories && categories.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Categoria</TableHead>
-                  <TableHead>Padre</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map((category) => (
-                  <TableRow key={category.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {category.color && (
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: category.color }}
-                          />
-                        )}
-                        {category.icon && (
-                          <span className="text-lg">{category.icon}</span>
-                        )}
-                        {category.name}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {category.parent?.name || "-"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(category)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleteId(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                {/* Parent categories with children */}
+                {organizedCategories.parents.map((parent) => (
+                  <>
+                    {renderCategoryRow(
+                      parent,
+                      false,
+                      true,
+                      expandedIds.has(parent.id),
+                    )}
+                    {expandedIds.has(parent.id) &&
+                      parent.children.map((child) =>
+                        renderCategoryRow(child, true, false, false),
+                      )}
+                  </>
                 ))}
+                {/* Standalone categories (no children) */}
+                {organizedCategories.standalone.map((category) =>
+                  renderCategoryRow(category, false, false, false),
+                )}
               </TableBody>
             </Table>
           ) : (

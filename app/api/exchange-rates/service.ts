@@ -9,7 +9,11 @@ import type {
 } from "./types";
 import {
   canSyncRates,
+  canSyncOfficialRates,
+  canSyncBinanceRates,
   updateLastRateSyncAt,
+  updateLastOfficialSyncAt,
+  updateLastBinanceSyncAt,
 } from "@/app/api/user-config/service";
 import {
   fetchBinanceP2PRate,
@@ -192,15 +196,17 @@ export async function syncFromAPI(): Promise<SyncResult> {
   let synced = 0;
 
   try {
-    // Check cooldown
-    const cooldownCheck = await checkSyncCooldown();
+    // Check cooldown (separate for official rates)
+    const cooldownCheck = await canSyncOfficialRates();
     if (!cooldownCheck.canSync) {
       const nextSync = cooldownCheck.nextSyncAt
         ? cooldownCheck.nextSyncAt.toLocaleString("es-CO")
         : "desconocido";
       return {
         synced: 0,
-        errors: [`Debes esperar hasta ${nextSync} para sincronizar de nuevo`],
+        errors: [
+          `Debes esperar hasta ${nextSync} para sincronizar tasas oficiales`,
+        ],
         source: "official",
       };
     }
@@ -262,10 +268,20 @@ export async function syncFromAPI(): Promise<SyncResult> {
         fetchedAt: now,
       });
       synced++;
+
+      // Create inverse rate automatically
+      await repository.create({
+        fromCurrencyId: targetCurrency.id,
+        toCurrencyId: baseCurrency.id,
+        rate: 1 / rate,
+        source: "official",
+        fetchedAt: now,
+      });
+      synced++;
     }
 
-    // Update last sync timestamp
-    await updateLastRateSyncAt();
+    // Update last official sync timestamp
+    await updateLastOfficialSyncAt();
 
     // Log sync
     await createSyncLog(
@@ -294,15 +310,17 @@ export async function syncFromBinance(): Promise<SyncResult> {
   let synced = 0;
 
   try {
-    // Check cooldown
-    const cooldownCheck = await checkSyncCooldown();
+    // Check cooldown (separate for Binance rates)
+    const cooldownCheck = await canSyncBinanceRates();
     if (!cooldownCheck.canSync) {
       const nextSync = cooldownCheck.nextSyncAt
         ? cooldownCheck.nextSyncAt.toLocaleString("es-CO")
         : "desconocido";
       return {
         synced: 0,
-        errors: [`Debes esperar hasta ${nextSync} para sincronizar de nuevo`],
+        errors: [
+          `Debes esperar hasta ${nextSync} para sincronizar tasas Binance`,
+        ],
         source: "binance",
       };
     }
@@ -347,11 +365,21 @@ export async function syncFromBinance(): Promise<SyncResult> {
           fetchedAt: now,
         });
         synced++;
+
+        // Create inverse rate automatically (fiat to crypto)
+        await repository.create({
+          fromCurrencyId: fiatId,
+          toCurrencyId: cryptoId,
+          rate: 1 / rate,
+          source: "binance",
+          fetchedAt: now,
+        });
+        synced++;
       }
     }
 
-    // Update last sync timestamp
-    await updateLastRateSyncAt();
+    // Update last Binance sync timestamp
+    await updateLastBinanceSyncAt();
 
     // Log sync
     await createSyncLog(

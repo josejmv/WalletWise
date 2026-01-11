@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
+import { InlineAccountModal } from "@/components/inline-account-modal";
 
 const budgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
@@ -115,7 +116,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
     defaultValues: {
       name: "",
       type: "goal",
-      targetAmount: 0,
+      targetAmount: undefined as unknown as number, // Empty by default
       currentAmount: 0,
       currencyId: "",
       accountId: "",
@@ -295,14 +296,14 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="accountId">Cuenta</Label>
+      <div className="space-y-2">
+        <Label htmlFor="accountId">Cuenta</Label>
+        <div className="flex gap-2">
           <Select
             value={watch("accountId")}
             onValueChange={(value) => setValue("accountId", value)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="flex-1">
               <SelectValue placeholder="Selecciona una cuenta" />
             </SelectTrigger>
             <SelectContent>
@@ -319,16 +320,18 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
               )}
             </SelectContent>
           </Select>
-          {errors.accountId && (
-            <p className="text-sm text-destructive">
-              {errors.accountId.message}
-            </p>
-          )}
+          <InlineAccountModal
+            onAccountCreated={(accountId) => setValue("accountId", accountId)}
+          />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="deadline">Fecha Limite (opcional)</Label>
-          <Input id="deadline" type="date" {...register("deadline")} />
-        </div>
+        {errors.accountId && (
+          <p className="text-sm text-destructive">{errors.accountId.message}</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="deadline">Fecha Limite (opcional)</Label>
+        <Input id="deadline" type="date" {...register("deadline")} />
       </div>
 
       {isEditing && (
