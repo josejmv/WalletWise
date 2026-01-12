@@ -88,6 +88,15 @@ interface Account {
 interface Category {
   id: string;
   name: string;
+  parent?: { id: string; name: string } | null;
+}
+
+// Helper to get category display name with parent
+function getCategoryDisplayName(category: Category): string {
+  if (category.parent) {
+    return `${category.name} (${category.parent.name})`;
+  }
+  return category.name;
 }
 
 interface Currency {
@@ -326,7 +335,7 @@ export default function TransactionHistoryPage() {
                       <SelectItem value="all">Todas</SelectItem>
                       {categories?.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
+                          {getCategoryDisplayName(cat)}
                         </SelectItem>
                       ))}
                     </SelectContent>

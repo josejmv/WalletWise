@@ -31,6 +31,7 @@ export interface TransactionHistoryItem {
   category?: {
     id: string;
     name: string;
+    parent?: { id: string; name: string } | null;
   };
   currency: {
     id: string;
@@ -129,13 +130,24 @@ export async function getTransactionHistory(
       },
       include: {
         account: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true } },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            parent: { select: { id: true, name: true } },
+          },
+        },
         currency: { select: { id: true, code: true, symbol: true } },
       },
       orderBy: { date: "desc" },
     });
 
     expenses.forEach((expense) => {
+      // Build display name with parent if exists
+      const categoryDisplayName = expense.category.parent
+        ? `${expense.category.name} (${expense.category.parent.name})`
+        : expense.category.name;
+
       transactions.push({
         id: expense.id,
         type: "expense",
@@ -146,7 +158,7 @@ export async function getTransactionHistory(
         account: expense.account,
         category: expense.category,
         currency: expense.currency,
-        displayName: expense.category.name,
+        displayName: categoryDisplayName,
       });
     });
   }

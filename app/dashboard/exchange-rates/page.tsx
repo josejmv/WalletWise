@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, ArrowRight, CloudDownload, Loader2 } from "lucide-react";
+import {
+  RefreshCw,
+  ArrowRight,
+  CloudDownload,
+  Loader2,
+  ChevronDown,
+  Route,
+} from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +29,11 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useFormatters } from "@/contexts/user-config-context";
 
 interface ExchangeRate {
@@ -31,6 +43,16 @@ interface ExchangeRate {
   fetchedAt: string;
   fromCurrency: { code: string; symbol: string };
   toCurrency: { code: string; symbol: string };
+}
+
+// v1.5.0: Calculated rate via intermediate currency
+interface CalculatedRate {
+  fromCurrency: { id: string; code: string };
+  toCurrency: { id: string; code: string };
+  intermediateCurrency: { id: string; code: string };
+  rate: number;
+  rate1: number;
+  rate2: number;
 }
 
 interface CooldownStatus {
@@ -43,6 +65,14 @@ interface CooldownStatus {
 async function fetchExchangeRates(): Promise<ExchangeRate[]> {
   // v1.3.0: Use latest=true to get only the most recent rate per currency pair
   const res = await fetch("/api/exchange-rates?latest=true");
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+  return data.data;
+}
+
+// v1.5.0: Fetch calculated rates via intermediaries
+async function fetchCalculatedRates(): Promise<CalculatedRate[]> {
+  const res = await fetch("/api/exchange-rates/calculated");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
@@ -136,6 +166,8 @@ export default function ExchangeRatesPage() {
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [isSyncingOfficial, setIsSyncingOfficial] = useState(false);
   const [isSyncingBinance, setIsSyncingBinance] = useState(false);
+  // v1.5.0: Toggle for showing calculated rates
+  const [showCalculated, setShowCalculated] = useState(false);
 
   const {
     data: rates,
@@ -150,6 +182,13 @@ export default function ExchangeRatesPage() {
     queryKey: ["cooldown-status"],
     queryFn: fetchCooldownStatus,
     refetchInterval: 60000, // Refetch every minute to update status
+  });
+
+  // v1.5.0: Fetch calculated rates when section is expanded
+  const { data: calculatedRates, isLoading: loadingCalculated } = useQuery({
+    queryKey: ["exchange-rates-calculated"],
+    queryFn: fetchCalculatedRates,
+    enabled: showCalculated,
   });
 
   const isSyncing = isSyncingAll || isSyncingOfficial || isSyncingBinance;
@@ -436,6 +475,98 @@ export default function ExchangeRatesPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* v1.5.0: Calculated Rates via Intermediaries */}
+      <Collapsible open={showCalculated} onOpenChange={setShowCalculated}>
+        <Card>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Route className="h-5 w-5" />
+                  <CardTitle>Tasas Calculadas via Intermediarios</CardTitle>
+                </div>
+                <ChevronDown
+                  className={`h-5 w-5 transition-transform ${showCalculated ? "rotate-180" : ""}`}
+                />
+              </div>
+              <CardDescription>
+                Conversiones calculadas usando monedas intermediarias (USD,
+                USDT)
+              </CardDescription>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              {loadingCalculated ? (
+                <div className="space-y-2">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : calculatedRates && calculatedRates.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>De</TableHead>
+                      <TableHead></TableHead>
+                      <TableHead>A</TableHead>
+                      <TableHead className="text-center">Via</TableHead>
+                      <TableHead className="text-right">Tasa 1</TableHead>
+                      <TableHead className="text-right">Tasa 2</TableHead>
+                      <TableHead className="text-right">Tasa Final</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {calculatedRates.map((rate) => (
+                      <TableRow
+                        key={`${rate.fromCurrency.id}-${rate.toCurrency.id}-${rate.intermediateCurrency.id}`}
+                      >
+                        <TableCell className="font-medium">
+                          {rate.fromCurrency.code}
+                        </TableCell>
+                        <TableCell>
+                          <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {rate.toCurrency.code}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="outline"
+                            className="bg-purple-500/10 text-purple-500 border-purple-500/20"
+                          >
+                            {rate.intermediateCurrency.code}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                          {Number(rate.rate1).toLocaleString("es-CO", {
+                            maximumFractionDigits: 6,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm text-muted-foreground">
+                          {Number(rate.rate2).toLocaleString("es-CO", {
+                            maximumFractionDigits: 6,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-medium">
+                          {Number(rate.rate).toLocaleString("es-CO", {
+                            maximumFractionDigits: 6,
+                          })}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  No hay tasas calculadas disponibles
+                </div>
+              )}
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
     </div>
   );
 }

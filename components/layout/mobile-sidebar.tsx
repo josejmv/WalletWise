@@ -37,6 +37,7 @@ import {
   Coins,
   CreditCard,
   History,
+  Calculator,
   type LucideIcon,
 } from "lucide-react";
 
@@ -148,6 +149,14 @@ const SIDEBAR_ITEMS: SidebarItemConfig[] = [
     title: "Reportes",
     href: "/dashboard/reports",
     icon: FileText,
+  },
+  // v1.5.0: Calculator for currency conversions
+  {
+    id: "calculator",
+    type: "item",
+    title: "Calculadora",
+    href: "/dashboard/calculator",
+    icon: Calculator,
   },
 ];
 

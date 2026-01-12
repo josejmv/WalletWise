@@ -344,7 +344,11 @@ export async function getRecentTransactions(
       where: { createdAt: { gte: startOfYesterday } },
       take: limit,
       orderBy: { createdAt: "desc" },
-      include: { currency: true, account: true, category: true },
+      include: {
+        currency: true,
+        account: true,
+        category: { include: { parent: true } },
+      },
     }),
     prisma.transfer.findMany({
       where: { createdAt: { gte: startOfYesterday } },
@@ -383,7 +387,9 @@ export async function getRecentTransactions(
       currencyCode: exp.currency.code,
       description: exp.description,
       date: exp.date,
-      category: exp.category.name,
+      category: exp.category.parent
+        ? `${exp.category.name} (${exp.category.parent.name})`
+        : exp.category.name,
       account: exp.account.name,
       createdAt: exp.createdAt,
     })),

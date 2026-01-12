@@ -65,9 +65,21 @@ interface Expense {
   nextDueDate: string | null;
   officialRate: number | null;
   customRate: number | null;
-  category: { id: string; name: string };
+  category: {
+    id: string;
+    name: string;
+    parent: { id: string; name: string } | null;
+  };
   account: { id: string; name: string; currency?: { code: string } };
   currency: { id: string; code: string; symbol: string };
+}
+
+// Helper to get category display name with parent
+function getCategoryDisplayName(category: Expense["category"]): string {
+  if (category.parent) {
+    return `${category.name} (${category.parent.name})`;
+  }
+  return category.name;
 }
 
 interface PaginatedResponse {
@@ -354,7 +366,8 @@ export default function ExpensesPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">
-                            {expense.description || expense.category.name}
+                            {expense.description ||
+                              getCategoryDisplayName(expense.category)}
                           </span>
                           <Badge variant="outline">
                             {periodicityLabels[expense.periodicity || ""] ||
@@ -460,8 +473,8 @@ export default function ExpensesPage() {
                           </TableCell>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
-                              <span className="truncate max-w-[80px] sm:max-w-none">
-                                {expense.category.name}
+                              <span className="truncate max-w-[120px] sm:max-w-none">
+                                {getCategoryDisplayName(expense.category)}
                               </span>
                               {expense.isRecurring && (
                                 <Badge

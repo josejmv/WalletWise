@@ -97,6 +97,60 @@ export async function getLatestRate(
 }
 
 /**
+ * v1.5.0: Get rate via a specific intermediate currency
+ * Forces the conversion to go through the specified intermediate
+ * Example: getRateViaIntermediate(COP_ID, VES_ID, USD_ID) = COP -> USD -> VES
+ */
+export async function getRateViaIntermediate(
+  fromCurrencyId: string,
+  toCurrencyId: string,
+  intermediateCurrencyId: string,
+): Promise<RateResult | null> {
+  // Same currency = rate 1
+  if (fromCurrencyId === toCurrencyId) {
+    return { rate: 1, source: "official", isInverse: false };
+  }
+
+  // Get intermediate currency code for display
+  const intermediateCurrency = await prisma.currency.findUnique({
+    where: { id: intermediateCurrencyId },
+    select: { code: true },
+  });
+
+  if (!intermediateCurrency) {
+    return null;
+  }
+
+  // Get rate1: from -> intermediate
+  const rate1Result = await getDirectOrInverseRate(
+    fromCurrencyId,
+    intermediateCurrencyId,
+  );
+  if (!rate1Result) return null;
+
+  // Get rate2: intermediate -> to
+  const rate2Result = await getDirectOrInverseRate(
+    intermediateCurrencyId,
+    toCurrencyId,
+  );
+  if (!rate2Result) return null;
+
+  // Calculate combined rate
+  const combinedRate = rate1Result.rate * rate2Result.rate;
+
+  return {
+    rate: combinedRate,
+    source: rate1Result.source,
+    isInverse: false,
+    intermediateRoute: {
+      currencyCode: intermediateCurrency.code,
+      rate1: rate1Result.rate,
+      rate2: rate2Result.rate,
+    },
+  };
+}
+
+/**
  * v1.4.0: Try to find a conversion rate via intermediate currencies (USD, USDT)
  * This is useful when no direct or inverse rate exists between two currencies
  * Example: COP -> VES via COP -> USD -> VES

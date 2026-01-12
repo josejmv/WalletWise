@@ -55,11 +55,25 @@ interface ExpenseFormProps {
   onCancel: () => void;
 }
 
-async function fetchCategories() {
+interface Category {
+  id: string;
+  name: string;
+  parent: { id: string; name: string } | null;
+}
+
+async function fetchCategories(): Promise<Category[]> {
   const res = await fetch("/api/categories");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
+}
+
+// Helper to get category display name with parent
+function getCategoryDisplayName(category: Category): string {
+  if (category.parent) {
+    return `${category.name} (${category.parent.name})`;
+  }
+  return category.name;
 }
 
 interface Account {
@@ -294,9 +308,9 @@ export function ExpenseForm({
             <SelectValue placeholder="Selecciona una categoria" />
           </SelectTrigger>
           <SelectContent>
-            {categories?.map((cat: { id: string; name: string }) => (
+            {categories?.map((cat) => (
               <SelectItem key={cat.id} value={cat.id}>
-                {cat.name}
+                {getCategoryDisplayName(cat)}
               </SelectItem>
             ))}
           </SelectContent>

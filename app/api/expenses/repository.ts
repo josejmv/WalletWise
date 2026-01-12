@@ -41,7 +41,7 @@ export async function findAll(filters?: ExpenseFilters) {
   return prisma.expense.findMany({
     where,
     include: {
-      category: true,
+      category: { include: { parent: true } },
       account: { include: { currency: true } },
       currency: true,
     },
@@ -65,7 +65,7 @@ export async function findAllPaginated(
     prisma.expense.findMany({
       where,
       include: {
-        category: true,
+        category: { include: { parent: true } },
         account: { include: { currency: true } },
         currency: true,
       },
@@ -91,8 +91,8 @@ export async function findById(id: string) {
   return prisma.expense.findUnique({
     where: { id },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
   });
@@ -102,8 +102,8 @@ export async function findByCategory(categoryId: string) {
   return prisma.expense.findMany({
     where: { categoryId },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
     orderBy: { date: "desc" },
@@ -114,8 +114,8 @@ export async function findByAccount(accountId: string) {
   return prisma.expense.findMany({
     where: { accountId },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
     orderBy: { date: "desc" },
@@ -126,8 +126,8 @@ export async function findRecurring() {
   return prisma.expense.findMany({
     where: { isRecurring: true },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
     orderBy: { nextDueDate: "asc" },
@@ -143,8 +143,8 @@ export async function findDueExpenses() {
       },
     },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
   });
@@ -157,8 +157,8 @@ export async function create(data: CreateExpenseInput) {
       date: data.date ?? new Date(),
     },
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
   });
@@ -169,8 +169,8 @@ export async function update(id: string, data: UpdateExpenseInput) {
     where: { id },
     data,
     include: {
-      category: true,
-      account: true,
+      category: { include: { parent: true } },
+      account: { include: { currency: true } },
       currency: true,
     },
   });
