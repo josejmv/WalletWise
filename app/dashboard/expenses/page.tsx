@@ -265,10 +265,14 @@ export default function ExpensesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gastos</h1>
-          <p className="text-muted-foreground">Registra tus gastos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Gastos
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Registra tus gastos
+          </p>
         </div>
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -294,16 +298,18 @@ export default function ExpensesPage() {
       </div>
 
       {/* Tab Toggle */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-2">
         <Button
           variant={activeTab === "all" ? "default" : "outline"}
           onClick={() => setActiveTab("all")}
+          className="whitespace-nowrap"
         >
           Todos los Gastos
         </Button>
         <Button
           variant={activeTab === "recurring" ? "default" : "outline"}
           onClick={() => setActiveTab("recurring")}
+          className="whitespace-nowrap"
         >
           <RefreshCw className="mr-2 h-4 w-4" />
           Recurrentes
@@ -424,79 +430,96 @@ export default function ExpensesPage() {
             <CardTitle>Historial de Gastos</CardTitle>
             <CardDescription>{meta.total} gasto(s)</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-2 sm:px-6">
             {expenses.length > 0 ? (
               <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead>Cuenta</TableHead>
-                      <TableHead>Descripcion</TableHead>
-                      <TableHead className="text-right">Monto</TableHead>
-                      <TableHead className="text-center">Tasa</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {expenses.map((expense) => (
-                      <TableRow key={expense.id}>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(expense.date)}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            {expense.category.name}
-                            {expense.isRecurring && (
-                              <Badge variant="outline" className="text-xs">
-                                <RefreshCw className="mr-1 h-3 w-3" />
-                                Recurrente
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>{expense.account.name}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {expense.description || "-"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-red-500">
-                          {formatCurrency(
-                            expense.amount,
-                            expense.currency.code,
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <RateDetailsPopover
-                            officialRate={expense.officialRate}
-                            customRate={expense.customRate}
-                            fromCurrency={expense.currency.code}
-                            toCurrency={expense.account.currency?.code}
-                            amount={expense.amount}
-                          />
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEdit(expense)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setDeleteId(expense.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Fecha</TableHead>
+                        <TableHead>Categoria</TableHead>
+                        <TableHead className="hidden md:table-cell">
+                          Cuenta
+                        </TableHead>
+                        <TableHead className="hidden lg:table-cell">
+                          Descripcion
+                        </TableHead>
+                        <TableHead className="text-right">Monto</TableHead>
+                        <TableHead className="text-center hidden sm:table-cell">
+                          Tasa
+                        </TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {expenses.map((expense) => (
+                        <TableRow key={expense.id}>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">
+                            {formatDate(expense.date)}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate max-w-[80px] sm:max-w-none">
+                                {expense.category.name}
+                              </span>
+                              {expense.isRecurring && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs shrink-0 hidden sm:inline-flex"
+                                >
+                                  <RefreshCw className="mr-1 h-3 w-3" />
+                                  Recurrente
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {expense.account.name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground hidden lg:table-cell">
+                            {expense.description || "-"}
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-red-500 whitespace-nowrap">
+                            {formatCurrency(
+                              expense.amount,
+                              expense.currency.code,
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center hidden sm:table-cell">
+                            <RateDetailsPopover
+                              officialRate={expense.officialRate}
+                              customRate={expense.customRate}
+                              fromCurrency={expense.currency.code}
+                              toCurrency={expense.account.currency?.code}
+                              amount={expense.amount}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => handleEdit(expense)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() => setDeleteId(expense.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 <Pagination
                   page={meta.page}
                   totalPages={meta.totalPages}

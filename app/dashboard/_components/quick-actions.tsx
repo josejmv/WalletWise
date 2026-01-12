@@ -89,12 +89,12 @@ export function QuickActions() {
           <CardDescription>Registra transacciones rapidamente</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {actions.map((action) => (
               <Button
                 key={action.type}
                 variant="ghost"
-                className={`flex-1 flex flex-col gap-2 h-auto py-4 ${action.bgColor}`}
+                className={`flex flex-col gap-2 h-auto py-4 ${action.bgColor}`}
                 onClick={() => setActiveModal(action.type)}
               >
                 <action.icon className={`h-6 w-6 ${action.color}`} />

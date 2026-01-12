@@ -206,10 +206,14 @@ export default function IncomesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ingresos</h1>
-          <p className="text-muted-foreground">Registra tus ingresos</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Ingresos
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Registra tus ingresos
+          </p>
         </div>
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -241,63 +245,75 @@ export default function IncomesPage() {
           <CardTitle>Historial de Ingresos</CardTitle>
           <CardDescription>{meta.total} ingreso(s)</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {incomes.length > 0 ? (
             <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Trabajo</TableHead>
-                    <TableHead>Cuenta</TableHead>
-                    <TableHead>Descripcion</TableHead>
-                    <TableHead className="text-right">Monto</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {incomes.map((income) => (
-                    <TableRow key={income.id}>
-                      <TableCell className="text-muted-foreground">
-                        {formatDate(income.date)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {/* v1.4.0: Show "Ingreso Extra" for incomes without job */}
-                        {income.job?.name ?? (
-                          <span className="text-muted-foreground italic">
-                            Ingreso Extra
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>{income.account.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {income.description || "-"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-green-500">
-                        {formatCurrency(income.amount, income.currency.code)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(income)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(income.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Trabajo</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Cuenta
+                      </TableHead>
+                      <TableHead className="hidden lg:table-cell">
+                        Descripcion
+                      </TableHead>
+                      <TableHead className="text-right">Monto</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {incomes.map((income) => (
+                      <TableRow key={income.id}>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {formatDate(income.date)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {/* v1.4.0: Show "Ingreso Extra" for incomes without job */}
+                          <span className="truncate max-w-[100px] sm:max-w-none block">
+                            {income.job?.name ?? (
+                              <span className="text-muted-foreground italic">
+                                Ingreso Extra
+                              </span>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {income.account.name}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground hidden lg:table-cell">
+                          {income.description || "-"}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-500 whitespace-nowrap">
+                          {formatCurrency(income.amount, income.currency.code)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(income)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setDeleteId(income.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <Pagination
                 page={meta.page}
                 totalPages={meta.totalPages}

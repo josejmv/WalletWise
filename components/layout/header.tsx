@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Bell, Moon, Sun, Monitor } from "lucide-react";
+import { Bell, Moon, Sun, Monitor, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import { useUserConfigContext } from "@/contexts/user-config-context";
 
 interface HeaderProps {
   title?: string;
+  onMenuClick?: () => void;
 }
 
 type Theme = "light" | "dark" | "system";
@@ -34,7 +35,7 @@ function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle("dark", effectiveTheme === "dark");
 }
 
-export function Header({ title }: HeaderProps) {
+export function Header({ title, onMenuClick }: HeaderProps) {
   const { config, updateConfig, isLoading } = useUserConfigContext();
   const currentTheme = (config?.theme as Theme) ?? "system";
 
@@ -80,9 +81,19 @@ export function Header({ title }: HeaderProps) {
   const effectiveTheme = getEffectiveTheme(currentTheme);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-6">
+    <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 md:px-6">
       <div className="flex flex-1 items-center gap-4">
-        {title && <h1 className="text-lg font-semibold">{title}</h1>}
+        {/* Mobile menu button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={onMenuClick}
+        >
+          <Menu className="h-5 w-5" />
+          <span className="sr-only">Abrir menu</span>
+        </Button>
+        {title && <h1 className="text-lg font-semibold truncate">{title}</h1>}
       </div>
 
       <div className="flex items-center gap-2">

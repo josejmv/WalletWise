@@ -41,13 +41,16 @@ export function Pagination({
   const endItem = Math.min(page * limit, total);
 
   return (
-    <div className="flex items-center justify-between px-2 py-4">
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-2 py-4">
       <div className="flex items-center gap-4">
-        <p className="text-sm text-muted-foreground">
-          Mostrando {startItem}-{endItem} de {total} registros
+        <p className="text-sm text-muted-foreground hidden sm:block">
+          Mostrando {startItem}-{endItem} de {total}
+        </p>
+        <p className="text-sm text-muted-foreground sm:hidden">
+          {startItem}-{endItem} / {total}
         </p>
         {showLimitSelector && onLimitChange && (
-          <div className="flex items-center gap-2">
+          <div className="hidden md:flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Por pagina:</span>
             <Select
               value={String(limit)}
@@ -71,7 +74,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 hidden sm:flex"
           onClick={() => onPageChange(1)}
           disabled={!canGoPrev}
         >
@@ -87,8 +90,8 @@ export function Pagination({
           <ChevronLeft className="h-4 w-4" />
         </Button>
 
-        <span className="px-4 text-sm">
-          Pagina {page} de {totalPages || 1}
+        <span className="px-2 sm:px-4 text-sm whitespace-nowrap">
+          {page} / {totalPages || 1}
         </span>
 
         <Button
@@ -103,7 +106,7 @@ export function Pagination({
         <Button
           variant="outline"
           size="icon"
-          className="h-8 w-8"
+          className="h-8 w-8 hidden sm:flex"
           onClick={() => onPageChange(totalPages)}
           disabled={!canGoNext}
         >

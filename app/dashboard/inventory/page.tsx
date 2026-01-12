@@ -155,22 +155,33 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventario</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+            Inventario
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestiona tu inventario del hogar
           </p>
         </div>
         <div className="flex gap-2">
           {/* v1.4.0: Consume button */}
-          <Button variant="outline" onClick={() => setConsumeOpen(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="sm:size-default"
+            onClick={() => setConsumeOpen(true)}
+          >
             <ShoppingCart className="mr-2 h-4 w-4" />
-            Consumir
+            <span className="hidden xs:inline">Consumir</span>
           </Button>
-          <Button onClick={() => setFormOpen(true)}>
+          <Button
+            size="sm"
+            className="sm:size-default"
+            onClick={() => setFormOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" />
-            Nuevo Producto
+            <span className="hidden xs:inline">Nuevo</span> Producto
           </Button>
         </div>
       </div>
@@ -210,93 +221,110 @@ export default function InventoryPage() {
           <CardTitle>Productos</CardTitle>
           <CardDescription>{items?.length || 0} producto(s)</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {items && items.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Producto</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead>Unidad</TableHead>
-                  <TableHead className="text-right">Precio Est.</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((item) => {
-                  const stockPercent =
-                    item.maxQuantity > 0
-                      ? (item.currentQuantity / item.maxQuantity) * 100
-                      : 0;
-                  const isLowStock = item.currentQuantity <= item.minQuantity;
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Producto</TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Categoria
+                    </TableHead>
+                    <TableHead>Stock</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Unidad
+                    </TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">
+                      Precio Est.
+                    </TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {items.map((item) => {
+                    const stockPercent =
+                      item.maxQuantity > 0
+                        ? (item.currentQuantity / item.maxQuantity) * 100
+                        : 0;
+                    const isLowStock = item.currentQuantity <= item.minQuantity;
 
-                  return (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {item.name}
-                          {isLowStock && (
-                            <Badge variant="warning" className="text-xs">
-                              Bajo
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {item.category?.name ?? (
-                          <span className="text-muted-foreground italic">
-                            Sin categoria
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 w-32">
-                          <div className="flex justify-between text-xs">
-                            <span>{item.currentQuantity}</span>
-                            <span className="text-muted-foreground">
-                              /{item.maxQuantity}
+                    return (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate max-w-[100px] sm:max-w-none">
+                              {item.name}
                             </span>
-                          </div>
-                          <Progress
-                            value={stockPercent}
-                            className={cn(
-                              "h-1.5",
-                              isLowStock && "[&>div]:bg-orange-500",
+                            {isLowStock && (
+                              <Badge
+                                variant="warning"
+                                className="text-xs shrink-0"
+                              >
+                                Bajo
+                              </Badge>
                             )}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(
-                          item.estimatedPrice,
-                          item.currency.symbol,
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(item)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeleteId(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          {item.category?.name ?? (
+                            <span className="text-muted-foreground italic">
+                              Sin categoria
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 w-20 sm:w-32">
+                            <div className="flex justify-between text-xs">
+                              <span>{item.currentQuantity}</span>
+                              <span className="text-muted-foreground">
+                                /{item.maxQuantity}
+                              </span>
+                            </div>
+                            <Progress
+                              value={stockPercent}
+                              className={cn(
+                                "h-1.5",
+                                isLowStock && "[&>div]:bg-orange-500",
+                              )}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {item.unit}
+                        </TableCell>
+                        <TableCell className="text-right hidden sm:table-cell">
+                          {formatCurrency(
+                            item.estimatedPrice,
+                            item.currency.symbol,
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => handleEdit(item)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => setDeleteId(item.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               No hay productos registrados
