@@ -86,10 +86,12 @@ export async function getMonthlyReport(
   );
 
   // Group income by job (using converted amounts)
+  // v1.4.0: Handle null jobs for "Ingreso Extra"
   const incomeByJob = new Map<string, number>();
   for (const income of incomesConverted) {
-    const current = incomeByJob.get(income.job.name) || 0;
-    incomeByJob.set(income.job.name, current + income.convertedAmount);
+    const jobName = income.job?.name ?? "Ingreso Extra";
+    const current = incomeByJob.get(jobName) || 0;
+    incomeByJob.set(jobName, current + income.convertedAmount);
   }
 
   // Group expenses by category (using converted amounts)
@@ -387,10 +389,12 @@ export async function getFinancialSummary(
     .slice(0, 5);
 
   // Top income jobs (using converted amounts)
+  // v1.4.0: Handle null jobs for "Ingreso Extra"
   const incomeByJob = new Map<string, number>();
   for (const income of incomesConverted) {
-    const current = incomeByJob.get(income.job.name) || 0;
-    incomeByJob.set(income.job.name, current + income.convertedAmount);
+    const jobName = income.job?.name ?? "Ingreso Extra";
+    const current = incomeByJob.get(jobName) || 0;
+    incomeByJob.set(jobName, current + income.convertedAmount);
   }
 
   const topIncomeJobs = Array.from(incomeByJob.entries())
@@ -459,7 +463,8 @@ export async function exportTransactions(
       amount: Number(inc.amount),
       currency: inc.currency.code,
       description: inc.description || "",
-      category: inc.job.name,
+      // v1.4.0: Handle null jobs for "Ingreso Extra"
+      category: inc.job?.name ?? "Ingreso Extra",
       account: inc.account.name,
     })),
     ...expenses.map((exp) => ({

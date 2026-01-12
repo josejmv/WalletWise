@@ -110,9 +110,10 @@ export async function getTransactionHistory(
         description: income.description,
         createdAt: income.createdAt,
         account: income.account,
-        job: income.job,
+        job: income.job ?? undefined,
         currency: income.currency,
-        displayName: income.job.name,
+        // v1.4.0: Show "Ingreso Extra" for incomes without job
+        displayName: income.job?.name ?? "Ingreso Extra",
       });
     });
   }

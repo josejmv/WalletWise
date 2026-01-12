@@ -7,11 +7,15 @@ export const createBudgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: budgetTypeEnum,
   // v1.3.0: targetAmount is optional (budgets without goal)
+  // v1.4.0: Use transform to handle NaN from empty inputs
   targetAmount: z
     .number()
-    .positive("El monto objetivo debe ser mayor a 0")
+    .transform((v) => (Number.isNaN(v) ? null : v))
     .nullable()
-    .optional(),
+    .optional()
+    .refine((v) => v === null || v === undefined || v > 0, {
+      message: "El monto objetivo debe ser mayor a 0",
+    }),
   currentAmount: z
     .number()
     .min(0, "El monto actual no puede ser negativo")
@@ -25,10 +29,15 @@ export const createBudgetSchema = z.object({
 export const updateBudgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").optional(),
   type: budgetTypeEnum.optional(),
+  // v1.4.0: Use transform to handle NaN from empty inputs
   targetAmount: z
     .number()
-    .positive("El monto objetivo debe ser mayor a 0")
-    .optional(),
+    .transform((v) => (Number.isNaN(v) ? null : v))
+    .nullable()
+    .optional()
+    .refine((v) => v === null || v === undefined || v > 0, {
+      message: "El monto objetivo debe ser mayor a 0",
+    }),
   currentAmount: z
     .number()
     .min(0, "El monto actual no puede ser negativo")

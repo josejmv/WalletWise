@@ -179,7 +179,8 @@ export async function getSummary(filters?: IncomeFilters) {
     currencyId: i.currencyId,
     customRate: i.customRate ? Number(i.customRate) : null,
     jobId: i.jobId,
-    jobName: i.job.name,
+    // v1.4.0: job can be null for "Ingreso Extra"
+    jobName: i.job?.name ?? "Ingreso Extra",
     currencyCode: i.currency.code,
   }));
 
@@ -199,12 +200,14 @@ export async function getSummary(filters?: IncomeFilters) {
 
     totalAmount += convertedAmount;
 
-    const jobData = byJob.get(income.jobId) || {
+    // v1.4.0: Use "extra" as key for incomes without job
+    const jobKey = income.jobId ?? "extra";
+    const jobData = byJob.get(jobKey) || {
       jobName: income.jobName,
       total: 0,
     };
     jobData.total += convertedAmount;
-    byJob.set(income.jobId, jobData);
+    byJob.set(jobKey, jobData);
 
     // For byCurrency, keep original amounts per currency
     const currencyData = byCurrency.get(income.currencyId) || {

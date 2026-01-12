@@ -1,16 +1,42 @@
 import { prisma } from "@/lib/prisma";
 import type { ExchangeRateSource } from "@prisma/client";
 
+// v1.4.0: Extended source types to include intermediate routes
+export type ConversionSource =
+  | ExchangeRateSource
+  | "inverse"
+  | "intermediate_usd"
+  | "intermediate_usdt";
+
 export interface ConversionResult {
   convertedAmount: number;
   rate: number;
-  source: ExchangeRateSource | "inverse";
+  source: ConversionSource;
   isInverse: boolean;
+  // v1.4.0: Track intermediate currency used for conversion
+  intermediateRoute?: {
+    currency: string;
+    rate1: number; // from -> intermediate
+    rate2: number; // intermediate -> to
+  };
+}
+
+// v1.4.0: Rate result with intermediate route info
+export interface RateResult {
+  rate: number;
+  source: ExchangeRateSource;
+  isInverse: boolean;
+  intermediateRoute?: {
+    currencyCode: string;
+    rate1: number;
+    rate2: number;
+  };
 }
 
 /**
  * Get the latest exchange rate between two currencies
- * Searches for direct rate first, then inverse if not found
+ * Searches for direct rate first, then inverse, then intermediate routes
+ * v1.4.0: Added intermediate route support via USD and USDT
  * @param fromCurrencyId - Source currency ID
  * @param toCurrencyId - Target currency ID
  * @returns Rate and metadata, or null if not found
@@ -18,11 +44,7 @@ export interface ConversionResult {
 export async function getLatestRate(
   fromCurrencyId: string,
   toCurrencyId: string,
-): Promise<{
-  rate: number;
-  source: ExchangeRateSource;
-  isInverse: boolean;
-} | null> {
+): Promise<RateResult | null> {
   // Same currency = rate 1
   if (fromCurrencyId === toCurrencyId) {
     return { rate: 1, source: "official", isInverse: false };
@@ -62,20 +84,126 @@ export async function getLatestRate(
     };
   }
 
+  // v1.4.0: Try intermediate routes (USD, USDT)
+  const intermediateResult = await tryIntermediateRoutes(
+    fromCurrencyId,
+    toCurrencyId,
+  );
+  if (intermediateResult) {
+    return intermediateResult;
+  }
+
+  return null;
+}
+
+/**
+ * v1.4.0: Try to find a conversion rate via intermediate currencies (USD, USDT)
+ * This is useful when no direct or inverse rate exists between two currencies
+ * Example: COP -> VES via COP -> USD -> VES
+ */
+async function tryIntermediateRoutes(
+  fromCurrencyId: string,
+  toCurrencyId: string,
+): Promise<RateResult | null> {
+  // Get intermediate currencies (USD and USDT)
+  const intermediateCurrencies = await prisma.currency.findMany({
+    where: {
+      code: { in: ["USD", "USDT"] },
+    },
+    select: { id: true, code: true },
+  });
+
+  // Try each intermediate currency
+  for (const intermediate of intermediateCurrencies) {
+    // Skip if the intermediate is one of the currencies we're converting
+    if (
+      intermediate.id === fromCurrencyId ||
+      intermediate.id === toCurrencyId
+    ) {
+      continue;
+    }
+
+    // Try to get rate1: from -> intermediate
+    const rate1Result = await getDirectOrInverseRate(
+      fromCurrencyId,
+      intermediate.id,
+    );
+    if (!rate1Result) continue;
+
+    // Try to get rate2: intermediate -> to
+    const rate2Result = await getDirectOrInverseRate(
+      intermediate.id,
+      toCurrencyId,
+    );
+    if (!rate2Result) continue;
+
+    // Calculate combined rate
+    const combinedRate = rate1Result.rate * rate2Result.rate;
+
+    return {
+      rate: combinedRate,
+      source: rate1Result.source, // Use the source of the first leg
+      isInverse: false,
+      intermediateRoute: {
+        currencyCode: intermediate.code,
+        rate1: rate1Result.rate,
+        rate2: rate2Result.rate,
+      },
+    };
+  }
+
+  return null;
+}
+
+/**
+ * v1.4.0: Helper to get direct or inverse rate without trying intermediate routes
+ * Used internally by tryIntermediateRoutes to avoid infinite recursion
+ */
+async function getDirectOrInverseRate(
+  fromCurrencyId: string,
+  toCurrencyId: string,
+): Promise<{ rate: number; source: ExchangeRateSource } | null> {
+  if (fromCurrencyId === toCurrencyId) {
+    return { rate: 1, source: "official" };
+  }
+
+  // Try direct rate
+  const directRate = await prisma.exchangeRate.findFirst({
+    where: { fromCurrencyId, toCurrencyId },
+    orderBy: { fetchedAt: "desc" },
+  });
+
+  if (directRate) {
+    return {
+      rate: Number(directRate.rate),
+      source: directRate.source,
+    };
+  }
+
+  // Try inverse rate
+  const inverseRate = await prisma.exchangeRate.findFirst({
+    where: { fromCurrencyId: toCurrencyId, toCurrencyId: fromCurrencyId },
+    orderBy: { fetchedAt: "desc" },
+  });
+
+  if (inverseRate && Number(inverseRate.rate) !== 0) {
+    return {
+      rate: 1 / Number(inverseRate.rate),
+      source: inverseRate.source,
+    };
+  }
+
   return null;
 }
 
 /**
  * Get the latest rate by currency codes instead of IDs
+ * v1.4.0: Updated return type to include intermediate route info
  */
 export async function getLatestRateByCode(
   fromCode: string,
   toCode: string,
-): Promise<{
-  rate: number;
-  source: ExchangeRateSource;
-  isInverse: boolean;
-} | null> {
+): Promise<RateResult | null> {
   // Same currency = rate 1
   if (fromCode === toCode) {
     return { rate: 1, source: "official", isInverse: false };
@@ -95,6 +223,7 @@ export async function getLatestRateByCode(
 
 /**
  * Convert an amount from one currency to another
+ * v1.4.0: Updated to include intermediate route info
  * @param amount - Amount to convert
  * @param fromCurrencyId - Source currency ID
  * @param toCurrencyId - Target currency ID
@@ -111,16 +240,37 @@ export async function convertAmount(
     return null;
   }
 
+  // v1.4.0: Determine source type including intermediate routes
+  let source: ConversionSource;
+  if (rateInfo.isInverse) {
+    source = "inverse";
+  } else if (rateInfo.intermediateRoute) {
+    source =
+      rateInfo.intermediateRoute.currencyCode === "USD"
+        ? "intermediate_usd"
+        : "intermediate_usdt";
+  } else {
+    source = rateInfo.source;
+  }
+
   return {
     convertedAmount: amount * rateInfo.rate,
     rate: rateInfo.rate,
-    source: rateInfo.isInverse ? "inverse" : rateInfo.source,
+    source,
     isInverse: rateInfo.isInverse,
+    intermediateRoute: rateInfo.intermediateRoute
+      ? {
+          currency: rateInfo.intermediateRoute.currencyCode,
+          rate1: rateInfo.intermediateRoute.rate1,
+          rate2: rateInfo.intermediateRoute.rate2,
+        }
+      : undefined,
   };
 }
 
 /**
  * Convert amount by currency codes
+ * v1.4.0: Updated to include intermediate route info
  */
 export async function convertAmountByCode(
   amount: number,
@@ -133,11 +283,31 @@ export async function convertAmountByCode(
     return null;
   }
 
+  // v1.4.0: Determine source type including intermediate routes
+  let source: ConversionSource;
+  if (rateInfo.isInverse) {
+    source = "inverse";
+  } else if (rateInfo.intermediateRoute) {
+    source =
+      rateInfo.intermediateRoute.currencyCode === "USD"
+        ? "intermediate_usd"
+        : "intermediate_usdt";
+  } else {
+    source = rateInfo.source;
+  }
+
   return {
     convertedAmount: amount * rateInfo.rate,
     rate: rateInfo.rate,
-    source: rateInfo.isInverse ? "inverse" : rateInfo.source,
+    source,
     isInverse: rateInfo.isInverse,
+    intermediateRoute: rateInfo.intermediateRoute
+      ? {
+          currency: rateInfo.intermediateRoute.currencyCode,
+          rate1: rateInfo.intermediateRoute.rate1,
+          rate2: rateInfo.intermediateRoute.rate2,
+        }
+      : undefined,
   };
 }
 

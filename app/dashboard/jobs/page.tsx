@@ -80,7 +80,7 @@ async function deleteJob(id: string): Promise<void> {
 }
 
 function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
+  return `${symbol} ${new Intl.NumberFormat("es-CO").format(value)}`;
 }
 
 const statusLabels: Record<string, string> = {

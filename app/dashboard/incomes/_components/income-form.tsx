@@ -22,7 +22,8 @@ import { ExchangeRateDisplay } from "@/components/exchange-rate-display";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
 
 const incomeSchema = z.object({
-  jobId: z.string().min(1, "El trabajo es requerido"),
+  // v1.4.0: jobId is optional - empty string or null means "Ingreso Extra"
+  jobId: z.string().optional(),
   accountId: z.string().min(1, "La cuenta es requerida"),
   amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
   currencyId: z.string().min(1, "La moneda es requerida"),
@@ -41,7 +42,8 @@ interface IncomeFormProps {
     amount: number;
     date: string;
     description: string | null;
-    job: { id: string };
+    // v1.4.0: job is optional (null = "Ingreso Extra")
+    job: { id: string } | null;
     account: { id: string };
     currency: { id: string };
   } | null;
@@ -92,6 +94,8 @@ async function createIncome(data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
+      // v1.4.0: Send null if no job selected (Ingreso Extra)
+      jobId: data.jobId || null,
       // Parse as noon local time to avoid timezone issues
       date: new Date(data.date + "T12:00:00"),
     }),
@@ -107,6 +111,8 @@ async function updateIncome(id: string, data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
+      // v1.4.0: Send null if no job selected (Ingreso Extra)
+      jobId: data.jobId || null,
       // Parse as noon local time to avoid timezone issues
       date: new Date(data.date + "T12:00:00"),
     }),
@@ -146,7 +152,8 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
     resolver: zodResolver(incomeSchema),
     defaultValues: income
       ? {
-          jobId: income.job.id,
+          // v1.4.0: job can be null for "Ingreso Extra"
+          jobId: income.job?.id ?? "",
           accountId: income.account.id,
           amount: income.amount,
           currencyId: income.currency.id,
@@ -268,15 +275,21 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
       className="space-y-4"
     >
       <div className="space-y-2">
-        <Label htmlFor="jobId">Trabajo</Label>
+        <Label htmlFor="jobId">Trabajo (opcional)</Label>
         <Select
-          value={watch("jobId")}
-          onValueChange={(value) => setValue("jobId", value)}
+          value={watch("jobId") || "none"}
+          onValueChange={(value) =>
+            setValue("jobId", value === "none" ? "" : value)
+          }
         >
           <SelectTrigger>
             <SelectValue placeholder="Selecciona un trabajo" />
           </SelectTrigger>
           <SelectContent>
+            {/* v1.4.0: Option for income without job */}
+            <SelectItem value="none" className="text-muted-foreground italic">
+              Sin trabajo (Ingreso Extra)
+            </SelectItem>
             {jobs?.map((job: { id: string; name: string }) => (
               <SelectItem key={job.id} value={job.id}>
                 {job.name}
@@ -284,9 +297,6 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
             ))}
           </SelectContent>
         </Select>
-        {errors.jobId && (
-          <p className="text-sm text-destructive">{errors.jobId.message}</p>
-        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

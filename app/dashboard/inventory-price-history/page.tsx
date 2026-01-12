@@ -98,7 +98,7 @@ async function createPriceHistory(input: {
 }
 
 function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
+  return `${symbol} ${new Intl.NumberFormat("es-CO").format(value)}`;
 }
 
 function formatDate(dateString: string): string {

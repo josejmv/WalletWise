@@ -2,14 +2,16 @@ import type { Income, Currency, Account, Job } from "@prisma/client";
 
 export type { Income };
 
+// v1.4.0: job is optional (null = "Ingreso Extra")
 export interface IncomeWithRelations extends Income {
-  job: Job;
+  job: Job | null;
   account: Account;
   currency: Currency;
 }
 
+// v1.4.0: jobId is optional for extra incomes
 export interface CreateIncomeInput {
-  jobId: string;
+  jobId?: string | null;
   accountId: string;
   amount: number;
   currencyId: string;
@@ -20,7 +22,7 @@ export interface CreateIncomeInput {
 }
 
 export interface UpdateIncomeInput {
-  jobId?: string;
+  jobId?: string | null;
   accountId?: string;
   amount?: number;
   currencyId?: string;

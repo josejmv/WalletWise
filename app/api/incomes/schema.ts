@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const createIncomeSchema = z.object({
-  jobId: z.string().uuid("ID de trabajo inválido"),
+  // v1.4.0: jobId is optional - null means "Ingreso Extra"
+  jobId: z.string().uuid("ID de trabajo inválido").nullable().optional(),
   accountId: z.string().uuid("ID de cuenta inválido"),
   amount: z.number().positive("El monto debe ser positivo"),
   currencyId: z.string().uuid("ID de moneda inválido"),
@@ -12,7 +13,8 @@ export const createIncomeSchema = z.object({
 });
 
 export const updateIncomeSchema = z.object({
-  jobId: z.string().uuid("ID de trabajo inválido").optional(),
+  // v1.4.0: jobId can be set to null
+  jobId: z.string().uuid("ID de trabajo inválido").nullable().optional(),
   accountId: z.string().uuid("ID de cuenta inválido").optional(),
   amount: z.number().positive("El monto debe ser positivo").optional(),
   currencyId: z.string().uuid("ID de moneda inválido").optional(),

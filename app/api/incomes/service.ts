@@ -43,9 +43,12 @@ export async function getIncomesByAccount(accountId: string) {
 }
 
 export async function createIncome(data: CreateIncomeInput) {
-  const job = await prisma.job.findUnique({ where: { id: data.jobId } });
-  if (!job) {
-    throw new Error("Trabajo no encontrado");
+  // v1.4.0: Only validate job if jobId is provided (optional for "Ingreso Extra")
+  if (data.jobId) {
+    const job = await prisma.job.findUnique({ where: { id: data.jobId } });
+    if (!job) {
+      throw new Error("Trabajo no encontrado");
+    }
   }
 
   const account = await prisma.account.findUnique({

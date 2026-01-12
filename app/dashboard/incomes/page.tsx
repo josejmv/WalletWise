@@ -49,7 +49,8 @@ interface Income {
   amount: number;
   date: string;
   description: string | null;
-  job: { id: string; name: string };
+  // v1.4.0: job is optional (null = "Ingreso Extra")
+  job: { id: string; name: string } | null;
   account: { id: string; name: string };
   currency: { id: string; code: string; symbol: string };
 }
@@ -261,7 +262,12 @@ export default function IncomesPage() {
                         {formatDate(income.date)}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {income.job.name}
+                        {/* v1.4.0: Show "Ingreso Extra" for incomes without job */}
+                        {income.job?.name ?? (
+                          <span className="text-muted-foreground italic">
+                            Ingreso Extra
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell>{income.account.name}</TableCell>
                       <TableCell className="text-muted-foreground">

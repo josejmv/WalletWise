@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil, Trash2, Package, AlertTriangle } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Package,
+  AlertTriangle,
+  ShoppingCart,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -41,6 +48,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { InventoryItemForm } from "./_components/inventory-item-form";
+import { ConsumeModal } from "@/components/inventory/consume-modal";
 
 interface InventoryItem {
   id: string;
@@ -70,13 +78,15 @@ async function deleteInventoryItem(id: string): Promise<void> {
 }
 
 function formatCurrency(value: number, symbol: string): string {
-  return `${symbol}${new Intl.NumberFormat("es-CO").format(value)}`;
+  return `${symbol} ${new Intl.NumberFormat("es-CO").format(value)}`;
 }
 
 export default function InventoryPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  // v1.4.0: Consume modal state
+  const [consumeOpen, setConsumeOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -89,6 +99,8 @@ export default function InventoryPage() {
     mutationFn: deleteInventoryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      // v1.4.0: Also invalidate categories to update item counts
+      queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
       toast({ title: "Producto eliminado" });
       setDeleteId(null);
     },
@@ -105,6 +117,8 @@ export default function InventoryPage() {
     setFormOpen(false);
     setEditingItem(null);
     queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+    // v1.4.0: Also invalidate categories to update item counts
+    queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
   };
 
   const handleEdit = (item: InventoryItem) => {
@@ -148,10 +162,17 @@ export default function InventoryPage() {
             Gestiona tu inventario del hogar
           </p>
         </div>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Nuevo Producto
-        </Button>
+        <div className="flex gap-2">
+          {/* v1.4.0: Consume button */}
+          <Button variant="outline" onClick={() => setConsumeOpen(true)}>
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Consumir
+          </Button>
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Producto
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -319,6 +340,9 @@ export default function InventoryPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* v1.4.0: Consume modal */}
+      <ConsumeModal open={consumeOpen} onOpenChange={setConsumeOpen} />
     </div>
   );
 }
