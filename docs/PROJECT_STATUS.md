@@ -6,11 +6,11 @@
 
 ## Version Actual
 
-| Metrica      | Valor         |
-| ------------ | ------------- |
-| Version      | 1.3.0         |
-| Estado       | En Desarrollo |
-| Build Status | OK            |
+| Metrica      | Valor      |
+| ------------ | ---------- |
+| Version      | 1.5.0      |
+| Estado       | Completado |
+| Build Status | OK         |
 
 ---
 
@@ -33,7 +33,7 @@
 
 ### Mejoras (v1.1.0)
 
-- [x] Criptomonedas (USDT, BTC, ETH, BNB, SOL)
+- [x] Criptomonedas (simplificado a solo USDT)
 - [x] Tasas Binance P2P
 - [x] Cooldown 6 horas en sync
 - [x] Tasa custom en formularios
@@ -62,26 +62,42 @@
 - [x] Inventario con categoria opcional
 - [x] Shopping list multi-moneda
 
-### Post-Testing y UX (v1.3.0) - En Desarrollo
+### Post-Testing y UX (v1.3.0) - Completado
 
-- [ ] Solo USDT como cripto (simplificar)
-- [ ] Simbolos de moneda = codigo
-- [ ] Botones sync con cooldown visual
-- [ ] Fix inventario (categoryId null, preseleccion)
-- [ ] Fix modelo presupuestos (bloqueo sin mover dinero)
-- [ ] targetAmount opcional en budgets
-- [ ] Conversiones con tasas custom
-- [ ] Inputs number sin valor por defecto
-- [ ] Selects preseleccionados en edicion
-- [ ] Icono categoria opcional
-- [ ] Account Types CRUD completo
-- [ ] Historial de precios mejorado
-- [ ] Shopping list: exportar PDF y WhatsApp
-- [ ] Nueva pagina historial de transacciones
-- [ ] Dashboard: fix donut dark mode
-- [ ] Dashboard: orden transacciones + selector
-- [ ] Dashboard: multiselect historial tasas
-- [ ] Personalizacion sidebar
+- [x] Solo USDT como cripto (simplificar)
+- [x] USDT-USD tasa fija 1:1
+- [x] Botones sync con cooldown visual y countdown
+- [x] Fix inventario (categoryId null, preseleccion)
+- [x] Fix modelo presupuestos (bloqueo sin mover dinero)
+- [x] targetAmount opcional en budgets
+- [x] Conversiones con tasas custom (lib/currency-utils.ts)
+- [x] Account Types CRUD completo con mover cuentas al eliminar
+- [x] Historial de precios mejorado con graficos
+- [x] Shopping list: exportar PDF y WhatsApp
+- [x] Nueva pagina historial de transacciones con filtros
+- [x] Dashboard: fix donut dark mode
+- [x] Dashboard: orden transacciones + selector
+- [x] Personalizacion sidebar (orden dinamico)
+
+### Mejoras y Features (v1.4.0) - Completado
+
+- [x] Ingresos extra sin trabajo asociado (jobId opcional)
+- [x] DatePicker mejorado (flechas arriba)
+- [x] Fix validacion budget targetAmount
+- [x] Estado de carga entre paginas (NProgress)
+- [x] Modal de consumo de inventario
+- [x] Rutas de conversion alternativas (USD, USDT como intermediarios)
+- [x] Responsive completo (mobile sidebar, tablas adaptativas)
+
+### Calculadora y Conversiones (v1.5.0) - Completado
+
+- [x] Nueva pagina calculadora con teclado numerico
+- [x] Parser de expresiones matematicas (expr-eval)
+- [x] Conversion multi-moneda en tiempo real
+- [x] Selector de monedas destino con persistencia
+- [x] Tasas calculadas via intermediarios (exchange-rates page)
+- [x] Mostrar categoria padre en gastos y historial
+- [x] Calculadora agregada al sidebar
 
 ---
 
@@ -109,6 +125,7 @@ app/
 │   ├── _components/        # Componentes del dashboard
 │   ├── accounts/
 │   ├── budgets/
+│   ├── calculator/         # NUEVO en v1.5.0
 │   ├── categories/
 │   ├── currencies/
 │   ├── exchange-rates/
@@ -118,6 +135,8 @@ app/
 │   ├── jobs/
 │   ├── reports/
 │   ├── settings/
+│   ├── transactions/       # NUEVO en v1.3.0
+│   │   └── history/
 │   └── transfers/
 └── api/                    # REST endpoints
     └── [modulo]/
@@ -133,7 +152,8 @@ lib/
 ├── pagination.ts
 ├── export-utils.ts
 ├── binance-p2p.ts
-├── currency-utils.ts       # NUEVO en v1.2.0
+├── calculator.ts           # NUEVO en v1.5.0
+├── currency-utils.ts       # Mejorado en v1.4.0
 ├── date-utils.ts
 ├── number-utils.ts
 └── utils.ts
@@ -143,10 +163,15 @@ contexts/
 
 components/
 ├── ui/
+│   └── sheet.tsx           # NUEVO en v1.4.0 (responsive)
 ├── layout/
+│   ├── mobile-sidebar.tsx  # NUEVO en v1.4.0
+│   └── progress-provider.tsx # NUEVO en v1.4.0
+├── inventory/
+│   └── consume-modal.tsx   # NUEVO en v1.4.0
 ├── exchange-rate-display.tsx
 ├── rate-details-popover.tsx
-├── inline-account-modal.tsx  # NUEVO en v1.2.0
+├── inline-account-modal.tsx
 └── backup-modal.tsx
 ```
 
@@ -154,14 +179,10 @@ components/
 
 ## Proximos Pasos
 
-Version 1.3.0 (en desarrollo):
+Version 1.6.0 (planificada):
 
-- Correcciones post-testing
-- Mejoras de UX
-- Nueva pagina historial
-- Exportacion shopping list
-
-Ver [docs/steps/v1.3.0.md](./steps/v1.3.0.md) para detalles.
+- Mejoras menores y correcciones pendientes
+- Ver [docs/steps/v1.6.0.md](./steps/v1.6.0.md) para detalles
 
 Version 2.0.0 (planificada):
 
@@ -182,9 +203,12 @@ Ver [docs/steps/v2.0.0.md](./steps/v2.0.0.md) para detalles.
 | [SETUP.md](./SETUP.md)               | Guia de instalacion      |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | Arquitectura             |
 | [API.md](./API.md)                   | Referencia de endpoints  |
+| [MIGRATIONS.md](./MIGRATIONS.md)     | Guia de migraciones DB   |
 | [steps/v1.md](./steps/v1.md)         | Detalles de v1.0.0-1.1.0 |
 | [steps/v1.2.0.md](./steps/v1.2.0.md) | Detalles de v1.2.0       |
 | [steps/v1.3.0.md](./steps/v1.3.0.md) | Detalles de v1.3.0       |
+| [steps/v1.4.0.md](./steps/v1.4.0.md) | Detalles de v1.4.0       |
+| [steps/v1.5.0.md](./steps/v1.5.0.md) | Detalles de v1.5.0       |
 | [steps/v2.0.0.md](./steps/v2.0.0.md) | Roadmap v2.0.0           |
 
 ---
@@ -210,4 +234,4 @@ docker-compose up -d  # Levantar PostgreSQL
 
 ---
 
-_WalletWise v1.3.0 - Estado del Proyecto (En Desarrollo)_
+_WalletWise v1.5.0 - Estado del Proyecto (Completado)_

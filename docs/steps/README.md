@@ -6,31 +6,39 @@
 
 ## Versiones
 
-| Version               | Nombre              | Estado        | Descripcion                               |
-| --------------------- | ------------------- | ------------- | ----------------------------------------- |
-| [v1.x](./v1.md)       | Single User Edition | Completado    | Dashboard de finanzas personales completo |
-| [v1.2.0](./v1.2.0.md) | Bugfixes & UX       | Completado    | Correcciones y mejoras de UX              |
-| [v1.3.0](./v1.3.0.md) | Post-Testing Fixes  | En Desarrollo | Correcciones post-testing y mejoras UX    |
-| [v2.0.0](./v2.0.0.md) | Multi-User Edition  | Planificado   | Autenticacion y soporte multi-usuario     |
+| Version               | Nombre                   | Estado      | Descripcion                               |
+| --------------------- | ------------------------ | ----------- | ----------------------------------------- |
+| [v1.x](./v1.md)       | Single User Edition      | Completado  | Dashboard de finanzas personales completo |
+| [v1.2.0](./v1.2.0.md) | Bugfixes & UX            | Completado  | Correcciones y mejoras de UX              |
+| [v1.3.0](./v1.3.0.md) | Post-Testing Fixes       | Completado  | Correcciones post-testing y mejoras UX    |
+| [v1.4.0](./v1.4.0.md) | Features & Responsive    | Completado  | Nuevas funcionalidades y diseño responsive |
+| [v1.5.0](./v1.5.0.md) | Calculator & Conversions | Completado  | Calculadora con conversiones multi-moneda |
+| [v1.6.0](./v1.6.0.md) | Polish & Improvements    | Planificado | Mejoras menores y correcciones pendientes |
+| [v2.0.0](./v2.0.0.md) | Multi-User Edition       | Planificado | Autenticacion y soporte multi-usuario     |
 
 ---
 
-## Version Actual: v1.3.0 (En Desarrollo)
+## Version Actual: v1.5.0 (Completado)
 
-Correcciones post-testing y mejoras de UX:
+Calculadora y mejoras de conversion:
 
-- Simplificacion de criptomonedas (solo USDT)
-- Fix modelo de presupuestos (bloqueo sin mover dinero)
-- Fix conversiones con tasas custom
-- Formularios mejorados (selects preseleccionados, inputs sin default)
-- CRUD completo de tipos de cuenta
-- Nueva pagina de historial de transacciones
-- Exportacion shopping list (PDF, WhatsApp)
-- Personalizacion del sidebar
+- Nueva pagina de calculadora con teclado numerico
+- Parser de expresiones matematicas (expr-eval)
+- Conversion multi-moneda en tiempo real
+- Tasas calculadas via intermediarios
+- Categoria padre visible en gastos e historial
 
 ---
 
-## Proxima Version: v2.0.0
+## Proxima Version: v1.6.0 (Planificado)
+
+Mejoras menores y correcciones pendientes:
+
+- Ver [docs/steps/v1.6.0.md](./v1.6.0.md) para detalles
+
+---
+
+## Version Futura: v2.0.0
 
 La version 2.0.0 agregara:
 
@@ -65,13 +73,16 @@ Seguimos [SemVer](https://semver.org/):
 
 ### Historial
 
-| Version | Tipo  | Descripcion                                   |
-| ------- | ----- | --------------------------------------------- |
-| 1.0.0   | MAJOR | Version inicial single-user                   |
-| 1.1.0   | MINOR | Crypto, tasas mejoradas, budgets, settings    |
-| 1.2.0   | MINOR | Bugfixes, cache, tasas inversas, UI mejorada  |
-| 1.3.0   | MINOR | Post-testing fixes, historial, exportacion    |
-| 2.0.0   | MAJOR | Multi-usuario con autenticacion (planificado) |
+| Version | Tipo  | Fecha          | Descripcion                                   |
+| ------- | ----- | -------------- | --------------------------------------------- |
+| 1.0.0   | MAJOR | Diciembre 2025 | Version inicial single-user                   |
+| 1.1.0   | MINOR | Diciembre 2025 | Crypto, tasas mejoradas, budgets, settings    |
+| 1.2.0   | MINOR | Enero 2026     | Bugfixes, cache, tasas inversas, UI mejorada  |
+| 1.3.0   | MINOR | Enero 2026     | Post-testing fixes, historial, exportacion    |
+| 1.4.0   | MINOR | Enero 2026     | Ingresos extra, consumo inventario, responsive|
+| 1.5.0   | MINOR | Enero 2026     | Calculadora, conversiones intermedias         |
+| 1.6.0   | MINOR | Pendiente      | Mejoras menores (planificado)                 |
+| 2.0.0   | MAJOR | Pendiente      | Multi-usuario con autenticacion (planificado) |
 
 ---
 
