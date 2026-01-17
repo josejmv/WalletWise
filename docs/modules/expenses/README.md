@@ -265,29 +265,39 @@ Permite registrar vueltos recibidos al realizar un gasto, con soporte para vuelt
 | hasChange        | boolean   | Si el gasto tiene vuelto asociado        |
 | changeAmount     | Decimal?  | Monto del vuelto recibido                |
 | changeAccountId  | string?   | Cuenta donde se deposita el vuelto       |
-| changeCurrencyId | string?   | Moneda del vuelto                        |
+| changeCurrencyId | string?   | Moneda del vuelto (= moneda de cuenta)   |
 | changeTransferId | string?   | ID de transferencia asociada (si aplica) |
+
+### Reglas
+
+- **Moneda del vuelto**: Siempre es la moneda de la cuenta de vuelto (no seleccionable)
+- **Monto guardado**: Es el monto NETO (original - equivalente del vuelto)
+- **Descripcion**: Incluye automaticamente info del vuelto (ej: "Vuelto: COP$12000.00 a efectivo")
 
 ### Logica de Calculo
 
 ```
-Ejemplo: Gasto de 10 USD, vuelto de 3671.77 COP
+Ejemplo: Gasto de 10 USD, vuelto de 12000 COP a cuenta COP
 Tasa: 1 USD = 3671.77 COP
 
 Calculo:
-- Vuelto en USD = 3671.77 / 3671.77 = 1 USD
-- Debito neto = 10 - 1 = 9 USD
+1. Equivalente del vuelto = 12000 / 3671.77 = 3.27 USD
+2. Gasto neto = 10 - 3.27 = 6.73 USD
+3. Transferencia = 3.27 USD -> 12000 COP
 
-Resultado:
-- Cuenta USD: -9 USD
-- Cuenta COP (si diferente): +3671.77 COP
+Resultado en balances:
+- Cuenta USD: -6.73 (gasto) -3.27 (transferencia) = -10 USD
+- Cuenta COP: +12000 COP
+
+Resultado en historial:
+- Gasto: 6.73 USD (con descripcion del vuelto)
+- Transferencia: 3.27 USD -> 12000 COP
 ```
 
 ### Casos de Uso
 
-1. **Misma cuenta y moneda**: Debito neto = monto - vuelto
-2. **Diferente cuenta, misma moneda**: Debito completo + transferencia de vuelto
-3. **Diferente moneda**: Conversion automatica usando tasa del sistema
+1. **Misma cuenta**: Debito neto = monto - vuelto (sin transferencia)
+2. **Diferente cuenta**: Debito neto + transferencia del equivalente
 
 ---
 

@@ -643,8 +643,8 @@ export function ExpenseForm({
                   // changeAmount / rate = equivalent in account currency
                   // Example: 3671.77 COP / 3671.77 = 1 USD
                   const changeInAccountCurrency = !sameAccountCurrency && accountToChangeRate
-                    ? watchedChangeAmount / accountToChangeRate
-                    : watchedChangeAmount;
+                    ? (watchedChangeAmount || 0) / accountToChangeRate
+                    : (watchedChangeAmount || 0);
 
                   // Net debit = expense - change equivalent (both in account currency)
                   const netDebit = expenseInAccountCurrency - changeInAccountCurrency;

@@ -185,29 +185,39 @@ Permite registrar vueltos dados al recibir un ingreso, con soporte para vueltos 
 | hasChange        | boolean   | Si el ingreso tiene vuelto asociado      |
 | changeAmount     | Decimal?  | Monto del vuelto dado                    |
 | changeAccountId  | string?   | Cuenta de donde sale el vuelto           |
-| changeCurrencyId | string?   | Moneda del vuelto                        |
+| changeCurrencyId | string?   | Moneda del vuelto (= moneda de cuenta)   |
 | changeTransferId | string?   | ID de transferencia asociada (si aplica) |
+
+### Reglas
+
+- **Moneda del vuelto**: Siempre es la moneda de la cuenta de vuelto (no seleccionable)
+- **Monto guardado**: Es el monto NETO (original - equivalente del vuelto)
+- **Descripcion**: Incluye automaticamente info del vuelto (ej: "Vuelto: COP$12000.00 de efectivo")
 
 ### Logica de Calculo
 
 ```
-Ejemplo: Ingreso de 10 USD, vuelto dado de 3671.77 COP
+Ejemplo: Ingreso de 10 USD, vuelto dado de 12000 COP desde cuenta COP
 Tasa: 1 USD = 3671.77 COP
 
 Calculo:
-- Vuelto en USD = 3671.77 / 3671.77 = 1 USD
-- Credito neto = 10 - 1 = 9 USD
+1. Equivalente del vuelto = 12000 / 3671.77 = 3.27 USD
+2. Ingreso neto = 10 - 3.27 = 6.73 USD
+3. Transferencia = 12000 COP -> 3.27 USD
 
-Resultado:
-- Cuenta USD: +9 USD
-- Cuenta COP (si diferente): -3671.77 COP
+Resultado en balances:
+- Cuenta USD: +6.73 (ingreso) +3.27 (transferencia) = +10 USD
+- Cuenta COP: -12000 COP
+
+Resultado en historial:
+- Ingreso: 6.73 USD (con descripcion del vuelto)
+- Transferencia: 3.27 USD desde cuenta COP
 ```
 
 ### Casos de Uso
 
-1. **Misma cuenta y moneda**: Credito neto = monto - vuelto
-2. **Diferente cuenta, misma moneda**: Credito completo + transferencia de vuelto
-3. **Diferente moneda**: Conversion automatica usando tasa del sistema
+1. **Misma cuenta**: Credito neto = monto - vuelto (sin transferencia)
+2. **Diferente cuenta**: Credito neto + transferencia del equivalente
 
 ---
 
