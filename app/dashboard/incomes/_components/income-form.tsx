@@ -555,7 +555,7 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
                             Vuelto dado de {changeAccount?.name || selectedAccount.name} ({changeCurrency.code}):
                           </span>
                           <span className="font-mono text-destructive font-medium">
-                            -{changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} {changeCurrency.code}
+                            -{changeCurrency.symbol}{(watchedChangeAmount || 0).toFixed(2)} {changeCurrency.code}
                           </span>
                         </div>
                       )}
@@ -569,7 +569,7 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
                           </div>
                           {/* Show conversion detail */}
                           <div className="text-xs text-muted-foreground pl-4">
-                            ({changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
+                            ({changeCurrency.symbol}{(watchedChangeAmount || 0).toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
                           </div>
                         </>
                       )}

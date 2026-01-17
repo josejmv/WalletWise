@@ -668,7 +668,7 @@ export function ExpenseForm({
                             Vuelto en {changeAccount?.name || selectedAccount.name} ({changeCurrency.code}):
                           </span>
                           <span className="font-mono text-success font-medium">
-                            +{changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} {changeCurrency.code}
+                            +{changeCurrency.symbol}{(watchedChangeAmount || 0).toFixed(2)} {changeCurrency.code}
                           </span>
                         </div>
                       )}
@@ -682,7 +682,7 @@ export function ExpenseForm({
                           </div>
                           {/* Show conversion detail */}
                           <div className="text-xs text-muted-foreground pl-4">
-                            ({changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
+                            ({changeCurrency.symbol}{(watchedChangeAmount || 0).toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
                           </div>
                         </>
                       )}
