@@ -28,7 +28,7 @@ import { ExpenseForm } from "@/app/dashboard/expenses/_components/expense-form";
 import { TransferForm } from "@/app/dashboard/transfers/_components/transfer-form";
 import { ConsumeModal } from "@/components/inventory/consume-modal";
 
-// v1.4.0: Added consume action type
+// Added consume action type
 type ActionType = "income" | "expense" | "transfer" | "consume" | null;
 
 export function QuickActions() {
@@ -68,7 +68,7 @@ export function QuickActions() {
       color: "text-blue-500",
       bgColor: "bg-blue-500/10 hover:bg-blue-500/20",
     },
-    // v1.4.0: Consume action for inventory
+    // Consume action for inventory
     {
       type: "consume" as const,
       label: "Consumo",

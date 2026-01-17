@@ -42,7 +42,7 @@ export async function getKPIs(
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
         select: { id: true, amount: true, currencyId: true },
       }),
-      // v1.3.0: Include customRate for expense conversion
+      // Include customRate for expense conversion
       prisma.expense.findMany({
         where:
           Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
@@ -61,7 +61,7 @@ export async function getKPIs(
     incomes.map((i) => ({ ...i, amount: Number(i.amount) })),
     baseCurrencyId,
   );
-  // v1.3.0: Use custom rates for expense conversion when available
+  // Use custom rates for expense conversion when available
   const expensesConverted = await convertManyWithCustomRates(
     expenses.map((e) => ({
       ...e,
@@ -99,22 +99,44 @@ export async function getKPIs(
 }
 
 export async function getBalanceByAccount(): Promise<BalanceByAccount[]> {
-  const accounts = await prisma.account.findMany({
-    where: { isActive: true },
-    include: {
-      accountType: true,
-      currency: true,
-    },
-    orderBy: { balance: "desc" },
-  });
+  // Include conversion to USD for proper comparison
+  const [accounts, baseCurrencyId] = await Promise.all([
+    prisma.account.findMany({
+      where: { isActive: true },
+      include: {
+        accountType: true,
+        currency: true,
+      },
+      orderBy: { balance: "desc" },
+    }),
+    getUserBaseCurrencyId(),
+  ]);
 
-  return accounts.map((account) => ({
-    accountId: account.id,
-    accountName: account.name,
-    accountType: account.accountType.name,
-    balance: Number(account.balance),
-    currencyCode: account.currency.code,
+  // Convert all balances to base currency (USD)
+  const accountsWithBalance = accounts.map((account) => ({
+    ...account,
+    amount: Number(account.balance),
+    currencyId: account.currencyId,
   }));
+
+  const converted = await convertManyToBaseCurrency(
+    accountsWithBalance,
+    baseCurrencyId
+  );
+
+  // Sort by converted balance (USD) descending
+  const sortedAccounts = accounts
+    .map((account, index) => ({
+      accountId: account.id,
+      accountName: account.name,
+      accountType: account.accountType.name,
+      balance: Number(account.balance),
+      currencyCode: account.currency.code,
+      balanceInUSD: converted[index]?.convertedAmount ?? Number(account.balance),
+    }))
+    .sort((a, b) => b.balanceInUSD - a.balanceInUSD);
+
+  return sortedAccounts;
 }
 
 export async function getBalanceByCurrency(): Promise<BalanceByCurrency[]> {
@@ -168,7 +190,7 @@ export async function getExpensesByCategory(
     ...(filters?.endDate && { lte: filters.endDate }),
   };
 
-  // v1.3.0: Include customRate for expense conversion
+  // Include customRate for expense conversion
   const [expenses, baseCurrencyId] = await Promise.all([
     prisma.expense.findMany({
       where:
@@ -185,7 +207,7 @@ export async function getExpensesByCategory(
     getUserBaseCurrencyId(),
   ]);
 
-  // v1.3.0: Use custom rates for expense conversion when available
+  // Use custom rates for expense conversion when available
   const expensesConverted = await convertManyWithCustomRates(
     expenses.map((e) => ({
       ...e,
@@ -475,27 +497,54 @@ export async function getDashboardSummary(
 }
 
 /**
- * Calculate savings from using custom exchange rates vs official rates
+ * v1.6.0: Calculate savings from using custom exchange rates vs official rates
  *
- * FORMULA CORREGIDA:
- * - En Venezuela, los precios estan en USD pero se paga en VES
- * - Tasa oficial ejemplo: 50 VES/USD
- * - Tasa custom ejemplo: 45 VES/USD (mejor tasa del comercio)
- * - Producto de 100 USD:
- *   - A tasa oficial pagaria: 100 * 50 = 5000 VES
- *   - A tasa custom paga: 100 * 45 = 4500 VES
- *   - Ahorro: 5000 - 4500 = 500 VES
+ * FORMULA:
+ * - Para GASTOS: tasa_custom < tasa_oficial = AHORRO (pagaste menos)
+ * - Para INGRESOS/TRANSFERENCIAS: tasa_custom > tasa_oficial = PERDIDA (recibiste/convertiste menos)
  *
- * REGLA: Si tasa_custom < tasa_oficial = AHORRO (pagas menos VES)
- * Savings = amount * (officialRate - customRate)
- * - Positivo = dinero ahorrado
- * - Negativo = dinero extra pagado
+ * Ejemplo GASTO:
+ * - Producto de 100 USD, tasa oficial 40, tasa custom 35
+ * - A oficial pagarias: 100 * 40 = 4000 VES
+ * - A custom pagas: 100 * 35 = 3500 VES
+ * - Ahorro: 500 VES (positivo = ahorraste)
+ *
+ * Ejemplo INGRESO:
+ * - Recibes 100 USD, tasa oficial 40, tasa custom 45
+ * - A oficial recibirias: 100 * 40 = 4000 VES
+ * - A custom recibes: 100 * 45 = 4500 VES
+ * - Perdida: -500 VES (pagaste extra para recibir esos USD)
+ *
+ * PERIODO: Solo mes actual
  */
 export async function getSavingsData(): Promise<SavingsData> {
-  // Get expenses with both official and custom rates
-  const [expenses, transfers, baseCurrency] = await Promise.all([
+  // Filter by current month
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  const dateFilter = {
+    gte: startOfMonth,
+    lte: endOfMonth,
+  };
+
+  // Include incomes, expenses, and transfers with custom rates
+  const [incomes, expenses, transfers, baseCurrency] = await Promise.all([
+    prisma.income.findMany({
+      where: {
+        date: dateFilter,
+        AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
+      },
+      select: {
+        id: true,
+        amount: true,
+        officialRate: true,
+        customRate: true,
+      },
+    }),
     prisma.expense.findMany({
       where: {
+        date: dateFilter,
         AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
       select: {
@@ -507,6 +556,7 @@ export async function getSavingsData(): Promise<SavingsData> {
     }),
     prisma.transfer.findMany({
       where: {
+        date: dateFilter,
         AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
       select: {
@@ -519,35 +569,50 @@ export async function getSavingsData(): Promise<SavingsData> {
     getUserBaseCurrency(),
   ]);
 
-  // Calculate savings for expenses using corrected formula
+  // Calculate savings for EXPENSES
+  // Rule: tasa_custom < tasa_oficial = AHORRO (paid less local currency)
   let expenseSavings = 0;
   for (const expense of expenses) {
     const amount = Number(expense.amount);
     const officialRate = Number(expense.officialRate);
     const customRate = Number(expense.customRate);
-    // Savings = what you would pay at official - what you paid at custom
-    // If positive = saved money (custom was lower)
-    // If negative = paid extra (custom was higher)
+    // Positive = saved money (custom was lower)
+    // Negative = paid extra (custom was higher)
     expenseSavings += calculateSavings(amount, officialRate, customRate);
   }
 
-  // Calculate savings for transfers using same corrected formula
+  // Calculate savings for INCOMES
+  // Rule: tasa_custom > tasa_oficial = PERDIDA (paid extra to receive)
+  // We invert the formula: negative when custom > official
+  let incomeSavings = 0;
+  for (const income of incomes) {
+    const amount = Number(income.amount);
+    const officialRate = Number(income.officialRate);
+    const customRate = Number(income.customRate);
+    // For incomes, the logic is inverted:
+    // If you received at a higher custom rate, you "lost" value
+    // savings = amount * (officialRate - customRate) but negated for incomes
+    incomeSavings += -calculateSavings(amount, officialRate, customRate);
+  }
+
+  // Calculate savings for TRANSFERS (same logic as incomes)
   let transferSavings = 0;
   for (const transfer of transfers) {
     const amount = Number(transfer.amount);
     const officialRate = Number(transfer.officialRate);
     const customRate = Number(transfer.customRate);
-    transferSavings += calculateSavings(amount, officialRate, customRate);
+    // Same inverted logic as incomes
+    transferSavings += -calculateSavings(amount, officialRate, customRate);
   }
 
-  const totalSavings = expenseSavings + transferSavings;
-  const transactionCount = expenses.length + transfers.length;
+  const totalSavings = expenseSavings + incomeSavings + transferSavings;
+  const transactionCount = incomes.length + expenses.length + transfers.length;
 
   return {
     totalSavings,
     transactionCount,
     breakdown: {
-      incomes: { savings: 0, count: 0 }, // Income doesn't have rate fields yet
+      incomes: { savings: incomeSavings, count: incomes.length },
       expenses: { savings: expenseSavings, count: expenses.length },
       transfers: { savings: transferSavings, count: transfers.length },
     },

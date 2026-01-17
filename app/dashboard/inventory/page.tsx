@@ -85,7 +85,7 @@ export default function InventoryPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  // v1.4.0: Consume modal state
+  // Consume modal state
   const [consumeOpen, setConsumeOpen] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -99,7 +99,7 @@ export default function InventoryPage() {
     mutationFn: deleteInventoryItem,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
-      // v1.4.0: Also invalidate categories to update item counts
+      // Also invalidate categories to update item counts
       queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
       toast({ title: "Producto eliminado" });
       setDeleteId(null);
@@ -117,7 +117,7 @@ export default function InventoryPage() {
     setFormOpen(false);
     setEditingItem(null);
     queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
-    // v1.4.0: Also invalidate categories to update item counts
+    // Also invalidate categories to update item counts
     queryClient.invalidateQueries({ queryKey: ["inventory-categories"] });
   };
 

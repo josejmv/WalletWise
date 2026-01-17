@@ -35,6 +35,11 @@ const expenseSchema = z.object({
   exchangeRate: z.number().optional(),
   officialRate: z.number().optional(),
   customRate: z.number().optional(),
+  // Change (vuelto) system
+  hasChange: z.boolean().optional(),
+  changeAmount: z.number().min(0).optional(),
+  changeAccountId: z.string().optional(),
+  changeCurrencyId: z.string().optional(),
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -55,25 +60,24 @@ interface ExpenseFormProps {
   onCancel: () => void;
 }
 
-interface Category {
+// Updated interface for hierarchical category selection
+interface CategoryChild {
   id: string;
   name: string;
-  parent: { id: string; name: string } | null;
 }
 
-async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch("/api/categories");
+interface CategoryWithChildren {
+  id: string;
+  name: string;
+  children: CategoryChild[];
+}
+
+// Fetch category tree for hierarchical selection
+async function fetchCategoryTree(): Promise<CategoryWithChildren[]> {
+  const res = await fetch("/api/categories?tree=true");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
-}
-
-// Helper to get category display name with parent
-function getCategoryDisplayName(category: Category): string {
-  if (category.parent) {
-    return `${category.name} (${category.parent.name})`;
-  }
-  return category.name;
 }
 
 interface Account {
@@ -145,10 +149,14 @@ export function ExpenseForm({
   const isEditing = !!expense;
   const [customRate, setCustomRate] = useState<number | null>(null);
 
-  const { data: categories, isLoading: loadingCategories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: fetchCategories,
+  // Fetch category tree for hierarchical selection
+  const { data: categoryTree, isLoading: loadingCategories } = useQuery({
+    queryKey: ["categories", "tree"],
+    queryFn: fetchCategoryTree,
   });
+
+  // State for parent category selection
+  const [selectedParentId, setSelectedParentId] = useState<string>("");
 
   const { data: accounts, isLoading: loadingAccounts } = useQuery({
     queryKey: ["accounts"],
@@ -172,23 +180,40 @@ export function ExpenseForm({
     defaultValues: {
       categoryId: "",
       accountId: "",
-      // v1.3.0: No default value for amount - use placeholder instead
+      // No default value for amount - use placeholder instead
       amount: undefined as unknown as number,
       currencyId: "",
       date: new Date().toISOString().split("T")[0],
       description: "",
       isRecurring: false,
+      // Change (vuelto) system
+      hasChange: false,
+      changeAmount: undefined as unknown as number,
+      changeAccountId: "",
+      changeCurrencyId: "",
     },
   });
 
   const watchedAccountId = watch("accountId");
   const watchedCurrencyId = watch("currencyId");
   const watchedAmount = watch("amount");
+  const watchedChangeAccountId = watch("changeAccountId");
+  const watchedChangeCurrencyId = watch("changeCurrencyId");
+  const watchedChangeAmount = watch("changeAmount");
 
   // Get selected account and its currency
   const selectedAccount = accounts?.find((a) => a.id === watchedAccountId);
   const selectedCurrency = currencies?.find((c) => c.id === watchedCurrencyId);
   const accountCurrency = selectedAccount?.currency;
+
+  // Get change account and currency for vuelto calculations
+  const effectiveChangeAccountId = watchedChangeAccountId || watchedAccountId;
+  const changeAccount = accounts?.find((a) => a.id === effectiveChangeAccountId);
+  const changeCurrency = currencies?.find((c) => c.id === watchedChangeCurrencyId);
+
+  // Get children of selected parent category
+  const selectedParent = categoryTree?.find((cat) => cat.id === selectedParentId);
+  const childCategories = selectedParent?.children || [];
 
   // Check if currencies differ (need exchange rate)
   const needsExchangeRate =
@@ -200,6 +225,18 @@ export function ExpenseForm({
   const { rate: officialRate, isLoading: loadingRate } = useExchangeRate(
     needsExchangeRate ? watchedCurrencyId : undefined,
     needsExchangeRate ? accountCurrency?.id : undefined,
+  );
+
+  // Fetch exchange rate from account currency to change currency
+  // This allows us to convert change amount back to account currency
+  const changeNeedsConversion =
+    changeCurrency &&
+    accountCurrency &&
+    changeCurrency.id !== accountCurrency.id;
+
+  const { rate: accountToChangeRate } = useExchangeRate(
+    changeNeedsConversion ? accountCurrency?.id : undefined,
+    changeNeedsConversion ? watchedChangeCurrencyId : undefined,
   );
 
   // Auto-select currency when account changes
@@ -226,8 +263,25 @@ export function ExpenseForm({
         isRecurring: expense.isRecurring,
         periodicity: expense.periodicity ?? undefined,
       });
+
+      // Set parent category when editing
+      if (categoryTree) {
+        // Check if the category is a parent
+        const isParent = categoryTree.some((cat) => cat.id === expense.category.id);
+        if (isParent) {
+          setSelectedParentId(expense.category.id);
+        } else {
+          // Find which parent has this category as a child
+          const parent = categoryTree.find((cat) =>
+            cat.children.some((child) => child.id === expense.category.id)
+          );
+          if (parent) {
+            setSelectedParentId(parent.id);
+          }
+        }
+      }
     }
-  }, [expense, reset]);
+  }, [expense, reset, categoryTree]);
 
   const createMutation = useMutation({
     mutationFn: createExpense,
@@ -298,29 +352,73 @@ export function ExpenseForm({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="categoryId">Categoria</Label>
-        <Select
-          value={watch("categoryId")}
-          onValueChange={(value) => setValue("categoryId", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Selecciona una categoria" />
-          </SelectTrigger>
-          <SelectContent>
-            {categories?.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {getCategoryDisplayName(cat)}
+      {/* v1.6.0: Hierarchical category selection with two selects */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="parentCategory">Categoría</Label>
+          <Select
+            value={selectedParentId}
+            onValueChange={(value) => {
+              setSelectedParentId(value);
+              // Set categoryId to parent by default
+              setValue("categoryId", value);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Selecciona categoría" />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              {categoryTree?.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="childCategory">Subcategoría (opcional)</Label>
+          <Select
+            value={
+              // Show selected child only if it belongs to current parent
+              childCategories.some((c) => c.id === watch("categoryId"))
+                ? watch("categoryId")
+                : "none"
+            }
+            onValueChange={(value) => {
+              // If "none" selected, use parent category
+              setValue("categoryId", value === "none" ? selectedParentId : value);
+            }}
+            disabled={!selectedParentId || childCategories.length === 0}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={
+                !selectedParentId
+                  ? "Selecciona categoría primero"
+                  : childCategories.length === 0
+                    ? "Sin subcategorías"
+                    : "Selecciona subcategoría"
+              } />
+            </SelectTrigger>
+            <SelectContent className="max-h-60 overflow-y-auto">
+              <SelectItem value="none" className="text-muted-foreground italic">
+                Solo categoría padre
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {errors.categoryId && (
-          <p className="text-sm text-destructive">
-            {errors.categoryId.message}
-          </p>
-        )}
+              {childCategories.map((child) => (
+                <SelectItem key={child.id} value={child.id}>
+                  {child.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
+      {errors.categoryId && (
+        <p className="text-sm text-destructive">
+          {errors.categoryId.message}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -444,6 +542,162 @@ export function ExpenseForm({
                 <SelectItem value="yearly">Anual</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        )}
+      </div>
+
+      {/* v1.6.0: Change (vuelto) system */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="hasChange"
+            checked={watch("hasChange") || false}
+            onCheckedChange={(checked) => {
+              setValue("hasChange", !!checked);
+              if (!checked) {
+                setValue("changeAmount", undefined as unknown as number);
+                setValue("changeAccountId", "");
+                setValue("changeCurrencyId", "");
+              } else {
+                // Auto-select account currency as change currency
+                const changeAccId = watch("changeAccountId") || watch("accountId");
+                const changeAcc = accounts?.find((a) => a.id === changeAccId);
+                if (changeAcc) {
+                  setValue("changeCurrencyId", changeAcc.currency.id);
+                }
+              }
+            }}
+          />
+          <Label htmlFor="hasChange" className="cursor-pointer">
+            Recibí vuelto
+          </Label>
+        </div>
+
+        {watch("hasChange") && (
+          <div className="space-y-4 pl-6 border-l-2 border-muted">
+            <div className="space-y-2">
+              <Label htmlFor="changeAccountId">Cuenta del vuelto</Label>
+              <Select
+                value={watch("changeAccountId") || watch("accountId")}
+                onValueChange={(value) => {
+                  setValue("changeAccountId", value);
+                  // Auto-select the account's currency
+                  const changeAcc = accounts?.find((a) => a.id === value);
+                  if (changeAcc) {
+                    setValue("changeCurrencyId", changeAcc.currency.id);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Misma cuenta" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {accounts?.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} ({account.currency.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="changeAmount">
+                Monto del vuelto
+                {changeCurrency && (
+                  <span className="text-muted-foreground ml-1">
+                    ({changeCurrency.code})
+                  </span>
+                )}
+              </Label>
+              <Input
+                id="changeAmount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                {...register("changeAmount", { valueAsNumber: true })}
+              />
+              {errors.changeAmount && (
+                <p className="text-sm text-destructive">
+                  {errors.changeAmount.message}
+                </p>
+              )}
+            </div>
+            {/* v1.6.0: Detailed transaction summary */}
+            {watchedAmount > 0 && (watchedChangeAmount || 0) > 0 && selectedAccount && changeCurrency && accountCurrency && (
+              <div className="text-sm bg-muted/50 p-3 rounded space-y-2">
+                <p className="font-medium text-foreground border-b border-border pb-1 mb-2">
+                  Resumen del movimiento:
+                </p>
+
+                {(() => {
+                  // Check if change goes to same account
+                  const sameAccount = effectiveChangeAccountId === watchedAccountId;
+                  const sameAccountCurrency = changeCurrency.id === accountCurrency.id;
+
+                  // Calculate expense amount in account currency
+                  const expenseInAccountCurrency = needsExchangeRate && officialRate
+                    ? watchedAmount * officialRate
+                    : watchedAmount;
+
+                  // Convert change to account currency using rate: accountCurrency -> changeCurrency
+                  // changeAmount / rate = equivalent in account currency
+                  // Example: 3671.77 COP / 3671.77 = 1 USD
+                  const changeInAccountCurrency = !sameAccountCurrency && accountToChangeRate
+                    ? watchedChangeAmount / accountToChangeRate
+                    : watchedChangeAmount;
+
+                  // Net debit = expense - change equivalent (both in account currency)
+                  const netDebit = expenseInAccountCurrency - changeInAccountCurrency;
+
+                  return (
+                    <>
+                      {/* 1. Net debit from expense account */}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Débito de {selectedAccount.name} ({accountCurrency.code}):
+                        </span>
+                        <span className="font-mono text-destructive font-medium">
+                          -{accountCurrency.symbol}{netDebit.toFixed(2)} {accountCurrency.code}
+                        </span>
+                      </div>
+
+                      {/* 2. Change received - only show if different account or currency */}
+                      {(!sameAccount || !sameAccountCurrency) && (
+                        <div className="flex justify-between pt-1">
+                          <span className="text-muted-foreground">
+                            Vuelto en {changeAccount?.name || selectedAccount.name} ({changeCurrency.code}):
+                          </span>
+                          <span className="font-mono text-success font-medium">
+                            +{changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} {changeCurrency.code}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 3. Exchange rate if currencies differ */}
+                      {!sameAccountCurrency && accountToChangeRate && (
+                        <>
+                          <div className="flex justify-between pt-2 border-t border-border mt-2 text-xs text-muted-foreground">
+                            <span>Tasa de cambio ({accountCurrency.code} → {changeCurrency.code}):</span>
+                            <span className="font-mono">{accountToChangeRate.toFixed(2)}</span>
+                          </div>
+                          {/* Show conversion detail */}
+                          <div className="text-xs text-muted-foreground pl-4">
+                            ({changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
+                          </div>
+                        </>
+                      )}
+
+                      {/* Show explanation for same account */}
+                      {sameAccount && sameAccountCurrency && (
+                        <div className="text-xs text-muted-foreground pt-1">
+                          (Monto - Vuelto = Débito neto)
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         )}
       </div>

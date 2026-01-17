@@ -48,7 +48,7 @@ interface Budget {
   id: string;
   name: string;
   type: "goal" | "envelope";
-  // v1.3.0: targetAmount can be null (budgets without goal)
+  // targetAmount can be null (budgets without goal)
   targetAmount: number | null;
   currentAmount: number;
   deadline: string | null;
@@ -163,7 +163,7 @@ export default function BudgetsPage() {
       {budgets && budgets.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {budgets.map((budget) => {
-            // v1.3.0: Handle null targetAmount
+            // Handle null targetAmount
             const hasTarget =
               budget.targetAmount !== null && budget.targetAmount > 0;
             const progress = hasTarget

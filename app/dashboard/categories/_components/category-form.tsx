@@ -196,7 +196,8 @@ export function CategoryForm({
           <SelectTrigger>
             <SelectValue placeholder="Sin categoria padre" />
           </SelectTrigger>
-          <SelectContent>
+          {/* v1.6.0: Added max-h-60 and overflow-y-auto to fix overflow on small screens */}
+          <SelectContent className="max-h-60 overflow-y-auto">
             <SelectItem value="none">Sin categoria padre</SelectItem>
             {availableParents.map(
               (cat: { id: string; name: string; color: string | null }) => (

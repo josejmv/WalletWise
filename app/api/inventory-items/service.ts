@@ -20,7 +20,7 @@ export async function getInventoryItemById(id: string) {
 }
 
 export async function createInventoryItem(data: CreateInventoryItemInput) {
-  // v1.3.0: Only validate categoryId if it's provided (not null/undefined)
+  // Only validate categoryId if it's provided (not null/undefined)
   if (data.categoryId) {
     const category = await prisma.inventoryCategory.findUnique({
       where: { id: data.categoryId },

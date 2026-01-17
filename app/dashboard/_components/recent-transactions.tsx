@@ -35,7 +35,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useFormatters } from "@/contexts/user-config-context";
 
-// v1.3.0: Order options
+// Order options
 type OrderBy = "recent" | "oldest" | "highest" | "lowest";
 
 interface Transaction {
@@ -94,7 +94,7 @@ const typeConfig = {
 
 export function RecentTransactions() {
   const { formatDate, formatCurrency } = useFormatters();
-  // v1.3.0: Order state
+  // Order state
   const [orderBy, setOrderBy] = useState<OrderBy>("recent");
 
   const { data, isLoading, error } = useQuery({
@@ -102,7 +102,7 @@ export function RecentTransactions() {
     queryFn: fetchRecentTransactions,
   });
 
-  // v1.3.0: Sort transactions based on orderBy
+  // Sort transactions based on orderBy
   const sortedData = useMemo(() => {
     if (!data) return [];
     const sorted = [...data];

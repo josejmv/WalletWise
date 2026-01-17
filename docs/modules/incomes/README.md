@@ -165,12 +165,49 @@ income.amountInBase = income.amount * getExchangeRate(income.currency, "USD");
 
 ## Validaciones
 
-| Campo     | Regla                            |
-| --------- | -------------------------------- |
-| jobId     | Requerido, debe existir          |
-| accountId | Requerido, debe existir y activa |
-| amount    | Requerido, > 0                   |
-| date      | Requerida, no futura             |
+| Campo     | Regla                                        |
+| --------- | -------------------------------------------- |
+| jobId     | Opcional desde v1.4.0 (Ingreso Extra si null)|
+| accountId | Requerido, debe existir y activa             |
+| amount    | Requerido, > 0                               |
+| date      | Requerida, no futura                         |
+
+---
+
+## Sistema de Vueltos (v1.6.0)
+
+Permite registrar vueltos dados al recibir un ingreso, con soporte para vueltos en diferente moneda y/o cuenta.
+
+### Campos Adicionales
+
+| Campo            | Tipo      | Descripcion                              |
+| ---------------- | --------- | ---------------------------------------- |
+| hasChange        | boolean   | Si el ingreso tiene vuelto asociado      |
+| changeAmount     | Decimal?  | Monto del vuelto dado                    |
+| changeAccountId  | string?   | Cuenta de donde sale el vuelto           |
+| changeCurrencyId | string?   | Moneda del vuelto                        |
+| changeTransferId | string?   | ID de transferencia asociada (si aplica) |
+
+### Logica de Calculo
+
+```
+Ejemplo: Ingreso de 10 USD, vuelto dado de 3671.77 COP
+Tasa: 1 USD = 3671.77 COP
+
+Calculo:
+- Vuelto en USD = 3671.77 / 3671.77 = 1 USD
+- Credito neto = 10 - 1 = 9 USD
+
+Resultado:
+- Cuenta USD: +9 USD
+- Cuenta COP (si diferente): -3671.77 COP
+```
+
+### Casos de Uso
+
+1. **Misma cuenta y moneda**: Credito neto = monto - vuelto
+2. **Diferente cuenta, misma moneda**: Credito completo + transferencia de vuelto
+3. **Diferente moneda**: Conversion automatica usando tasa del sistema
 
 ---
 

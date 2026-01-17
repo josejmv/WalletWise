@@ -44,7 +44,7 @@ import { SidebarItem } from "./sidebar-item";
 import { SidebarGroup } from "./sidebar-group";
 import { useUserConfigContext } from "@/contexts/user-config-context";
 
-// v1.3.0: Sidebar item configuration for dynamic ordering
+// Sidebar item configuration for dynamic ordering
 interface SidebarItemConfig {
   id: string;
   type: "item" | "group";
@@ -59,7 +59,7 @@ interface SidebarItemConfig {
   }[];
 }
 
-// v1.3.0: Default sidebar structure
+// Default sidebar structure
 const SIDEBAR_ITEMS: SidebarItemConfig[] = [
   {
     id: "dashboard",
@@ -154,7 +154,7 @@ const SIDEBAR_ITEMS: SidebarItemConfig[] = [
     href: "/dashboard/reports",
     icon: FileText,
   },
-  // v1.5.0: Calculator for currency conversions
+  // Calculator for currency conversions
   {
     id: "calculator",
     type: "item",
@@ -169,7 +169,7 @@ interface SidebarProps {
   onToggle: () => void;
 }
 
-// v1.3.0: Type for sidebarConfig from UserConfig
+// Type for sidebarConfig from UserConfig
 interface SidebarConfigChild {
   id: string;
   title: string;
@@ -222,7 +222,23 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const { config } = useUserConfigContext();
 
-  // v1.3.0: Get ordered sidebar items based on user config
+  // State for exclusive accordion behavior (only one group open at a time)
+  const [openGroupId, setOpenGroupId] = React.useState<string | null>(null);
+
+  // Auto-open the group containing the active route
+  React.useEffect(() => {
+    for (const item of SIDEBAR_ITEMS) {
+      if (item.type === "group" && item.items) {
+        const hasActiveChild = item.items.some((child) => pathname === child.href);
+        if (hasActiveChild) {
+          setOpenGroupId(item.id);
+          return;
+        }
+      }
+    }
+  }, [pathname]);
+
+  // Get ordered sidebar items based on user config
   const orderedItems = useMemo(() => {
     const sidebarConfig = config?.sidebarConfig as SidebarConfig | undefined;
 
@@ -300,6 +316,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Navigation - v1.3.0: Dynamic ordering based on user config */}
+      {/* v1.6.0: Exclusive accordion behavior - only one group open at a time */}
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
         {orderedItems.map((item) =>
           item.type === "item" ? (
@@ -316,8 +333,9 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               title={item.title}
               icon={item.icon}
               collapsed={collapsed}
-              defaultOpen={item.defaultOpen}
               items={item.items!}
+              isOpen={openGroupId === item.id}
+              onOpenChange={(open) => setOpenGroupId(open ? item.id : null)}
             />
           ),
         )}

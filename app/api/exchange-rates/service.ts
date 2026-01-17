@@ -287,7 +287,7 @@ export async function syncFromAPI(): Promise<SyncResult> {
       synced++;
     }
 
-    // v1.3.0: Calculate and store cross-rates between non-base currencies
+    // Calculate and store cross-rates between non-base currencies
     // e.g., COP-VES = (USD-VES) / (USD-COP)
     const nonBaseCurrencyCodes = Object.keys(ratesFromBase);
     for (let i = 0; i < nonBaseCurrencyCodes.length; i++) {
@@ -411,7 +411,7 @@ export async function syncFromBinance(): Promise<SyncResult> {
       }
     }
 
-    // v1.3.0: Create fixed USDT-USD = 1 rate (and inverse)
+    // Create fixed USDT-USD = 1 rate (and inverse)
     const usdtId = currencyMap.get("USDT");
     const usdId = currencyMap.get("USD");
     if (usdtId && usdId) {

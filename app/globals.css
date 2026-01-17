@@ -42,43 +42,52 @@
   --sidebar-ring: 240 5.9% 10%;
 }
 
+/* v1.6.0: Pastel colors and gray background for dark mode */
 .dark {
-  --background: 240 10% 3.9%;
+  /* Background: #2a2a2a - softer gray instead of near-black */
+  --background: 0 0% 16.5%;
   --foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
+  /* Card: slightly lighter than background for depth */
+  --card: 0 0% 18%;
   --card-foreground: 0 0% 98%;
-  --popover: 240 10% 3.9%;
+  --popover: 0 0% 18%;
   --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
+  /* Primary: Pastel blue #93c5fd */
+  --primary: 213 92% 78%;
   --primary-foreground: 240 5.9% 10%;
-  --secondary: 240 3.7% 15.9%;
+  --secondary: 0 0% 22%;
   --secondary-foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --accent: 240 3.7% 15.9%;
+  --muted: 0 0% 22%;
+  --muted-foreground: 0 0% 65%;
+  --accent: 0 0% 22%;
   --accent-foreground: 0 0% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --ring: 240 4.9% 83.9%;
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 98%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 0 0% 98%;
-  --chart-1: 220 70% 50%;
-  --chart-2: 160 60% 45%;
-  --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
-  --sidebar-background: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 240 4.9% 83.9%;
+  /* Destructive: Pastel red #fca5a5 */
+  --destructive: 0 91% 82%;
+  --destructive-foreground: 0 0% 10%;
+  --border: 0 0% 22%;
+  --input: 0 0% 22%;
+  --ring: 213 92% 78%;
+  /* Success: Pastel green #86efac */
+  --success: 142 77% 73%;
+  --success-foreground: 0 0% 10%;
+  /* Warning: Pastel yellow #fde047 */
+  --warning: 53 98% 63%;
+  --warning-foreground: 0 0% 10%;
+  /* Chart colors: Pastel palette for graphs */
+  --chart-1: 213 92% 78%;   /* Pastel blue */
+  --chart-2: 142 77% 73%;   /* Pastel green */
+  --chart-3: 53 98% 63%;    /* Pastel yellow */
+  --chart-4: 270 95% 85%;   /* Pastel purple #d8b4fe */
+  --chart-5: 0 91% 82%;     /* Pastel red */
+  /* Sidebar: Matching gray theme */
+  --sidebar-background: 0 0% 14%;
+  --sidebar-foreground: 0 0% 95%;
+  --sidebar-primary: 213 92% 78%;
+  --sidebar-primary-foreground: 0 0% 10%;
+  --sidebar-accent: 0 0% 20%;
+  --sidebar-accent-foreground: 0 0% 95%;
+  --sidebar-border: 0 0% 20%;
+  --sidebar-ring: 213 92% 78%;
 }
 
 @theme inline {

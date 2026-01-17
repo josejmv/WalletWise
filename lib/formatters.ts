@@ -1,4 +1,4 @@
-// v1.3.0: Symbols equal to currency codes for consistency
+// Symbols equal to currency codes for consistency
 const CURRENCY_SYMBOLS: Record<string, string> = {
   USD: "USD",
   COP: "COP",

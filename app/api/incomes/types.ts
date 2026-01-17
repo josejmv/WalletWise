@@ -2,14 +2,14 @@ import type { Income, Currency, Account, Job } from "@prisma/client";
 
 export type { Income };
 
-// v1.4.0: job is optional (null = "Ingreso Extra")
+// job is optional (null = "Ingreso Extra")
 export interface IncomeWithRelations extends Income {
   job: Job | null;
   account: Account;
   currency: Currency;
 }
 
-// v1.4.0: jobId is optional for extra incomes
+// jobId is optional for extra incomes
 export interface CreateIncomeInput {
   jobId?: string | null;
   accountId: string;
@@ -19,6 +19,11 @@ export interface CreateIncomeInput {
   customRate?: number;
   date?: Date;
   description?: string;
+  // Change (vuelto) system
+  hasChange?: boolean;
+  changeAmount?: number;
+  changeAccountId?: string;
+  changeCurrencyId?: string;
 }
 
 export interface UpdateIncomeInput {
@@ -30,6 +35,11 @@ export interface UpdateIncomeInput {
   customRate?: number | null;
   date?: Date;
   description?: string | null;
+  // Change (vuelto) system
+  hasChange?: boolean;
+  changeAmount?: number | null;
+  changeAccountId?: string | null;
+  changeCurrencyId?: string | null;
 }
 
 export interface IncomeFilters {

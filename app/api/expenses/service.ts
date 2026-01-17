@@ -77,6 +77,18 @@ export async function createExpense(data: CreateExpenseInput) {
     throw new Error("Moneda no encontrada");
   }
 
+  // Validate change account if specified
+  let changeAccount = null;
+  if (data.hasChange && data.changeAccountId) {
+    changeAccount = await prisma.account.findUnique({
+      where: { id: data.changeAccountId },
+      include: { currency: true },
+    });
+    if (!changeAccount) {
+      throw new Error("Cuenta de vuelto no encontrada");
+    }
+  }
+
   // Calculate the amount to deduct from account
   // If currencies differ, use exchange rate to convert
   let amountToDeduct = data.amount;
@@ -90,10 +102,156 @@ export async function createExpense(data: CreateExpenseInput) {
   }
 
   return prisma.$transaction(async (tx) => {
+    // Handle change (vuelto) system
+    let changeTransferId: string | null = null;
+    const changeAmount = data.changeAmount || 0;
+    const effectiveChangeAccountId = data.changeAccountId || data.accountId;
+    const changeGoesToSameAccount = effectiveChangeAccountId === data.accountId;
+    // Change currency is always the currency of the change account
+    const changeCurrencyId = changeAccount?.currencyId || account.currencyId;
+
+    // Calculate change equivalent in expense account currency
+    let changeInAccountCurrency = changeAmount;
+    if (data.hasChange && changeAmount > 0 && changeCurrencyId !== account.currencyId) {
+      // Try to find rate from change currency to account currency
+      let rate: number | null = null;
+
+      // First try: changeCurrency -> accountCurrency
+      const directRate = await tx.exchangeRate.findFirst({
+        where: {
+          fromCurrencyId: changeCurrencyId,
+          toCurrencyId: account.currencyId,
+        },
+        orderBy: { fetchedAt: "desc" },
+      });
+
+      if (directRate?.rate) {
+        rate = Number(directRate.rate);
+        changeInAccountCurrency = changeAmount * rate;
+      } else {
+        // Fallback: use inverse of accountCurrency -> changeCurrency
+        const inverseRate = await tx.exchangeRate.findFirst({
+          where: {
+            fromCurrencyId: account.currencyId,
+            toCurrencyId: changeCurrencyId,
+          },
+          orderBy: { fetchedAt: "desc" },
+        });
+        if (inverseRate?.rate && Number(inverseRate.rate) > 0) {
+          rate = 1 / Number(inverseRate.rate);
+          changeInAccountCurrency = changeAmount * rate;
+        }
+      }
+    }
+
+    // Create transfer for change if going to different account
+    if (data.hasChange && changeAmount > 0 && !changeGoesToSameAccount) {
+      // Calculate exchange rate from account currency to change currency
+      // This allows the transfer service to correctly reverse the operation
+      let accountToChangeRate: number | null = null;
+      if (changeCurrencyId !== account.currencyId) {
+        // Try direct rate: accountCurrency -> changeCurrency
+        const directRate = await tx.exchangeRate.findFirst({
+          where: {
+            fromCurrencyId: account.currencyId,
+            toCurrencyId: changeCurrencyId,
+          },
+          orderBy: { fetchedAt: "desc" },
+        });
+        if (directRate?.rate) {
+          accountToChangeRate = Number(directRate.rate);
+        } else {
+          // Fallback: inverse of changeCurrency -> accountCurrency
+          const inverseRate = await tx.exchangeRate.findFirst({
+            where: {
+              fromCurrencyId: changeCurrencyId,
+              toCurrencyId: account.currencyId,
+            },
+            orderBy: { fetchedAt: "desc" },
+          });
+          if (inverseRate?.rate && Number(inverseRate.rate) > 0) {
+            accountToChangeRate = 1 / Number(inverseRate.rate);
+          }
+        }
+      }
+
+      // Transfer stores amount in account currency (what leaves the account)
+      // exchangeRate converts to change currency (what enters change account)
+      const transfer = await tx.transfer.create({
+        data: {
+          type: "account_to_account",
+          fromAccountId: data.accountId,
+          toAccountId: effectiveChangeAccountId,
+          amount: changeInAccountCurrency, // Amount in account currency (e.g., 3.27 USD)
+          currencyId: account.currencyId, // Account currency
+          exchangeRate: accountToChangeRate, // Rate to convert to change currency
+          date: data.date ?? new Date(),
+          description: `Vuelto de gasto: ${data.description || "Sin descripción"}`,
+        },
+      });
+      changeTransferId = transfer.id;
+
+      // Deduct equivalent from expense account (in account currency)
+      await tx.account.update({
+        where: { id: data.accountId },
+        data: { balance: { decrement: changeInAccountCurrency } },
+      });
+
+      // Add change amount to change account (in change account currency)
+      await tx.account.update({
+        where: { id: effectiveChangeAccountId },
+        data: { balance: { increment: changeAmount } },
+      });
+    }
+
+    // Calculate net amount to deduct from expense account
+    // Always: net = expense - change equivalent
+    // When different account: transfer handles moving the equivalent separately
+    let netAmountToDeduct = amountToDeduct;
+    if (data.hasChange && changeAmount > 0) {
+      netAmountToDeduct = amountToDeduct - changeInAccountCurrency;
+    }
+
+    // Build description with change info
+    let expenseDescription = data.description || "";
+    if (data.hasChange && changeAmount > 0) {
+      const changeAccountForDesc = changeAccount || account;
+      const changeCurrencyForDesc = changeAccount?.currency || account.currency;
+      const changeAccountName = changeGoesToSameAccount ? "misma cuenta" : changeAccountForDesc.name;
+      expenseDescription = expenseDescription
+        ? `${expenseDescription} | Vuelto: ${changeCurrencyForDesc.symbol}${changeAmount.toFixed(2)} a ${changeAccountName}`
+        : `Vuelto: ${changeCurrencyForDesc.symbol}${changeAmount.toFixed(2)} a ${changeAccountName}`;
+    }
+
+    // Calculate the NET amount in expense currency
+    // netAmountToDeduct is in account currency, convert back to expense currency if needed
+    let netAmountInExpenseCurrency = data.amount;
+    if (data.hasChange && changeAmount > 0) {
+      // changeInAccountCurrency is the change equivalent in account currency
+      // Convert it back to expense currency to get the net expense amount
+      const rate = data.customRate || data.officialRate || 1;
+      const changeInExpenseCurrency = rate > 0 ? changeInAccountCurrency / rate : changeInAccountCurrency;
+      netAmountInExpenseCurrency = data.amount - changeInExpenseCurrency;
+    }
+
     const expense = await tx.expense.create({
       data: {
-        ...data,
+        categoryId: data.categoryId,
+        accountId: data.accountId,
+        amount: netAmountInExpenseCurrency,
+        currencyId: data.currencyId,
+        officialRate: data.officialRate,
+        customRate: data.customRate,
+        isRecurring: data.isRecurring,
+        periodicity: data.periodicity,
+        nextDueDate: data.nextDueDate,
         date: data.date ?? new Date(),
+        description: expenseDescription,
+        hasChange: data.hasChange || false,
+        changeAmount: data.hasChange ? changeAmount : null,
+        changeCurrencyId: data.hasChange ? changeCurrencyId : null,
+        changeAccountId: data.hasChange ? effectiveChangeAccountId : null,
+        changeTransferId,
       },
       include: {
         category: true,
@@ -105,7 +263,7 @@ export async function createExpense(data: CreateExpenseInput) {
     await tx.account.update({
       where: { id: data.accountId },
       data: {
-        balance: { decrement: amountToDeduct },
+        balance: { decrement: netAmountToDeduct },
       },
     });
 

@@ -21,8 +21,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { ExchangeRateDisplay } from "@/components/exchange-rate-display";
 import { useExchangeRate } from "@/hooks/use-exchange-rate";
 
+import { Checkbox } from "@/components/ui/checkbox";
+
 const incomeSchema = z.object({
-  // v1.4.0: jobId is optional - empty string or null means "Ingreso Extra"
+  // jobId is optional - empty string or null means "Ingreso Extra"
   jobId: z.string().optional(),
   accountId: z.string().min(1, "La cuenta es requerida"),
   amount: z.number().min(0.01, "El monto debe ser mayor a 0"),
@@ -32,6 +34,11 @@ const incomeSchema = z.object({
   exchangeRate: z.number().optional(),
   officialRate: z.number().optional(),
   customRate: z.number().optional(),
+  // Change (vuelto) system
+  hasChange: z.boolean().optional(),
+  changeAmount: z.number().min(0).optional(),
+  changeAccountId: z.string().optional(),
+  changeCurrencyId: z.string().optional(),
 });
 
 type IncomeFormData = z.infer<typeof incomeSchema>;
@@ -42,7 +49,7 @@ interface IncomeFormProps {
     amount: number;
     date: string;
     description: string | null;
-    // v1.4.0: job is optional (null = "Ingreso Extra")
+    // job is optional (null = "Ingreso Extra")
     job: { id: string } | null;
     account: { id: string };
     currency: { id: string };
@@ -94,7 +101,7 @@ async function createIncome(data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      // v1.4.0: Send null if no job selected (Ingreso Extra)
+      // Send null if no job selected (Ingreso Extra)
       jobId: data.jobId || null,
       // Parse as noon local time to avoid timezone issues
       date: new Date(data.date + "T12:00:00"),
@@ -111,7 +118,7 @@ async function updateIncome(id: string, data: IncomeFormData) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       ...data,
-      // v1.4.0: Send null if no job selected (Ingreso Extra)
+      // Send null if no job selected (Ingreso Extra)
       jobId: data.jobId || null,
       // Parse as noon local time to avoid timezone issues
       date: new Date(data.date + "T12:00:00"),
@@ -152,7 +159,7 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
     resolver: zodResolver(incomeSchema),
     defaultValues: income
       ? {
-          // v1.4.0: job can be null for "Ingreso Extra"
+          // job can be null for "Ingreso Extra"
           jobId: income.job?.id ?? "",
           accountId: income.account.id,
           amount: income.amount,
@@ -167,17 +174,30 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
           currencyId: "",
           date: new Date().toISOString().split("T")[0],
           description: "",
+          // Change (vuelto) system
+          hasChange: false,
+          changeAmount: undefined as unknown as number,
+          changeAccountId: "",
+          changeCurrencyId: "",
         },
   });
 
   const watchedAccountId = watch("accountId");
   const watchedCurrencyId = watch("currencyId");
   const watchedAmount = watch("amount");
+  const watchedChangeAccountId = watch("changeAccountId");
+  const watchedChangeCurrencyId = watch("changeCurrencyId");
+  const watchedChangeAmount = watch("changeAmount");
 
   // Get selected account and its currency
   const selectedAccount = accounts?.find((a) => a.id === watchedAccountId);
   const selectedCurrency = currencies?.find((c) => c.id === watchedCurrencyId);
   const accountCurrency = selectedAccount?.currency;
+
+  // Get change account and currency for vuelto calculations
+  const effectiveChangeAccountId = watchedChangeAccountId || watchedAccountId;
+  const changeAccount = accounts?.find((a) => a.id === effectiveChangeAccountId);
+  const changeCurrency = currencies?.find((c) => c.id === watchedChangeCurrencyId);
 
   // Check if currencies differ (need exchange rate)
   const needsExchangeRate =
@@ -189,6 +209,18 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
   const { rate: officialRate, isLoading: loadingRate } = useExchangeRate(
     needsExchangeRate ? watchedCurrencyId : undefined,
     needsExchangeRate ? accountCurrency?.id : undefined,
+  );
+
+  // Fetch exchange rate from account currency to change currency
+  // This allows us to convert change amount back to account currency
+  const changeNeedsConversion =
+    changeCurrency &&
+    accountCurrency &&
+    changeCurrency.id !== accountCurrency.id;
+
+  const { rate: accountToChangeRate } = useExchangeRate(
+    changeNeedsConversion ? accountCurrency?.id : undefined,
+    changeNeedsConversion ? watchedChangeCurrencyId : undefined,
   );
 
   // Auto-select currency when account changes
@@ -399,6 +431,162 @@ export function IncomeForm({ income, onSuccess, onCancel }: IncomeFormProps) {
           placeholder="Nota adicional"
           {...register("description")}
         />
+      </div>
+
+      {/* v1.6.0: Change (vuelto) system */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            id="hasChange"
+            checked={watch("hasChange") || false}
+            onCheckedChange={(checked) => {
+              setValue("hasChange", !!checked);
+              if (!checked) {
+                setValue("changeAmount", undefined as unknown as number);
+                setValue("changeAccountId", "");
+                setValue("changeCurrencyId", "");
+              } else {
+                // Auto-select account currency as change currency
+                const changeAccId = watch("changeAccountId") || watch("accountId");
+                const changeAcc = accounts?.find((a) => a.id === changeAccId);
+                if (changeAcc) {
+                  setValue("changeCurrencyId", changeAcc.currency.id);
+                }
+              }
+            }}
+          />
+          <Label htmlFor="hasChange" className="cursor-pointer">
+            Di vuelto
+          </Label>
+        </div>
+
+        {watch("hasChange") && (
+          <div className="space-y-4 pl-6 border-l-2 border-muted">
+            <div className="space-y-2">
+              <Label htmlFor="changeAccountId">Cuenta del vuelto</Label>
+              <Select
+                value={watch("changeAccountId") || watch("accountId")}
+                onValueChange={(value) => {
+                  setValue("changeAccountId", value);
+                  // Auto-select the account's currency
+                  const changeAcc = accounts?.find((a) => a.id === value);
+                  if (changeAcc) {
+                    setValue("changeCurrencyId", changeAcc.currency.id);
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Misma cuenta" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60 overflow-y-auto">
+                  {accounts?.map((account) => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.name} ({account.currency.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="changeAmount">
+                Monto del vuelto
+                {changeCurrency && (
+                  <span className="text-muted-foreground ml-1">
+                    ({changeCurrency.code})
+                  </span>
+                )}
+              </Label>
+              <Input
+                id="changeAmount"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                {...register("changeAmount", { valueAsNumber: true })}
+              />
+              {errors.changeAmount && (
+                <p className="text-sm text-destructive">
+                  {errors.changeAmount.message}
+                </p>
+              )}
+            </div>
+            {/* v1.6.0: Detailed transaction summary */}
+            {watchedAmount > 0 && (watchedChangeAmount || 0) > 0 && selectedAccount && changeCurrency && accountCurrency && (
+              <div className="text-sm bg-muted/50 p-3 rounded space-y-2">
+                <p className="font-medium text-foreground border-b border-border pb-1 mb-2">
+                  Resumen del movimiento:
+                </p>
+
+                {(() => {
+                  // Check if change comes from same account
+                  const sameAccount = effectiveChangeAccountId === watchedAccountId;
+                  const sameAccountCurrency = changeCurrency.id === accountCurrency.id;
+
+                  // Calculate income amount in account currency
+                  const incomeInAccountCurrency = needsExchangeRate && officialRate
+                    ? watchedAmount * officialRate
+                    : watchedAmount;
+
+                  // Convert change to account currency using rate: accountCurrency -> changeCurrency
+                  // changeAmount / rate = equivalent in account currency
+                  // Example: 3671.77 COP / 3671.77 = 1 USD
+                  const changeInAccountCurrency = !sameAccountCurrency && accountToChangeRate
+                    ? watchedChangeAmount / accountToChangeRate
+                    : watchedChangeAmount;
+
+                  // Net credit = income - change given (both in account currency)
+                  const netCredit = incomeInAccountCurrency - changeInAccountCurrency;
+
+                  return (
+                    <>
+                      {/* 1. Net credit to income account */}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Crédito a {selectedAccount.name} ({accountCurrency.code}):
+                        </span>
+                        <span className="font-mono text-success font-medium">
+                          +{accountCurrency.symbol}{netCredit.toFixed(2)} {accountCurrency.code}
+                        </span>
+                      </div>
+
+                      {/* 2. Change given - only show if different account or currency */}
+                      {(!sameAccount || !sameAccountCurrency) && (
+                        <div className="flex justify-between pt-1">
+                          <span className="text-muted-foreground">
+                            Vuelto dado de {changeAccount?.name || selectedAccount.name} ({changeCurrency.code}):
+                          </span>
+                          <span className="font-mono text-destructive font-medium">
+                            -{changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} {changeCurrency.code}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* 3. Exchange rate if currencies differ */}
+                      {!sameAccountCurrency && accountToChangeRate && (
+                        <>
+                          <div className="flex justify-between pt-2 border-t border-border mt-2 text-xs text-muted-foreground">
+                            <span>Tasa de cambio ({accountCurrency.code} → {changeCurrency.code}):</span>
+                            <span className="font-mono">{accountToChangeRate.toFixed(2)}</span>
+                          </div>
+                          {/* Show conversion detail */}
+                          <div className="text-xs text-muted-foreground pl-4">
+                            ({changeCurrency.symbol}{watchedChangeAmount.toFixed(2)} ÷ {accountToChangeRate.toFixed(2)} = {accountCurrency.symbol}{changeInAccountCurrency.toFixed(2)} {accountCurrency.code})
+                          </div>
+                        </>
+                      )}
+
+                      {/* Show explanation for same account */}
+                      {sameAccount && sameAccountCurrency && (
+                        <div className="text-xs text-muted-foreground pt-1">
+                          (Monto - Vuelto = Crédito neto)
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end gap-2 pt-4">

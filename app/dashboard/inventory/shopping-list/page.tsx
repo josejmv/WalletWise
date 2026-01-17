@@ -201,7 +201,7 @@ export default function ShoppingListPage() {
 
   const selectedCurrency = currencies?.find((c) => c.id === selectedCurrencyId);
 
-  // v1.3.0: Export to PDF
+  // Export to PDF
   const exportToPDF = useCallback(() => {
     if (!items || items.length === 0) return;
 
@@ -296,7 +296,7 @@ export default function ShoppingListPage() {
     itemsWithoutRate,
   ]);
 
-  // v1.3.0: Share via WhatsApp
+  // Share via WhatsApp
   const shareViaWhatsApp = useCallback(() => {
     if (!items || items.length === 0) return;
 

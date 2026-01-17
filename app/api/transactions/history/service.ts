@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-// v1.3.0: Combined transaction type
+// Combined transaction type
 export type TransactionType =
   | "income"
   | "expense"
@@ -113,7 +113,7 @@ export async function getTransactionHistory(
         account: income.account,
         job: income.job ?? undefined,
         currency: income.currency,
-        // v1.4.0: Show "Ingreso Extra" for incomes without job
+        // Show "Ingreso Extra" for incomes without job
         displayName: income.job?.name ?? "Ingreso Extra",
       });
     });

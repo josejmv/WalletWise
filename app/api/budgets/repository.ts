@@ -92,7 +92,7 @@ export async function remove(id: string) {
   });
 }
 
-// v1.3.0: Block model - contribute does NOT deduct from account balance
+// Block model - contribute does NOT deduct from account balance
 // The money stays in the account but is marked as "blocked" for this budget
 export async function contribute(
   budgetId: string,
@@ -110,7 +110,7 @@ export async function contribute(
       throw new Error("Cuenta no encontrada");
     }
 
-    // v1.3.0: Calculate available balance (total - blocked in budgets)
+    // Calculate available balance (total - blocked in budgets)
     const budgetsForAccount = await tx.budget.findMany({
       where: {
         accountId: fromAccountId,
@@ -141,7 +141,7 @@ export async function contribute(
       },
     });
 
-    // v1.3.0: NO reducir el balance de la cuenta (modelo de bloqueo)
+    // NO reducir el balance de la cuenta (modelo de bloqueo)
     // El dinero permanece en la cuenta pero queda bloqueado
 
     // Incrementar el monto actual del budget (bloqueado)
@@ -181,7 +181,7 @@ export async function contribute(
   });
 }
 
-// v1.3.0: Block model - withdraw does NOT add to account balance
+// Block model - withdraw does NOT add to account balance
 // The money was never removed, just unblock it
 export async function withdraw(
   budgetId: string,
@@ -215,7 +215,7 @@ export async function withdraw(
       },
     });
 
-    // v1.3.0: NO incrementar el balance de la cuenta (modelo de bloqueo)
+    // NO incrementar el balance de la cuenta (modelo de bloqueo)
     // El dinero nunca salio, solo se desbloquea
 
     // Reducir el monto del budget (desbloquear) y reactivar si estaba completado

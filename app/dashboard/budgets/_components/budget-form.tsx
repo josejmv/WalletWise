@@ -23,7 +23,7 @@ import { InlineAccountModal } from "@/components/inline-account-modal";
 const budgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: z.enum(["goal", "envelope"]),
-  // v1.3.0: targetAmount is optional (budgets without goal)
+  // targetAmount is optional (budgets without goal)
   targetAmount: z
     .number()
     .positive("El monto objetivo debe ser mayor a 0")
@@ -43,7 +43,7 @@ interface BudgetFormProps {
     id: string;
     name: string;
     type: "goal" | "envelope";
-    // v1.3.0: targetAmount can be null
+    // targetAmount can be null
     targetAmount: number | null;
     currentAmount: number;
     deadline: string | null;
@@ -137,7 +137,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
       reset({
         name: budget.name,
         type: budget.type,
-        // v1.3.0: Handle null targetAmount
+        // Handle null targetAmount
         targetAmount: budget.targetAmount ?? undefined,
         currentAmount: budget.currentAmount,
         currencyId: budget.currency.id,
@@ -197,7 +197,7 @@ export function BudgetForm({ budget, onSuccess, onCancel }: BudgetFormProps) {
   const onSubmit = (data: BudgetFormData) => {
     const submitData = {
       ...data,
-      // v1.3.0: Handle optional targetAmount - send null if not provided
+      // Handle optional targetAmount - send null if not provided
       targetAmount: data.targetAmount ?? null,
       deadline: data.deadline || undefined,
     };

@@ -37,7 +37,7 @@ interface Budget {
   id: string;
   name: string;
   currentAmount: number;
-  // v1.3.0: targetAmount can be null (budgets without goal)
+  // targetAmount can be null (budgets without goal)
   targetAmount: number | null;
   status: "active" | "completed" | "cancelled";
   currency: { id: string; code: string; symbol: string };
@@ -127,7 +127,7 @@ export function WithdrawModal({
   };
 
   const currentAmount = Number(budget.currentAmount);
-  // v1.3.0: Handle null targetAmount
+  // Handle null targetAmount
   const hasTarget = budget.targetAmount !== null && budget.targetAmount > 0;
   const progress = hasTarget
     ? (currentAmount / Number(budget.targetAmount!)) * 100

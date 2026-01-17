@@ -62,7 +62,7 @@ async function fetchPriceHistory(): Promise<PriceHistory[]> {
   return data.data;
 }
 
-// v1.3.0: Color palette for chart lines
+// Color palette for chart lines
 const CHART_COLORS = [
   "#3b82f6", // blue
   "#ef4444", // red
@@ -106,7 +106,7 @@ export default function PriceHistoryPage() {
     return history.filter((entry) => entry.item.id === selectedItemId);
   }, [history, selectedItemId]);
 
-  // v1.3.0: Prepare chart data - group by date for selected products
+  // Prepare chart data - group by date for selected products
   const chartData = useMemo(() => {
     if (!history || history.length === 0) return [];
 
@@ -146,7 +146,7 @@ export default function PriceHistoryPage() {
     return item ? [item.name] : [];
   }, [selectedItemId, uniqueItems]);
 
-  // v1.3.0: Calculate stats for selected item
+  // Calculate stats for selected item
   const stats = useMemo(() => {
     if (filteredHistory.length === 0) return null;
 

@@ -9,7 +9,7 @@ import {
 const requestSchema = z.object({
   sourceCurrencyId: z.string().uuid(),
   targetCurrencyIds: z.array(z.string().uuid()),
-  // v1.5.0: Optional intermediate currency for forced routing
+  // Optional intermediate currency for forced routing
   intermediateCurrencyId: z.string().uuid().optional(),
 });
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       let rate: RateResult | null;
 
       if (intermediateCurrencyId) {
-        // v1.5.0: Force routing via intermediate currency
+        // Force routing via intermediate currency
         rate = await getRateViaIntermediate(
           sourceCurrencyId,
           targetId,

@@ -7,7 +7,7 @@ import type {
 
 export type { InventoryItem, InventoryUnit };
 
-// v1.3.0: category can be null (items without category)
+// category can be null (items without category)
 export interface InventoryItemWithRelations extends InventoryItem {
   category: InventoryCategory | null;
   currency: Currency;
@@ -15,7 +15,7 @@ export interface InventoryItemWithRelations extends InventoryItem {
 
 export interface CreateInventoryItemInput {
   name: string;
-  // v1.3.0: categoryId is optional (nullable)
+  // categoryId is optional (nullable)
   categoryId?: string | null;
   currentQuantity?: number;
   maxQuantity: number;
@@ -29,7 +29,7 @@ export interface CreateInventoryItemInput {
 
 export interface UpdateInventoryItemInput {
   name?: string;
-  // v1.3.0: categoryId can be null to remove category
+  // categoryId can be null to remove category
   categoryId?: string | null;
   currentQuantity?: number;
   maxQuantity?: number;

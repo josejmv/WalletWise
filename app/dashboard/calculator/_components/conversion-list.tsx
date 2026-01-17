@@ -62,7 +62,7 @@ export function ConversionList({
     return rate.source;
   };
 
-  // v1.5.0: Get detailed tooltip content for intermediate routes
+  // Get detailed tooltip content for intermediate routes
   const getTooltipContent = (rate: RateResult) => {
     if (rate.intermediateRoute) {
       const { currencyCode, rate1, rate2 } = rate.intermediateRoute;

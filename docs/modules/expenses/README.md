@@ -254,6 +254,54 @@ function calcularProximaFecha(fecha: Date, periodicidad: string): Date {
 
 ---
 
+## Sistema de Vueltos (v1.6.0)
+
+Permite registrar vueltos recibidos al realizar un gasto, con soporte para vueltos en diferente moneda y/o cuenta.
+
+### Campos Adicionales
+
+| Campo            | Tipo      | Descripcion                              |
+| ---------------- | --------- | ---------------------------------------- |
+| hasChange        | boolean   | Si el gasto tiene vuelto asociado        |
+| changeAmount     | Decimal?  | Monto del vuelto recibido                |
+| changeAccountId  | string?   | Cuenta donde se deposita el vuelto       |
+| changeCurrencyId | string?   | Moneda del vuelto                        |
+| changeTransferId | string?   | ID de transferencia asociada (si aplica) |
+
+### Logica de Calculo
+
+```
+Ejemplo: Gasto de 10 USD, vuelto de 3671.77 COP
+Tasa: 1 USD = 3671.77 COP
+
+Calculo:
+- Vuelto en USD = 3671.77 / 3671.77 = 1 USD
+- Debito neto = 10 - 1 = 9 USD
+
+Resultado:
+- Cuenta USD: -9 USD
+- Cuenta COP (si diferente): +3671.77 COP
+```
+
+### Casos de Uso
+
+1. **Misma cuenta y moneda**: Debito neto = monto - vuelto
+2. **Diferente cuenta, misma moneda**: Debito completo + transferencia de vuelto
+3. **Diferente moneda**: Conversion automatica usando tasa del sistema
+
+---
+
+## Seleccion Jerarquica de Categorias (v1.6.0)
+
+El formulario de gastos usa dos selectores para categorias:
+
+1. **Categoria padre** (requerido): Selecciona la categoria principal
+2. **Subcategoria** (opcional): Selecciona una subcategoria del padre
+
+Si no se selecciona subcategoria, el gasto se registra con la categoria padre.
+
+---
+
 ## Ver tambien
 
 - [Categories](../categories/README.md) - Clasificacion de gastos

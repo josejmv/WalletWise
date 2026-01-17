@@ -49,7 +49,7 @@ interface Income {
   amount: number;
   date: string;
   description: string | null;
-  // v1.4.0: job is optional (null = "Ingreso Extra")
+  // job is optional (null = "Ingreso Extra")
   job: { id: string; name: string } | null;
   account: { id: string; name: string };
   currency: { id: string; code: string; symbol: string };

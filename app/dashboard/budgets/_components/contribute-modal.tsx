@@ -37,7 +37,7 @@ interface Budget {
   id: string;
   name: string;
   currentAmount: number;
-  // v1.3.0: targetAmount can be null (budgets without goal)
+  // targetAmount can be null (budgets without goal)
   targetAmount: number | null;
   currency: { id: string; code: string; symbol: string };
   account: { id: string; name: string };
@@ -131,7 +131,7 @@ export function ContributeModal({
     (acc: { id: string }) => acc.id === selectedAccountId,
   );
 
-  // v1.3.0: Handle null targetAmount
+  // Handle null targetAmount
   const hasTarget = budget.targetAmount !== null && budget.targetAmount > 0;
   const remaining = hasTarget
     ? Number(budget.targetAmount) - Number(budget.currentAmount)

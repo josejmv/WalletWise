@@ -37,7 +37,7 @@ import {
   CornerDownRight,
 } from "lucide-react";
 
-// v1.3.0: Sidebar item structure
+// Sidebar item structure
 interface SidebarChildItem {
   id: string;
   title: string;
@@ -71,7 +71,7 @@ interface UserConfig {
   };
 }
 
-// v1.3.0: Complete default sidebar structure
+// Complete default sidebar structure
 const DEFAULT_SIDEBAR_CONFIG: SidebarConfig = {
   items: [
     { id: "dashboard", type: "item", title: "Dashboard", href: "/dashboard" },
@@ -395,7 +395,7 @@ export default function SettingsPage() {
   );
 }
 
-// v1.3.0: Helper to get title from default config
+// Helper to get title from default config
 function getTitleFromDefaults(id: string, href?: string): string {
   // Check top-level items
   for (const item of DEFAULT_SIDEBAR_CONFIG.items) {
@@ -411,7 +411,7 @@ function getTitleFromDefaults(id: string, href?: string): string {
   return id; // Fallback to id if not found
 }
 
-// v1.3.0: Sidebar order configuration component
+// Sidebar order configuration component
 function SidebarOrderConfig({
   config,
   onUpdate,

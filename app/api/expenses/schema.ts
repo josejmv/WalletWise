@@ -15,6 +15,11 @@ export const createExpenseSchema = z
     nextDueDate: z.coerce.date().optional(),
     date: z.coerce.date().optional(),
     description: z.string().max(500).optional(),
+    // Change (vuelto) system
+    hasChange: z.boolean().optional(),
+    changeAmount: z.number().positive("El vuelto debe ser positivo").optional(),
+    changeAccountId: z.string().uuid("ID de cuenta de vuelto inválido").optional(),
+    changeCurrencyId: z.string().uuid("ID de moneda de vuelto inválido").optional(),
   })
   .refine(
     (data) => {
@@ -26,6 +31,19 @@ export const createExpenseSchema = z
     {
       message: "La periodicidad es requerida para gastos recurrentes",
       path: ["periodicity"],
+    },
+  )
+  // Validate change amount is provided when hasChange is true
+  .refine(
+    (data) => {
+      if (data.hasChange && !data.changeAmount) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "El monto del vuelto es requerido",
+      path: ["changeAmount"],
     },
   );
 
@@ -41,6 +59,11 @@ export const updateExpenseSchema = z.object({
   nextDueDate: z.coerce.date().nullable().optional(),
   date: z.coerce.date().optional(),
   description: z.string().max(500).nullable().optional(),
+  // Change (vuelto) system
+  hasChange: z.boolean().optional(),
+  changeAmount: z.number().positive().nullable().optional(),
+  changeAccountId: z.string().uuid().nullable().optional(),
+  changeCurrencyId: z.string().uuid().nullable().optional(),
 });
 
 export const expenseFiltersSchema = z.object({

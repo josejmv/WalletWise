@@ -26,6 +26,11 @@ export interface CreateExpenseInput {
   nextDueDate?: Date;
   date?: Date;
   description?: string;
+  // Change (vuelto) system
+  hasChange?: boolean;
+  changeAmount?: number;
+  changeAccountId?: string;
+  changeCurrencyId?: string;
 }
 
 export interface UpdateExpenseInput {
@@ -40,6 +45,11 @@ export interface UpdateExpenseInput {
   nextDueDate?: Date | null;
   date?: Date;
   description?: string | null;
+  // Change (vuelto) system
+  hasChange?: boolean;
+  changeAmount?: number | null;
+  changeAccountId?: string | null;
+  changeCurrencyId?: string | null;
 }
 
 export interface ExpenseFilters {

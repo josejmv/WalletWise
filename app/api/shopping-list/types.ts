@@ -8,7 +8,7 @@ export interface ShoppingListItem {
   id: string;
   itemId: string;
   itemName: string;
-  // v1.3.0: categoryId can be null (items without category)
+  // categoryId can be null (items without category)
   categoryId: string | null;
   categoryName: string;
   currentQuantity: number;

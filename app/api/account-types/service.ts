@@ -40,7 +40,7 @@ export async function deleteAccountType(id: string) {
     throw new Error("Tipo de cuenta no encontrado");
   }
 
-  // v1.3.0: Check for associated accounts
+  // Check for associated accounts
   const accountCount = await repository.countAccounts(id);
   if (accountCount > 0) {
     throw new Error(
@@ -51,7 +51,7 @@ export async function deleteAccountType(id: string) {
   return repository.remove(id);
 }
 
-// v1.3.0: Get account count for a type
+// Get account count for a type
 export async function getAccountCount(id: string) {
   const accountType = await repository.findById(id);
   if (!accountType) {
@@ -60,7 +60,7 @@ export async function getAccountCount(id: string) {
   return repository.countAccounts(id);
 }
 
-// v1.3.0: Get accounts for a type
+// Get accounts for a type
 export async function getAccountsForType(id: string) {
   const accountType = await repository.findById(id);
   if (!accountType) {
@@ -69,7 +69,7 @@ export async function getAccountsForType(id: string) {
   return repository.getAccounts(id);
 }
 
-// v1.3.0: Move accounts to another type and delete
+// Move accounts to another type and delete
 export async function moveAccountsAndDeleteType(
   fromTypeId: string,
   toTypeId: string,

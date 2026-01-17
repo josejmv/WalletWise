@@ -8,7 +8,7 @@
 
 | Metrica      | Valor      |
 | ------------ | ---------- |
-| Version      | 1.5.0      |
+| Version      | 1.6.0      |
 | Estado       | Completado |
 | Build Status | OK         |
 
@@ -99,6 +99,19 @@
 - [x] Mostrar categoria padre en gastos y historial
 - [x] Calculadora agregada al sidebar
 
+### Polish & Improvements (v1.6.0) - Completado
+
+- [x] Sidebar mobile y desktop con accordion exclusivo (scroll fix)
+- [x] Dropdown categorias con scroll interno
+- [x] Ahorro por tasas custom corregido
+- [x] Colores pasteles en modo oscuro
+- [x] Fondo gris #2a2a2a en modo oscuro
+- [x] Comparacion de tasas en lista compacta
+- [x] Balance por cuenta con conversion a USD
+- [x] Sistema de vueltos para gastos e ingresos (multi-moneda)
+- [x] Seleccion jerarquica de categorias en gastos
+- [x] Dialogs con max-height y scroll interno
+
 ---
 
 ## Stack Tecnologico
@@ -179,11 +192,6 @@ components/
 
 ## Proximos Pasos
 
-Version 1.6.0 (planificada):
-
-- Mejoras menores y correcciones pendientes
-- Ver [docs/steps/v1.6.0.md](./steps/v1.6.0.md) para detalles
-
 Version 2.0.0 (planificada):
 
 - Sistema de autenticacion
@@ -209,6 +217,7 @@ Ver [docs/steps/v2.0.0.md](./steps/v2.0.0.md) para detalles.
 | [steps/v1.3.0.md](./steps/v1.3.0.md) | Detalles de v1.3.0       |
 | [steps/v1.4.0.md](./steps/v1.4.0.md) | Detalles de v1.4.0       |
 | [steps/v1.5.0.md](./steps/v1.5.0.md) | Detalles de v1.5.0       |
+| [steps/v1.6.0.md](./steps/v1.6.0.md) | Detalles de v1.6.0       |
 | [steps/v2.0.0.md](./steps/v2.0.0.md) | Roadmap v2.0.0           |
 
 ---
@@ -234,4 +243,4 @@ docker-compose up -d  # Levantar PostgreSQL
 
 ---
 
-_WalletWise v1.5.0 - Estado del Proyecto (Completado)_
+_WalletWise v1.6.0 - Estado del Proyecto (Completado)_

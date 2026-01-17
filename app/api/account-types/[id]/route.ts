@@ -61,7 +61,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // v1.3.0: Check if request has a body with moveToTypeId
+    // Check if request has a body with moveToTypeId
     let moveToTypeId: string | undefined;
     try {
       const body = await request.json();
@@ -96,7 +96,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
   }
 }
 
-// v1.3.0: Get account count for this type
+// Get account count for this type
 export async function OPTIONS(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;

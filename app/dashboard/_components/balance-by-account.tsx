@@ -26,6 +26,8 @@ interface AccountBalance {
   accountType: string;
   balance: number;
   currencyCode: string;
+  // Balance converted to USD for comparison
+  balanceInUSD: number;
 }
 
 async function fetchBalanceByAccount(): Promise<AccountBalance[]> {
@@ -87,9 +89,12 @@ export function BalanceByAccount() {
     );
   }
 
+  // Use USD balance for chart comparison, keep original for tooltip
   const chartData = data.slice(0, 6).map((account) => ({
     name: account.accountName,
-    balance: account.balance,
+    balanceUSD: account.balanceInUSD,
+    originalBalance: account.balance,
+    currencyCode: account.currencyCode,
     type: account.accountType,
   }));
 
@@ -97,7 +102,8 @@ export function BalanceByAccount() {
     <Card>
       <CardHeader>
         <CardTitle>Balance por Cuenta</CardTitle>
-        <CardDescription>Distribucion de fondos</CardDescription>
+        {/* v1.6.0: Updated description to indicate USD conversion */}
+        <CardDescription>Distribucion de fondos (convertido a USD)</CardDescription>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={280}>
@@ -118,16 +124,35 @@ export function BalanceByAccount() {
               axisLine={false}
               width={100}
             />
+            {/* v1.6.0: Custom tooltip showing USD and original currency */}
             <Tooltip
-              formatter={(value) => formatNumber(Number(value))}
-              contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
+              content={({ active, payload }) => {
+                if (!active || !payload || payload.length === 0) return null;
+                const data = payload[0].payload;
+                return (
+                  <div
+                    className="rounded-lg border bg-card p-3 shadow-md"
+                    style={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                    }}
+                  >
+                    <p className="font-medium text-sm mb-1">{data.name}</p>
+                    <p className="text-sm text-foreground">
+                      <span className="text-muted-foreground">USD: </span>
+                      {formatNumber(data.balanceUSD)}
+                    </p>
+                    {data.currencyCode !== "USD" && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Original: {formatNumber(data.originalBalance)} {data.currencyCode}
+                      </p>
+                    )}
+                  </div>
+                );
               }}
             />
             <Bar
-              dataKey="balance"
+              dataKey="balanceUSD"
               fill="hsl(var(--primary))"
               radius={[0, 4, 4, 0]}
             />

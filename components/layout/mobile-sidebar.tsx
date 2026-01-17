@@ -41,7 +41,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-// v1.4.0: Sidebar item configuration (shared with desktop sidebar)
+// Sidebar item configuration (shared with desktop sidebar)
 interface SidebarItemConfig {
   id: string;
   type: "item" | "group";
@@ -150,7 +150,7 @@ const SIDEBAR_ITEMS: SidebarItemConfig[] = [
     href: "/dashboard/reports",
     icon: FileText,
   },
-  // v1.5.0: Calculator for currency conversions
+  // Calculator for currency conversions
   {
     id: "calculator",
     type: "item",
@@ -168,6 +168,20 @@ interface MobileSidebarProps {
 export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
   const pathname = usePathname();
 
+  // Exclusive accordion - only one group open at a time
+  const [openGroupId, setOpenGroupId] = React.useState<string | null>(null);
+
+  // Handle accordion toggle - exclusive mode
+  const handleGroupOpenChange = (groupId: string, isOpen: boolean) => {
+    if (isOpen) {
+      // Opening a group closes all others
+      setOpenGroupId(groupId);
+    } else {
+      // Closing the currently open group
+      setOpenGroupId(null);
+    }
+  };
+
   // Close sidebar when navigating
   React.useEffect(() => {
     onOpenChange(false);
@@ -175,7 +189,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="w-72 p-0">
+      <SheetContent side="left" className="w-72 p-0 flex flex-col">
         <SheetHeader className="border-b px-4 py-3">
           <SheetTitle asChild>
             <Link
@@ -188,7 +202,7 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
           </SheetTitle>
         </SheetHeader>
 
-        {/* Navigation */}
+        {/* Navigation - v1.6.0: Added flex-1 and proper overflow for scroll */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-2">
           {SIDEBAR_ITEMS.map((item) =>
             item.type === "item" ? (
@@ -205,8 +219,10 @@ export function MobileSidebar({ open, onOpenChange }: MobileSidebarProps) {
                 title={item.title}
                 icon={item.icon}
                 collapsed={false}
-                defaultOpen={item.defaultOpen}
                 items={item.items!}
+                // Controlled mode for exclusive accordion
+                isOpen={openGroupId === item.id}
+                onOpenChange={(isOpen) => handleGroupOpenChange(item.id, isOpen)}
               />
             ),
           )}

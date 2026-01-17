@@ -60,7 +60,7 @@ async function fetchRates(
     body: JSON.stringify({
       sourceCurrencyId,
       targetCurrencyIds,
-      // v1.5.0: Pass intermediate currency if selected
+      // Pass intermediate currency if selected
       ...(intermediateCurrencyId && { intermediateCurrencyId }),
     }),
   });
@@ -81,7 +81,7 @@ export default function CalculatorPage() {
   const [sourceCurrencyId, setSourceCurrencyId] = useState<string>("");
   const [targetCurrencyIds, setTargetCurrencyIds] = useState<string[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
-  // v1.5.0: Optional intermediate currency for forced routing
+  // Optional intermediate currency for forced routing
   const [intermediateCurrencyId, setIntermediateCurrencyId] = useState<
     string | undefined
   >(undefined);

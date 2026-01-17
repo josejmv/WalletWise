@@ -9,18 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Cell,
-} from "recharts";
 import { ArrowLeftRight } from "lucide-react";
+import { useFormatters } from "@/contexts/user-config-context";
+import { cn } from "@/lib/utils";
 
 interface ExchangeRate {
   id: string;
@@ -44,19 +35,25 @@ async function fetchLatestRates(): Promise<ExchangeRate[]> {
   return data.data;
 }
 
-const SOURCE_COLORS: Record<string, string> = {
-  official: "#3b82f6",
-  binance: "#eab308",
-  manual: "#6b7280",
-};
-
 const SOURCE_LABELS: Record<string, string> = {
   official: "Oficial",
   binance: "Binance",
   manual: "Manual",
 };
 
+// Pastel colors for source badges
+const SOURCE_STYLES: Record<string, string> = {
+  official: "bg-blue-500/20 text-blue-400",
+  binance: "bg-yellow-500/20 text-yellow-400",
+  manual: "bg-gray-500/20 text-gray-400",
+};
+
+/**
+ * v1.6.0: Replaced bar chart with compact list view
+ * Shows exchange rates in a simple list format: PAIR  RATE  (SOURCE)
+ */
 export function RateComparisonChart() {
+  const { formatNumber } = useFormatters();
   const { data: rates, isLoading } = useQuery({
     queryKey: ["exchange-rates", "latest"],
     queryFn: fetchLatestRates,
@@ -66,123 +63,90 @@ export function RateComparisonChart() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Comparacion de Tasas</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ArrowLeftRight className="h-4 w-4" />
+            Tasas de Cambio
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-64" />
+          <Skeleton className="h-40" />
         </CardContent>
       </Card>
     );
   }
 
-  // Group rates by currency pair and compare sources
+  // Group rates by currency pair, keeping the most recent/preferred source
   const pairMap = new Map<
     string,
-    { pair: string; official?: number; binance?: number; manual?: number }
+    { pair: string; rate: number; source: string }
   >();
 
   rates?.forEach((rate) => {
     const pairKey = `${rate.fromCurrency.code}/${rate.toCurrency.code}`;
-    const existing = pairMap.get(pairKey) || { pair: pairKey };
-    existing[rate.source] = Number(rate.rate);
-    pairMap.set(pairKey, existing);
+    const existing = pairMap.get(pairKey);
+
+    // Priority: binance > official > manual (prefer binance for crypto pairs)
+    const sourcePriority: Record<string, number> = { binance: 3, official: 2, manual: 1 };
+    const newPriority = sourcePriority[rate.source] || 0;
+    const existingPriority = existing ? (sourcePriority[existing.source] || 0) : 0;
+
+    if (!existing || newPriority > existingPriority) {
+      pairMap.set(pairKey, {
+        pair: pairKey,
+        rate: Number(rate.rate),
+        source: rate.source,
+      });
+    }
   });
 
-  // Filter to only show pairs with multiple sources for comparison
-  const comparisonData = Array.from(pairMap.values()).filter(
-    (item) =>
-      (item.official !== undefined ? 1 : 0) +
-        (item.binance !== undefined ? 1 : 0) +
-        (item.manual !== undefined ? 1 : 0) >=
-      1,
-  );
-
-  // Sort by pair name
-  comparisonData.sort((a, b) => a.pair.localeCompare(b.pair));
-
-  // Limit to top 6 pairs for readability
-  const displayData = comparisonData.slice(0, 6);
+  // Sort by pair name and limit
+  const displayData = Array.from(pairMap.values())
+    .sort((a, b) => a.pair.localeCompare(b.pair))
+    .slice(0, 8);
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
           <ArrowLeftRight className="h-4 w-4" />
-          Comparacion de Tasas
+          Tasas de Cambio Actuales
         </CardTitle>
         <CardDescription>
-          Tasas por fuente para diferentes pares de monedas
+          {displayData.length} par(es) de monedas disponibles
         </CardDescription>
       </CardHeader>
       <CardContent>
         {displayData.length === 0 ? (
-          <div className="h-64 flex items-center justify-center text-muted-foreground">
-            No hay suficientes tasas para comparar
+          <div className="py-8 text-center text-muted-foreground text-sm">
+            No hay tasas de cambio registradas
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={displayData} layout="vertical">
-              <CartesianGrid
-                strokeDasharray="3 3"
-                className="stroke-muted"
-                horizontal={true}
-                vertical={false}
-              />
-              <XAxis
-                type="number"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(value) =>
-                  Number(value).toLocaleString("es-CO", {
-                    notation: "compact",
-                    maximumFractionDigits: 0,
-                  })
-                }
-              />
-              <YAxis
-                type="category"
-                dataKey="pair"
-                fontSize={12}
-                tickLine={false}
-                axisLine={false}
-                width={80}
-              />
-              <Tooltip
-                formatter={(value, name) => [
-                  Number(value).toLocaleString("es-CO", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 4,
-                  }),
-                  SOURCE_LABELS[name as string] || name,
-                ]}
-                contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "8px",
-                }}
-              />
-              <Legend formatter={(value) => SOURCE_LABELS[value] || value} />
-              <Bar
-                dataKey="official"
-                name="official"
-                fill={SOURCE_COLORS.official}
-                radius={[0, 4, 4, 0]}
-              />
-              <Bar
-                dataKey="binance"
-                name="binance"
-                fill={SOURCE_COLORS.binance}
-                radius={[0, 4, 4, 0]}
-              />
-              <Bar
-                dataKey="manual"
-                name="manual"
-                fill={SOURCE_COLORS.manual}
-                radius={[0, 4, 4, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <div className="space-y-2">
+            {displayData.map((item) => (
+              <div
+                key={item.pair}
+                className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <span className="font-medium text-sm">{item.pair}</span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm">
+                    {formatNumber(item.rate, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: item.rate < 10 ? 4 : 2,
+                    })}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs px-2 py-0.5 rounded-full font-medium",
+                      SOURCE_STYLES[item.source] || SOURCE_STYLES.manual
+                    )}
+                  >
+                    {SOURCE_LABELS[item.source] || item.source}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>

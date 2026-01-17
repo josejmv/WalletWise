@@ -72,7 +72,7 @@ export async function generateShoppingList(
       itemId: item.id,
       itemName: item.name,
       categoryId: item.categoryId,
-      // v1.3.0: Handle null category
+      // Handle null category
       categoryName: item.category?.name ?? "Sin categoría",
       currentQuantity: current,
       minQuantity: min,
@@ -146,7 +146,7 @@ export async function getLowStockItems(): Promise<ShoppingListItem[]> {
       itemId: item.id,
       itemName: item.name,
       categoryId: item.categoryId,
-      // v1.3.0: Handle null category
+      // Handle null category
       categoryName: item.category?.name ?? "Sin categoría",
       currentQuantity: current,
       minQuantity: min,
@@ -167,7 +167,7 @@ export async function getLowStockItems(): Promise<ShoppingListItem[]> {
   );
 }
 
-// v1.3.0: categoryId can be null for items without category
+// categoryId can be null for items without category
 export async function getShoppingListByCategory(): Promise<
   {
     categoryId: string | null;

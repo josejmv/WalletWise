@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
-// v1.4.0: Schema for bulk consumption
+// Schema for bulk consumption
 const consumeSchema = z.object({
   items: z.array(
     z.object({

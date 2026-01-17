@@ -48,7 +48,7 @@ import {
 } from "@/components/ui/collapsible";
 import { formatCurrency, formatDate } from "@/lib/formatters";
 
-// v1.3.0: Transaction types
+// Transaction types
 type TransactionType =
   | "income"
   | "expense"

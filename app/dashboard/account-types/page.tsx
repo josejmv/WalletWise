@@ -125,7 +125,7 @@ async function deleteAccountType(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
-// v1.3.0: Delete with move accounts to another type
+// Delete with move accounts to another type
 async function deleteWithMove(id: string, moveToTypeId: string): Promise<void> {
   const res = await fetch(`/api/account-types/${id}`, {
     method: "DELETE",
@@ -140,7 +140,7 @@ export default function AccountTypesPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<AccountType | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  // v1.3.0: State for move accounts modal
+  // State for move accounts modal
   const [moveModalOpen, setMoveModalOpen] = useState(false);
   const [typeToDelete, setTypeToDelete] = useState<AccountType | null>(null);
   const [moveToTypeId, setMoveToTypeId] = useState("");
@@ -214,7 +214,7 @@ export default function AccountTypesPage() {
       setDeleteId(null);
     },
     onError: (error: Error) => {
-      // v1.3.0: Check if error is due to associated accounts
+      // Check if error is due to associated accounts
       const match = error.message.match(/hay (\d+) cuenta\(s\) asociada\(s\)/);
       if (match && deleteId) {
         const count = parseInt(match[1], 10);
@@ -235,7 +235,7 @@ export default function AccountTypesPage() {
     },
   });
 
-  // v1.3.0: Mutation for delete with move
+  // Mutation for delete with move
   const deleteWithMoveMutation = useMutation({
     mutationFn: ({ id, moveToTypeId }: { id: string; moveToTypeId: string }) =>
       deleteWithMove(id, moveToTypeId),

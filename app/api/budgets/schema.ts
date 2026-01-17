@@ -6,8 +6,8 @@ const budgetStatusEnum = z.enum(["active", "completed", "cancelled"]);
 export const createBudgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido"),
   type: budgetTypeEnum,
-  // v1.3.0: targetAmount is optional (budgets without goal)
-  // v1.4.0: Use transform to handle NaN from empty inputs
+  // targetAmount is optional (budgets without goal)
+  // Use transform to handle NaN from empty inputs
   targetAmount: z
     .number()
     .transform((v) => (Number.isNaN(v) ? null : v))
@@ -29,7 +29,7 @@ export const createBudgetSchema = z.object({
 export const updateBudgetSchema = z.object({
   name: z.string().min(1, "El nombre es requerido").optional(),
   type: budgetTypeEnum.optional(),
-  // v1.4.0: Use transform to handle NaN from empty inputs
+  // Use transform to handle NaN from empty inputs
   targetAmount: z
     .number()
     .transform((v) => (Number.isNaN(v) ? null : v))

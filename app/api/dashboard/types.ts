@@ -15,6 +15,8 @@ export interface BalanceByAccount {
   accountType: string;
   balance: number;
   currencyCode: string;
+  // Balance converted to USD for comparison
+  balanceInUSD: number;
 }
 
 export interface BalanceByCurrency {

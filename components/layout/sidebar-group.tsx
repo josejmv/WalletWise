@@ -29,6 +29,9 @@ export interface SidebarGroupProps {
   items: SidebarGroupItem[];
   collapsed?: boolean;
   defaultOpen?: boolean;
+  // Controlled mode props for exclusive accordion behavior
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function SidebarGroup({
@@ -37,19 +40,33 @@ export function SidebarGroup({
   items,
   collapsed = false,
   defaultOpen = false,
+  isOpen: controlledIsOpen,
+  onOpenChange,
 }: SidebarGroupProps) {
   const pathname = usePathname();
-  const [isOpen, setIsOpen] = React.useState(defaultOpen);
+
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledIsOpen !== undefined;
+  const [internalIsOpen, setInternalIsOpen] = React.useState(defaultOpen);
+
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+  const setIsOpen = (open: boolean) => {
+    if (isControlled) {
+      onOpenChange?.(open);
+    } else {
+      setInternalIsOpen(open);
+    }
+  };
 
   // Check if any child is active (exact match only)
   const hasActiveChild = items.some((item) => pathname === item.href);
 
-  // Auto-open if a child is active
+  // Auto-open if a child is active (only in uncontrolled mode)
   React.useEffect(() => {
-    if (hasActiveChild && !isOpen) {
-      setIsOpen(true);
+    if (!isControlled && hasActiveChild && !internalIsOpen) {
+      setInternalIsOpen(true);
     }
-  }, [hasActiveChild, isOpen]);
+  }, [hasActiveChild, internalIsOpen, isControlled]);
 
   if (collapsed) {
     // In collapsed mode, show a tooltip with the group name

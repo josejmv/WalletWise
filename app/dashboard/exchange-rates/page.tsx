@@ -45,7 +45,7 @@ interface ExchangeRate {
   toCurrency: { code: string; symbol: string };
 }
 
-// v1.5.0: Calculated rate via intermediate currency
+// Calculated rate via intermediate currency
 interface CalculatedRate {
   fromCurrency: { id: string; code: string };
   toCurrency: { id: string; code: string };
@@ -63,14 +63,14 @@ interface CooldownStatus {
 }
 
 async function fetchExchangeRates(): Promise<ExchangeRate[]> {
-  // v1.3.0: Use latest=true to get only the most recent rate per currency pair
+  // Use latest=true to get only the most recent rate per currency pair
   const res = await fetch("/api/exchange-rates?latest=true");
   const data = await res.json();
   if (!data.success) throw new Error(data.error);
   return data.data;
 }
 
-// v1.5.0: Fetch calculated rates via intermediaries
+// Fetch calculated rates via intermediaries
 async function fetchCalculatedRates(): Promise<CalculatedRate[]> {
   const res = await fetch("/api/exchange-rates/calculated");
   const data = await res.json();
@@ -166,7 +166,7 @@ export default function ExchangeRatesPage() {
   const [isSyncingAll, setIsSyncingAll] = useState(false);
   const [isSyncingOfficial, setIsSyncingOfficial] = useState(false);
   const [isSyncingBinance, setIsSyncingBinance] = useState(false);
-  // v1.5.0: Toggle for showing calculated rates
+  // Toggle for showing calculated rates
   const [showCalculated, setShowCalculated] = useState(false);
 
   const {
@@ -184,7 +184,7 @@ export default function ExchangeRatesPage() {
     refetchInterval: 60000, // Refetch every minute to update status
   });
 
-  // v1.5.0: Fetch calculated rates when section is expanded
+  // Fetch calculated rates when section is expanded
   const { data: calculatedRates, isLoading: loadingCalculated } = useQuery({
     queryKey: ["exchange-rates-calculated"],
     queryFn: fetchCalculatedRates,

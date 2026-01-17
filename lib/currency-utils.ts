@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import type { ExchangeRateSource } from "@prisma/client";
 
-// v1.4.0: Extended source types to include intermediate routes
+// Extended source types to include intermediate routes
 export type ConversionSource =
   | ExchangeRateSource
   | "inverse"
@@ -13,7 +13,7 @@ export interface ConversionResult {
   rate: number;
   source: ConversionSource;
   isInverse: boolean;
-  // v1.4.0: Track intermediate currency used for conversion
+  // Track intermediate currency used for conversion
   intermediateRoute?: {
     currency: string;
     rate1: number; // from -> intermediate
@@ -21,7 +21,7 @@ export interface ConversionResult {
   };
 }
 
-// v1.4.0: Rate result with intermediate route info
+// Rate result with intermediate route info
 export interface RateResult {
   rate: number;
   source: ExchangeRateSource;
@@ -84,7 +84,7 @@ export async function getLatestRate(
     };
   }
 
-  // v1.4.0: Try intermediate routes (USD, USDT)
+  // Try intermediate routes (USD, USDT)
   const intermediateResult = await tryIntermediateRoutes(
     fromCurrencyId,
     toCurrencyId,
@@ -294,7 +294,7 @@ export async function convertAmount(
     return null;
   }
 
-  // v1.4.0: Determine source type including intermediate routes
+  // Determine source type including intermediate routes
   let source: ConversionSource;
   if (rateInfo.isInverse) {
     source = "inverse";
@@ -337,7 +337,7 @@ export async function convertAmountByCode(
     return null;
   }
 
-  // v1.4.0: Determine source type including intermediate routes
+  // Determine source type including intermediate routes
   let source: ConversionSource;
   if (rateInfo.isInverse) {
     source = "inverse";

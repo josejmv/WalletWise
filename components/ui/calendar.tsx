@@ -23,7 +23,7 @@ function Calendar({
       className={cn("p-3", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-4",
-        // v1.4.0: Use relative positioning to place nav in header
+        // Use relative positioning to place nav in header
         month: "relative flex flex-col gap-2",
         month_caption: "flex justify-center items-center h-7 mb-2",
         caption_label: "text-sm font-medium",

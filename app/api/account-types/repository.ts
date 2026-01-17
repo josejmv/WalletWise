@@ -38,14 +38,14 @@ export async function remove(id: string) {
   });
 }
 
-// v1.3.0: Count accounts associated with this type
+// Count accounts associated with this type
 export async function countAccounts(id: string) {
   return prisma.account.count({
     where: { accountTypeId: id },
   });
 }
 
-// v1.3.0: Get accounts associated with this type
+// Get accounts associated with this type
 export async function getAccounts(id: string) {
   return prisma.account.findMany({
     where: { accountTypeId: id },
@@ -53,7 +53,7 @@ export async function getAccounts(id: string) {
   });
 }
 
-// v1.3.0: Move accounts to another type and delete original
+// Move accounts to another type and delete original
 export async function moveAccountsAndDelete(
   fromTypeId: string,
   toTypeId: string,

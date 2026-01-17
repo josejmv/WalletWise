@@ -10,8 +10,8 @@ async function main() {
   console.log("Seeding database...");
 
   // Seed Currencies (Fiat + Crypto)
-  // v1.3.0: Symbols equal to code for easier identification
-  // v1.3.0: Only USDT as crypto (removed BTC, ETH, BNB, SOL)
+  // Symbols equal to code for easier identification
+  // Only USDT as crypto (removed BTC, ETH, BNB, SOL)
   const currencies = [
     // Fiat - symbols = codes
     {
@@ -54,7 +54,7 @@ async function main() {
   }
   console.log("Currencies seeded (Fiat + Crypto)");
 
-  // v1.3.0: Seed initial exchange rates for development
+  // Seed initial exchange rates for development
   // Rates updated 2026-01-11 - will be updated by sync in production
   const USD_COP = 3733.0;
   const USD_VES = 330.38;
@@ -201,7 +201,7 @@ async function main() {
               { id: "incomes", type: "item", pageId: "incomes" },
               { id: "expenses", type: "item", pageId: "expenses" },
               { id: "transfers", type: "item", pageId: "transfers" },
-              // v1.3.0: Transaction history page
+              // Transaction history page
               {
                 id: "transaction-history",
                 type: "item",
