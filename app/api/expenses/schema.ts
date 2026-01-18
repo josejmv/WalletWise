@@ -2,6 +2,13 @@ import { z } from "zod";
 
 const periodicityEnum = z.enum(["weekly", "monthly", "yearly"]);
 
+// Helper to transform empty strings to undefined for optional UUID fields
+const optionalUuid = (errorMsg: string) =>
+  z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().uuid(errorMsg).optional()
+  );
+
 export const createExpenseSchema = z
   .object({
     categoryId: z.string().uuid("ID de categoría inválido"),
@@ -18,8 +25,8 @@ export const createExpenseSchema = z
     // Change (vuelto) system
     hasChange: z.boolean().optional(),
     changeAmount: z.number().positive("El vuelto debe ser positivo").optional(),
-    changeAccountId: z.string().uuid("ID de cuenta de vuelto inválido").optional(),
-    changeCurrencyId: z.string().uuid("ID de moneda de vuelto inválido").optional(),
+    changeAccountId: optionalUuid("ID de cuenta de vuelto inválido"),
+    changeCurrencyId: optionalUuid("ID de moneda de vuelto inválido"),
   })
   .refine(
     (data) => {

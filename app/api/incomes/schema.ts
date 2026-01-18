@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+// Helper to transform empty strings to undefined for optional UUID fields
+const optionalUuid = (errorMsg: string) =>
+  z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().uuid(errorMsg).optional()
+  );
+
 export const createIncomeSchema = z
   .object({
     // jobId is optional - null means "Ingreso Extra"
@@ -14,8 +21,8 @@ export const createIncomeSchema = z
     // Change (vuelto) system
     hasChange: z.boolean().optional(),
     changeAmount: z.number().positive("El vuelto debe ser positivo").optional(),
-    changeAccountId: z.string().uuid("ID de cuenta de vuelto inválido").optional(),
-    changeCurrencyId: z.string().uuid("ID de moneda de vuelto inválido").optional(),
+    changeAccountId: optionalUuid("ID de cuenta de vuelto inválido"),
+    changeCurrencyId: optionalUuid("ID de moneda de vuelto inválido"),
   })
   // Validate change amount is provided when hasChange is true
   .refine(
