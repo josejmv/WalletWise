@@ -83,321 +83,409 @@ export async function importAllData(backup: BackupData): Promise<{
   const imported: Record<string, number> = {};
   const errors: string[] = [];
 
+  // ID mapping: oldId -> newId (for reference data that may have different IDs)
+  const currencyIdMap = new Map<string, string>();
+  const accountTypeIdMap = new Map<string, string>();
+  const invCategoryIdMap = new Map<string, string>();
+
   try {
     // Import in dependency order using transactions
-    await prisma.$transaction(async (tx) => {
-      // 1. Reference data (no dependencies)
-      if (backup.data.currencies?.length) {
-        for (const currency of backup.data.currencies as any[]) {
-          await tx.currency.upsert({
-            where: { id: currency.id },
-            update: {
-              code: currency.code,
-              name: currency.name,
-              symbol: currency.symbol,
-              isBase: currency.isBase,
-            },
-            create: currency,
-          });
+    await prisma.$transaction(
+      async (tx) => {
+        // 1. Reference data (no dependencies)
+        // Use unique fields (code, name, type) for upsert to handle seed conflicts
+        // Build ID maps to translate foreign keys in dependent entities
+        if (backup.data.currencies?.length) {
+          for (const currency of backup.data.currencies as any[]) {
+            const result = await tx.currency.upsert({
+              where: { code: currency.code },
+              update: {
+                name: currency.name,
+                symbol: currency.symbol,
+                isBase: currency.isBase,
+              },
+              create: currency,
+            });
+            currencyIdMap.set(currency.id, result.id);
+          }
+          imported.currencies = backup.data.currencies.length;
         }
-        imported.currencies = backup.data.currencies.length;
-      }
 
-      if (backup.data.accountTypes?.length) {
-        for (const accountType of backup.data.accountTypes as any[]) {
-          await tx.accountType.upsert({
-            where: { id: accountType.id },
-            update: {
-              name: accountType.name,
-              type: accountType.type,
-              description: accountType.description,
-            },
-            create: {
-              id: accountType.id,
-              name: accountType.name,
-              type: accountType.type,
-              description: accountType.description,
-            },
-          });
+        if (backup.data.accountTypes?.length) {
+          for (const accountType of backup.data.accountTypes as any[]) {
+            const result = await tx.accountType.upsert({
+              where: { type: accountType.type },
+              update: {
+                name: accountType.name,
+                description: accountType.description,
+              },
+              create: {
+                id: accountType.id,
+                name: accountType.name,
+                type: accountType.type,
+                description: accountType.description,
+              },
+            });
+            accountTypeIdMap.set(accountType.id, result.id);
+          }
+          imported.accountTypes = backup.data.accountTypes.length;
         }
-        imported.accountTypes = backup.data.accountTypes.length;
-      }
 
-      if (backup.data.categories?.length) {
-        // First pass: create without parent
-        for (const category of backup.data.categories as any[]) {
-          await tx.category.upsert({
-            where: { id: category.id },
-            update: {
-              name: category.name,
-              color: category.color,
-              icon: category.icon,
-            },
-            create: {
-              id: category.id,
-              name: category.name,
-              color: category.color,
-              icon: category.icon,
-              parentId: null,
-            },
-          });
-        }
-        // Second pass: set parent relationships
-        for (const category of backup.data.categories as any[]) {
-          if (category.parentId) {
-            await tx.category.update({
+        if (backup.data.categories?.length) {
+          // First pass: create without parent
+          for (const category of backup.data.categories as any[]) {
+            await tx.category.upsert({
               where: { id: category.id },
-              data: { parentId: category.parentId },
+              update: {
+                name: category.name,
+                color: category.color,
+                icon: category.icon,
+              },
+              create: {
+                id: category.id,
+                name: category.name,
+                color: category.color,
+                icon: category.icon,
+                parentId: null,
+              },
             });
           }
+          // Second pass: set parent relationships
+          for (const category of backup.data.categories as any[]) {
+            if (category.parentId) {
+              await tx.category.update({
+                where: { id: category.id },
+                data: { parentId: category.parentId },
+              });
+            }
+          }
+          imported.categories = backup.data.categories.length;
         }
-        imported.categories = backup.data.categories.length;
-      }
 
-      if (backup.data.inventoryCategories?.length) {
-        for (const cat of backup.data.inventoryCategories as any[]) {
-          await tx.inventoryCategory.upsert({
-            where: { id: cat.id },
-            update: {
-              name: cat.name,
-              icon: cat.icon,
-              color: cat.color,
-              description: cat.description,
-            },
-            create: {
-              id: cat.id,
-              name: cat.name,
-              icon: cat.icon,
-              color: cat.color,
-              description: cat.description,
-            },
-          });
+        if (backup.data.inventoryCategories?.length) {
+          for (const cat of backup.data.inventoryCategories as any[]) {
+            const result = await tx.inventoryCategory.upsert({
+              where: { name: cat.name },
+              update: {
+                icon: cat.icon,
+                color: cat.color,
+                description: cat.description,
+              },
+              create: {
+                id: cat.id,
+                name: cat.name,
+                icon: cat.icon,
+                color: cat.color,
+                description: cat.description,
+              },
+            });
+            invCategoryIdMap.set(cat.id, result.id);
+          }
+          imported.inventoryCategories = backup.data.inventoryCategories.length;
         }
-        imported.inventoryCategories = backup.data.inventoryCategories.length;
-      }
 
-      // 2. Primary entities (depend on reference data)
-      if (backup.data.accounts?.length) {
-        for (const account of backup.data.accounts as any[]) {
-          await tx.account.upsert({
-            where: { id: account.id },
-            update: {
-              name: account.name,
-              balance: account.balance,
-              currencyId: account.currencyId,
-              accountTypeId: account.accountTypeId,
-              isActive: account.isActive,
-            },
-            create: account,
-          });
-        }
-        imported.accounts = backup.data.accounts.length;
-      }
+        // Helper to translate IDs using maps
+        const mapCurrencyId = (id: string | null) =>
+          id ? currencyIdMap.get(id) || id : null;
+        const mapAccountTypeId = (id: string | null) =>
+          id ? accountTypeIdMap.get(id) || id : null;
+        const mapInvCategoryId = (id: string | null) =>
+          id ? invCategoryIdMap.get(id) || id : null;
 
-      if (backup.data.jobs?.length) {
-        for (const job of backup.data.jobs as any[]) {
-          await tx.job.upsert({
-            where: { id: job.id },
-            update: {
-              name: job.name,
-              type: job.type,
-              salary: job.salary,
-              currencyId: job.currencyId,
-              accountId: job.accountId,
-              periodicity: job.periodicity,
-              payDay: job.payDay,
-              status: job.status,
-            },
-            create: job,
-          });
+        // 2. Primary entities (depend on reference data)
+        if (backup.data.accounts?.length) {
+          for (const account of backup.data.accounts as any[]) {
+            const mappedCurrencyId = mapCurrencyId(account.currencyId);
+            const mappedAccountTypeId = mapAccountTypeId(account.accountTypeId);
+            await tx.account.upsert({
+              where: { id: account.id },
+              update: {
+                name: account.name,
+                balance: account.balance,
+                currencyId: mappedCurrencyId,
+                accountTypeId: mappedAccountTypeId,
+                isActive: account.isActive,
+              },
+              create: {
+                ...account,
+                currencyId: mappedCurrencyId,
+                accountTypeId: mappedAccountTypeId,
+              },
+            });
+          }
+          imported.accounts = backup.data.accounts.length;
         }
-        imported.jobs = backup.data.jobs.length;
-      }
 
-      // 3. Transactions (depend on primary entities)
-      if (backup.data.incomes?.length) {
-        for (const income of backup.data.incomes as any[]) {
-          await tx.income.upsert({
-            where: { id: income.id },
-            update: {
-              jobId: income.jobId,
-              accountId: income.accountId,
-              amount: income.amount,
-              currencyId: income.currencyId,
-              date: new Date(income.date),
-              description: income.description,
-            },
-            create: {
-              ...income,
-              date: new Date(income.date),
-            },
-          });
+        if (backup.data.jobs?.length) {
+          for (const job of backup.data.jobs as any[]) {
+            const mappedCurrencyId = mapCurrencyId(job.currencyId);
+            await tx.job.upsert({
+              where: { id: job.id },
+              update: {
+                name: job.name,
+                type: job.type,
+                salary: job.salary,
+                currencyId: mappedCurrencyId,
+                accountId: job.accountId,
+                periodicity: job.periodicity,
+                payDay: job.payDay,
+                status: job.status,
+              },
+              create: {
+                ...job,
+                currencyId: mappedCurrencyId,
+              },
+            });
+          }
+          imported.jobs = backup.data.jobs.length;
         }
-        imported.incomes = backup.data.incomes.length;
-      }
 
-      if (backup.data.expenses?.length) {
-        for (const expense of backup.data.expenses as any[]) {
-          await tx.expense.upsert({
-            where: { id: expense.id },
-            update: {
-              categoryId: expense.categoryId,
-              accountId: expense.accountId,
-              amount: expense.amount,
-              currencyId: expense.currencyId,
-              officialRate: expense.officialRate,
-              customRate: expense.customRate,
-              isRecurring: expense.isRecurring,
-              periodicity: expense.periodicity,
-              nextDueDate: expense.nextDueDate
-                ? new Date(expense.nextDueDate)
-                : null,
-              date: new Date(expense.date),
-              description: expense.description,
-            },
-            create: {
-              ...expense,
-              date: new Date(expense.date),
-              nextDueDate: expense.nextDueDate
-                ? new Date(expense.nextDueDate)
-                : null,
-            },
-          });
+        // 3. Transactions (depend on primary entities)
+        // First pass: import without changeTransferId (FK to transfers not yet imported)
+        if (backup.data.incomes?.length) {
+          for (const income of backup.data.incomes as any[]) {
+            const mappedCurrencyId = mapCurrencyId(income.currencyId);
+            const mappedChangeCurrencyId = mapCurrencyId(income.changeCurrencyId);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { changeTransferId, ...incomeWithoutTransfer } = income;
+            await tx.income.upsert({
+              where: { id: income.id },
+              update: {
+                jobId: income.jobId,
+                accountId: income.accountId,
+                amount: income.amount,
+                currencyId: mappedCurrencyId,
+                date: new Date(income.date),
+                description: income.description,
+                hasChange: income.hasChange,
+                changeAmount: income.changeAmount,
+                changeCurrencyId: mappedChangeCurrencyId,
+                changeAccountId: income.changeAccountId,
+              },
+              create: {
+                ...incomeWithoutTransfer,
+                currencyId: mappedCurrencyId,
+                changeCurrencyId: mappedChangeCurrencyId,
+                date: new Date(income.date),
+              },
+            });
+          }
+          imported.incomes = backup.data.incomes.length;
         }
-        imported.expenses = backup.data.expenses.length;
-      }
 
-      if (backup.data.transfers?.length) {
-        for (const transfer of backup.data.transfers as any[]) {
-          await tx.transfer.upsert({
-            where: { id: transfer.id },
-            update: {
-              fromAccountId: transfer.fromAccountId,
-              toAccountId: transfer.toAccountId,
-              amount: transfer.amount,
-              currencyId: transfer.currencyId,
-              exchangeRate: transfer.exchangeRate,
-              date: new Date(transfer.date),
-              description: transfer.description,
-            },
-            create: {
-              ...transfer,
-              date: new Date(transfer.date),
-            },
-          });
+        if (backup.data.expenses?.length) {
+          for (const expense of backup.data.expenses as any[]) {
+            const mappedCurrencyId = mapCurrencyId(expense.currencyId);
+            const mappedChangeCurrencyId = mapCurrencyId(expense.changeCurrencyId);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { changeTransferId, ...expenseWithoutTransfer } = expense;
+            await tx.expense.upsert({
+              where: { id: expense.id },
+              update: {
+                categoryId: expense.categoryId,
+                accountId: expense.accountId,
+                amount: expense.amount,
+                currencyId: mappedCurrencyId,
+                officialRate: expense.officialRate,
+                customRate: expense.customRate,
+                isRecurring: expense.isRecurring,
+                periodicity: expense.periodicity,
+                nextDueDate: expense.nextDueDate
+                  ? new Date(expense.nextDueDate)
+                  : null,
+                date: new Date(expense.date),
+                description: expense.description,
+                isPaid: expense.isPaid,
+                hasChange: expense.hasChange,
+                changeAmount: expense.changeAmount,
+                changeCurrencyId: mappedChangeCurrencyId,
+                changeAccountId: expense.changeAccountId,
+              },
+              create: {
+                ...expenseWithoutTransfer,
+                currencyId: mappedCurrencyId,
+                changeCurrencyId: mappedChangeCurrencyId,
+                date: new Date(expense.date),
+                nextDueDate: expense.nextDueDate
+                  ? new Date(expense.nextDueDate)
+                  : null,
+              },
+            });
+          }
+          imported.expenses = backup.data.expenses.length;
         }
-        imported.transfers = backup.data.transfers.length;
-      }
 
-      if (backup.data.budgets?.length) {
-        for (const budget of backup.data.budgets as any[]) {
-          await tx.budget.upsert({
-            where: { id: budget.id },
-            update: {
-              name: budget.name,
-              type: budget.type,
-              targetAmount: budget.targetAmount,
-              currentAmount: budget.currentAmount,
-              currencyId: budget.currencyId,
-              accountId: budget.accountId,
-              deadline: budget.deadline ? new Date(budget.deadline) : null,
-              status: budget.status,
-            },
-            create: {
-              ...budget,
-              deadline: budget.deadline ? new Date(budget.deadline) : null,
-            },
-          });
+        if (backup.data.transfers?.length) {
+          for (const transfer of backup.data.transfers as any[]) {
+            const mappedCurrencyId = mapCurrencyId(transfer.currencyId);
+            await tx.transfer.upsert({
+              where: { id: transfer.id },
+              update: {
+                fromAccountId: transfer.fromAccountId,
+                toAccountId: transfer.toAccountId,
+                amount: transfer.amount,
+                currencyId: mappedCurrencyId,
+                exchangeRate: transfer.exchangeRate,
+                date: new Date(transfer.date),
+                description: transfer.description,
+              },
+              create: {
+                ...transfer,
+                currencyId: mappedCurrencyId,
+                date: new Date(transfer.date),
+              },
+            });
+          }
+          imported.transfers = backup.data.transfers.length;
         }
-        imported.budgets = backup.data.budgets.length;
-      }
 
-      if (backup.data.budgetContributions?.length) {
-        for (const contrib of backup.data.budgetContributions as any[]) {
-          await tx.budgetContribution.upsert({
-            where: { id: contrib.id },
-            update: {
-              budgetId: contrib.budgetId,
-              amount: contrib.amount,
-              date: new Date(contrib.date),
-            },
-            create: {
-              ...contrib,
-              date: new Date(contrib.date),
-            },
-          });
+        // Second pass: link changeTransferId now that transfers exist
+        if (backup.data.incomes?.length) {
+          for (const income of backup.data.incomes as any[]) {
+            if (income.changeTransferId) {
+              await tx.income.update({
+                where: { id: income.id },
+                data: { changeTransferId: income.changeTransferId },
+              });
+            }
+          }
         }
-        imported.budgetContributions = backup.data.budgetContributions.length;
-      }
 
-      // 4. Inventory
-      if (backup.data.inventoryItems?.length) {
-        for (const item of backup.data.inventoryItems as any[]) {
-          await tx.inventoryItem.upsert({
-            where: { id: item.id },
-            update: {
-              name: item.name,
-              categoryId: item.categoryId,
-              currentQuantity: item.currentQuantity,
-              minQuantity: item.minQuantity,
-              maxQuantity: item.maxQuantity,
-              unit: item.unit,
-              estimatedPrice: item.estimatedPrice,
-              currencyId: item.currencyId,
-              notes: item.notes,
-              isActive: item.isActive,
-            },
-            create: item,
-          });
+        if (backup.data.expenses?.length) {
+          for (const expense of backup.data.expenses as any[]) {
+            if (expense.changeTransferId) {
+              await tx.expense.update({
+                where: { id: expense.id },
+                data: { changeTransferId: expense.changeTransferId },
+              });
+            }
+          }
         }
-        imported.inventoryItems = backup.data.inventoryItems.length;
-      }
 
-      if (backup.data.inventoryPriceHistory?.length) {
-        for (const history of backup.data.inventoryPriceHistory as any[]) {
-          await tx.inventoryPriceHistory.upsert({
-            where: { id: history.id },
-            update: {
-              itemId: history.itemId,
-              price: history.price,
-              currencyId: history.currencyId,
-              source: history.source,
-              date: new Date(history.date),
-            },
-            create: {
-              id: history.id,
-              itemId: history.itemId,
-              price: history.price,
-              currencyId: history.currencyId,
-              source: history.source,
-              date: new Date(history.date),
-            },
-          });
+        if (backup.data.budgets?.length) {
+          for (const budget of backup.data.budgets as any[]) {
+            const mappedCurrencyId = mapCurrencyId(budget.currencyId);
+            await tx.budget.upsert({
+              where: { id: budget.id },
+              update: {
+                name: budget.name,
+                type: budget.type,
+                targetAmount: budget.targetAmount,
+                currentAmount: budget.currentAmount,
+                currencyId: mappedCurrencyId,
+                accountId: budget.accountId,
+                deadline: budget.deadline ? new Date(budget.deadline) : null,
+                status: budget.status,
+              },
+              create: {
+                ...budget,
+                currencyId: mappedCurrencyId,
+                deadline: budget.deadline ? new Date(budget.deadline) : null,
+              },
+            });
+          }
+          imported.budgets = backup.data.budgets.length;
         }
-        imported.inventoryPriceHistory =
-          backup.data.inventoryPriceHistory.length;
-      }
 
-      // 5. Exchange rates
-      if (backup.data.exchangeRates?.length) {
-        for (const rate of backup.data.exchangeRates as any[]) {
-          await tx.exchangeRate.upsert({
-            where: { id: rate.id },
-            update: {
-              fromCurrencyId: rate.fromCurrencyId,
-              toCurrencyId: rate.toCurrencyId,
-              rate: rate.rate,
-              fetchedAt: new Date(rate.fetchedAt),
-            },
-            create: {
-              ...rate,
-              fetchedAt: new Date(rate.fetchedAt),
-            },
-          });
+        if (backup.data.budgetContributions?.length) {
+          for (const contrib of backup.data.budgetContributions as any[]) {
+            await tx.budgetContribution.upsert({
+              where: { id: contrib.id },
+              update: {
+                budgetId: contrib.budgetId,
+                amount: contrib.amount,
+                date: new Date(contrib.date),
+              },
+              create: {
+                ...contrib,
+                date: new Date(contrib.date),
+              },
+            });
+          }
+          imported.budgetContributions = backup.data.budgetContributions.length;
         }
-        imported.exchangeRates = backup.data.exchangeRates.length;
-      }
-    });
+
+        // 4. Inventory
+        if (backup.data.inventoryItems?.length) {
+          for (const item of backup.data.inventoryItems as any[]) {
+            const mappedCurrencyId = mapCurrencyId(item.currencyId);
+            const mappedCategoryId = mapInvCategoryId(item.categoryId);
+            await tx.inventoryItem.upsert({
+              where: { id: item.id },
+              update: {
+                name: item.name,
+                categoryId: mappedCategoryId,
+                currentQuantity: item.currentQuantity,
+                minQuantity: item.minQuantity,
+                maxQuantity: item.maxQuantity,
+                unit: item.unit,
+                estimatedPrice: item.estimatedPrice,
+                currencyId: mappedCurrencyId,
+                notes: item.notes,
+                isActive: item.isActive,
+              },
+              create: {
+                ...item,
+                currencyId: mappedCurrencyId,
+                categoryId: mappedCategoryId,
+              },
+            });
+          }
+          imported.inventoryItems = backup.data.inventoryItems.length;
+        }
+
+        if (backup.data.inventoryPriceHistory?.length) {
+          for (const history of backup.data.inventoryPriceHistory as any[]) {
+            const mappedCurrencyId = mapCurrencyId(history.currencyId);
+            await tx.inventoryPriceHistory.upsert({
+              where: { id: history.id },
+              update: {
+                itemId: history.itemId,
+                price: history.price,
+                currencyId: mappedCurrencyId,
+                source: history.source,
+                date: new Date(history.date),
+              },
+              create: {
+                id: history.id,
+                itemId: history.itemId,
+                price: history.price,
+                currencyId: mappedCurrencyId,
+                source: history.source,
+                date: new Date(history.date),
+              },
+            });
+          }
+          imported.inventoryPriceHistory =
+            backup.data.inventoryPriceHistory.length;
+        }
+
+        // 5. Exchange rates
+        if (backup.data.exchangeRates?.length) {
+          for (const rate of backup.data.exchangeRates as any[]) {
+            const mappedFromCurrencyId = mapCurrencyId(rate.fromCurrencyId);
+            const mappedToCurrencyId = mapCurrencyId(rate.toCurrencyId);
+            await tx.exchangeRate.upsert({
+              where: { id: rate.id },
+              update: {
+                fromCurrencyId: mappedFromCurrencyId,
+                toCurrencyId: mappedToCurrencyId,
+                rate: rate.rate,
+                fetchedAt: new Date(rate.fetchedAt),
+              },
+              create: {
+                ...rate,
+                fromCurrencyId: mappedFromCurrencyId,
+                toCurrencyId: mappedToCurrencyId,
+                fetchedAt: new Date(rate.fetchedAt),
+              },
+            });
+          }
+          imported.exchangeRates = backup.data.exchangeRates.length;
+        }
+      },
+      { timeout: 60000 },
+    );
   } catch (error) {
     errors.push(
       error instanceof Error ? error.message : "Error durante la importacion",

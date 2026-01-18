@@ -4,53 +4,47 @@
 
 ---
 
-## Versiones
+## Estructura de Versiones
 
-| Version               | Nombre                   | Estado      | Descripcion                               |
-| --------------------- | ------------------------ | ----------- | ----------------------------------------- |
-| [v1.x](./v1.md)       | Single User Edition      | Completado  | Dashboard de finanzas personales completo |
-| [v1.2.0](./v1.2.0.md) | Bugfixes & UX            | Completado  | Correcciones y mejoras de UX              |
-| [v1.3.0](./v1.3.0.md) | Post-Testing Fixes       | Completado  | Correcciones post-testing y mejoras UX    |
-| [v1.4.0](./v1.4.0.md) | Features & Responsive    | Completado  | Nuevas funcionalidades y diseño responsive |
-| [v1.5.0](./v1.5.0.md) | Calculator & Conversions | Completado  | Calculadora con conversiones multi-moneda |
-| [v1.6.0](./v1.6.0.md) | Polish & Improvements    | Completado  | Mejoras visuales, sistema de vueltos y fixes |
-| [v2.0.0](./v2.0.0.md) | Multi-User Edition       | Planificado | Autenticacion y soporte multi-usuario     |
+| Carpeta | Descripcion | Estado |
+|---------|-------------|--------|
+| [v1/](./v1/) | Single User Edition | Completado |
+| [v2/](./v2/) | Multi-User Edition | Planificado |
 
 ---
 
-## Version Actual: v1.6.0 (Completado)
+## Version 1.x - Single User Edition
 
-Mejoras visuales, sistema de vueltos y fixes:
+Dashboard de finanzas personales completo para un solo usuario.
 
-- Sistema de vueltos multi-moneda para gastos e ingresos
-- KPI cards con estilos visuales y colores por tipo
-- Columna de equivalente en moneda base en cuentas
-- Card "Total en Cuentas" con selector de moneda
-- Grafica de gastos por categoria padre/singleton
-- Gastos pendientes filtrados por mes actual
-- Boton de actualizar precio en inventario
-- Fixes de validacion, dark mode y cache de tasas
+| Version | Nombre | Estado |
+|---------|--------|--------|
+| [v1.md](./v1/v1.md) | Base + Mejoras v1.0-1.1 | Completado |
+| [v1.2.0](./v1/v1.2.0.md) | Bugfixes & UX | Completado |
+| [v1.3.0](./v1/v1.3.0.md) | Post-Testing Fixes | Completado |
+| [v1.4.0](./v1/v1.4.0.md) | Features & Responsive | Completado |
+| [v1.5.0](./v1/v1.5.0.md) | Calculator & Conversions | Completado |
+| [v1.6.0](./v1/v1.6.0.md) | Polish & Improvements | Completado |
 
----
-
-## Proxima Version: v2.0.0 (Planificado)
-
-Transformacion a multi-usuario:
-
-- Ver [docs/steps/v2.0.0.md](./v2.0.0.md) para detalles
+**Version Actual:** v1.6.0 (Completado)
 
 ---
 
-## Estructura de Documentacion
+## Version 2.x - Multi-User Edition (Planificado)
 
-Cada archivo de version contiene:
+Transformacion a aplicacion multi-usuario con autenticacion y encriptacion E2E.
 
-1. **Descripcion** - Objetivo de la version
-2. **Features** - Lista de funcionalidades incluidas
-3. **Stack** - Tecnologias utilizadas
-4. **Arquitectura** - Estructura de carpetas y modelos
-5. **Endpoints** - APIs disponibles
-6. **Componentes** - Componentes principales
+| Version | Nombre | Contenido | Estado |
+|---------|--------|-----------|--------|
+| [v2.0.0](./v2/v2.0.0.md) | CI/CD + Landing | Semantic versioning, landing page, legal | Planificado |
+| [v2.1.0](./v2/v2.1.0.md) | Auth Base | Auth.js, email/password, Google OAuth | Planificado |
+| [v2.2.0](./v2/v2.2.0.md) | Auth Avanzado | WebAuthn (Passkeys), 2FA TOTP | Planificado |
+| [v2.3.0](./v2/v2.3.0.md) | Multi-Usuario | userId en entidades, migracion | Planificado |
+| [v2.4.0](./v2/v2.4.0.md) | E2E Encryption | Encriptacion de datos sensibles | Planificado |
+| [v2.5.0](./v2/v2.5.0.md) | Onboarding | Sistema de onboarding guiado | Planificado |
+| [v2.6.0](./v2/v2.6.0.md) | Polish | Delete account, testing, QA | Planificado |
+
+**Proxima Version:** v2.0.0 (Planificado)
 
 ---
 
@@ -62,18 +56,59 @@ Seguimos [SemVer](https://semver.org/):
 - **MINOR** (0.X.0): Nuevas features retrocompatibles
 - **PATCH** (0.0.X): Bugfixes retrocompatibles
 
-### Historial
+---
 
-| Version | Tipo  | Fecha          | Descripcion                                   |
-| ------- | ----- | -------------- | --------------------------------------------- |
-| 1.0.0   | MAJOR | Diciembre 2025 | Version inicial single-user                   |
-| 1.1.0   | MINOR | Diciembre 2025 | Crypto, tasas mejoradas, budgets, settings    |
-| 1.2.0   | MINOR | Enero 2026     | Bugfixes, cache, tasas inversas, UI mejorada  |
-| 1.3.0   | MINOR | Enero 2026     | Post-testing fixes, historial, exportacion    |
-| 1.4.0   | MINOR | Enero 2026     | Ingresos extra, consumo inventario, responsive|
-| 1.5.0   | MINOR | Enero 2026     | Calculadora, conversiones intermedias         |
-| 1.6.0   | MINOR | Enero 2026     | Sistema vueltos, mejoras UI, fixes            |
-| 2.0.0   | MAJOR | Pendiente      | Multi-usuario con autenticacion (planificado) |
+## Historial de Releases
+
+| Version | Tipo  | Fecha | Descripcion |
+|---------|-------|-------|-------------|
+| 1.0.0 | MAJOR | Diciembre 2025 | Version inicial single-user |
+| 1.1.0 | MINOR | Diciembre 2025 | Crypto, tasas mejoradas, budgets |
+| 1.2.0 | MINOR | Enero 2026 | Bugfixes, cache, tasas inversas |
+| 1.3.0 | MINOR | Enero 2026 | Post-testing, historial, exportacion |
+| 1.4.0 | MINOR | Enero 2026 | Ingresos extra, consumo, responsive |
+| 1.5.0 | MINOR | Enero 2026 | Calculadora multi-moneda |
+| 1.6.0 | MINOR | Enero 2026 | Sistema vueltos, mejoras UI |
+| 2.0.0 | MAJOR | Pendiente | Multi-usuario + autenticacion |
+
+---
+
+## Estructura de Carpetas
+
+```
+docs/steps/
+├── README.md           # Este archivo
+├── v1/
+│   ├── README.md       # Indice v1.x
+│   ├── v1.md           # v1.0.0 - v1.1.0
+│   ├── v1.2.0.md
+│   ├── v1.3.0.md
+│   ├── v1.4.0.md
+│   ├── v1.5.0.md
+│   └── v1.6.0.md
+└── v2/
+    ├── README.md       # Indice v2.x
+    ├── v2.0.0.md       # CI/CD + Landing + Legal
+    ├── v2.1.0.md       # Auth Base
+    ├── v2.2.0.md       # Auth Avanzado
+    ├── v2.3.0.md       # Multi-Usuario
+    ├── v2.4.0.md       # E2E Encryption
+    ├── v2.5.0.md       # Onboarding
+    └── v2.6.0.md       # Delete Account + Polish
+```
+
+---
+
+## Documentacion por Version
+
+Cada archivo de version contiene:
+
+1. **Descripcion** - Objetivo de la version
+2. **Features** - Lista de funcionalidades incluidas
+3. **Archivos** - Archivos nuevos/modificados
+4. **Schema** - Cambios en base de datos
+5. **Verificacion** - Checklist de pruebas
+6. **Migracion** - Comandos de migracion
 
 ---
 

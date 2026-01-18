@@ -11,7 +11,9 @@
 | Documento                                | Descripcion                   |
 | ---------------------------------------- | ----------------------------- |
 | [PROJECT_STATUS.md](./PROJECT_STATUS.md) | Estado actual del proyecto    |
-| [steps/](./steps/)                       | Versiones (v1.x, v2.0.0, etc) |
+| [steps/](./steps/)                       | Versiones del proyecto        |
+| [steps/v1/](./steps/v1/)                 | v1.x - Single User Edition    |
+| [steps/v2/](./steps/v2/)                 | v2.x - Multi-User Edition     |
 
 ### Contexto y Configuracion
 
@@ -202,4 +204,5 @@ components/
 - [API.md](./API.md) - Referencia de APIs
 - [SETUP.md](./SETUP.md) - Guia de instalacion
 - [DEPLOY.md](./DEPLOY.md) - Guia de despliegue en produccion
-- [steps/v1.md](./steps/v1.md) - Detalles de version 1.x
+- [steps/v1/](./steps/v1/) - Documentacion version 1.x
+- [steps/v2/](./steps/v2/) - Documentacion version 2.x (planificado)
