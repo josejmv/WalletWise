@@ -13,40 +13,31 @@
 | [v1.3.0](./v1.3.0.md) | Post-Testing Fixes       | Completado  | Correcciones post-testing y mejoras UX    |
 | [v1.4.0](./v1.4.0.md) | Features & Responsive    | Completado  | Nuevas funcionalidades y diseño responsive |
 | [v1.5.0](./v1.5.0.md) | Calculator & Conversions | Completado  | Calculadora con conversiones multi-moneda |
-| [v1.6.0](./v1.6.0.md) | Polish & Improvements    | Planificado | Mejoras menores y correcciones pendientes |
+| [v1.6.0](./v1.6.0.md) | Polish & Improvements    | Completado  | Mejoras visuales, sistema de vueltos y fixes |
 | [v2.0.0](./v2.0.0.md) | Multi-User Edition       | Planificado | Autenticacion y soporte multi-usuario     |
 
 ---
 
-## Version Actual: v1.5.0 (Completado)
+## Version Actual: v1.6.0 (Completado)
 
-Calculadora y mejoras de conversion:
+Mejoras visuales, sistema de vueltos y fixes:
 
-- Nueva pagina de calculadora con teclado numerico
-- Parser de expresiones matematicas (expr-eval)
-- Conversion multi-moneda en tiempo real
-- Tasas calculadas via intermediarios
-- Categoria padre visible en gastos e historial
-
----
-
-## Proxima Version: v1.6.0 (Planificado)
-
-Mejoras menores y correcciones pendientes:
-
-- Ver [docs/steps/v1.6.0.md](./v1.6.0.md) para detalles
+- Sistema de vueltos multi-moneda para gastos e ingresos
+- KPI cards con estilos visuales y colores por tipo
+- Columna de equivalente en moneda base en cuentas
+- Card "Total en Cuentas" con selector de moneda
+- Grafica de gastos por categoria padre/singleton
+- Gastos pendientes filtrados por mes actual
+- Boton de actualizar precio en inventario
+- Fixes de validacion, dark mode y cache de tasas
 
 ---
 
-## Version Futura: v2.0.0
+## Proxima Version: v2.0.0 (Planificado)
 
-La version 2.0.0 agregara:
+Transformacion a multi-usuario:
 
-- Sistema de autenticacion (login/registro)
-- Soporte multi-usuario
-- Aislamiento de datos por usuario
-- Landing page publica
-- OAuth providers (Google, GitHub)
+- Ver [docs/steps/v2.0.0.md](./v2.0.0.md) para detalles
 
 ---
 
@@ -81,7 +72,7 @@ Seguimos [SemVer](https://semver.org/):
 | 1.3.0   | MINOR | Enero 2026     | Post-testing fixes, historial, exportacion    |
 | 1.4.0   | MINOR | Enero 2026     | Ingresos extra, consumo inventario, responsive|
 | 1.5.0   | MINOR | Enero 2026     | Calculadora, conversiones intermedias         |
-| 1.6.0   | MINOR | Pendiente      | Mejoras menores (planificado)                 |
+| 1.6.0   | MINOR | Enero 2026     | Sistema vueltos, mejoras UI, fixes            |
 | 2.0.0   | MAJOR | Pendiente      | Multi-usuario con autenticacion (planificado) |
 
 ---
