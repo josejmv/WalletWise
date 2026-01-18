@@ -135,11 +135,18 @@ export async function findRecurring() {
 }
 
 export async function findDueExpenses() {
+  // Show recurring expenses due in the current month
+  // This allows users to pay them before the exact due date
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
   return prisma.expense.findMany({
     where: {
       isRecurring: true,
       nextDueDate: {
-        lte: new Date(),
+        gte: startOfMonth,
+        lte: endOfMonth,
       },
     },
     include: {
@@ -147,6 +154,7 @@ export async function findDueExpenses() {
       account: { include: { currency: true } },
       currency: true,
     },
+    orderBy: { nextDueDate: "asc" },
   });
 }
 

@@ -9,6 +9,7 @@ import {
   Package,
   AlertTriangle,
   ShoppingCart,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +46,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 import { InventoryItemForm } from "./_components/inventory-item-form";
@@ -77,6 +80,20 @@ async function deleteInventoryItem(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
+async function updatePrice(data: {
+  itemId: string;
+  price: number;
+  currencyId: string;
+}): Promise<void> {
+  const res = await fetch("/api/inventory-items/price-history", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const result = await res.json();
+  if (!result.success) throw new Error(result.error);
+}
+
 function formatCurrency(value: number, symbol: string): string {
   return `${symbol} ${new Intl.NumberFormat("es-CO").format(value)}`;
 }
@@ -87,6 +104,9 @@ export default function InventoryPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   // Consume modal state
   const [consumeOpen, setConsumeOpen] = useState(false);
+  // Price update state
+  const [priceUpdateItem, setPriceUpdateItem] = useState<InventoryItem | null>(null);
+  const [newPrice, setNewPrice] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -112,6 +132,47 @@ export default function InventoryPage() {
       });
     },
   });
+
+  const priceUpdateMutation = useMutation({
+    mutationFn: updatePrice,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["inventory-items"] });
+      queryClient.invalidateQueries({ queryKey: ["price-history"] });
+      toast({ title: "Precio actualizado" });
+      setPriceUpdateItem(null);
+      setNewPrice("");
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error al actualizar precio",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handlePriceUpdate = () => {
+    if (!priceUpdateItem || !newPrice) return;
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) {
+      toast({
+        title: "Precio inválido",
+        description: "Ingresa un precio válido",
+        variant: "destructive",
+      });
+      return;
+    }
+    priceUpdateMutation.mutate({
+      itemId: priceUpdateItem.id,
+      price,
+      currencyId: priceUpdateItem.currency.id,
+    });
+  };
+
+  const openPriceUpdate = (item: InventoryItem) => {
+    setPriceUpdateItem(item);
+    setNewPrice(item.estimatedPrice.toString());
+  };
 
   const handleFormSuccess = () => {
     setFormOpen(false);
@@ -238,6 +299,7 @@ export default function InventoryPage() {
                     <TableHead className="text-right hidden sm:table-cell">
                       Precio Est.
                     </TableHead>
+                    <TableHead className="hidden sm:table-cell"></TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -298,6 +360,17 @@ export default function InventoryPage() {
                             item.estimatedPrice,
                             item.currency.symbol,
                           )}
+                        </TableCell>
+                        <TableCell className="hidden sm:table-cell">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openPriceUpdate(item)}
+                            title="Actualizar precio"
+                          >
+                            <DollarSign className="h-4 w-4 text-green-600" />
+                          </Button>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
@@ -371,6 +444,69 @@ export default function InventoryPage() {
 
       {/* v1.4.0: Consume modal */}
       <ConsumeModal open={consumeOpen} onOpenChange={setConsumeOpen} />
+
+      {/* Price update modal */}
+      <Dialog
+        open={!!priceUpdateItem}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPriceUpdateItem(null);
+            setNewPrice("");
+          }
+        }}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Actualizar Precio</DialogTitle>
+          </DialogHeader>
+          {priceUpdateItem && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Producto</p>
+                <p className="font-medium">{priceUpdateItem.name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Precio anterior</p>
+                <p className="font-medium">
+                  {formatCurrency(
+                    priceUpdateItem.estimatedPrice,
+                    priceUpdateItem.currency.symbol
+                  )}
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPrice">Nuevo precio ({priceUpdateItem.currency.code})</Label>
+                <Input
+                  id="newPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={newPrice}
+                  onChange={(e) => setNewPrice(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setPriceUpdateItem(null);
+                    setNewPrice("");
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handlePriceUpdate}
+                  disabled={priceUpdateMutation.isPending}
+                >
+                  {priceUpdateMutation.isPending ? "Guardando..." : "Guardar"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
