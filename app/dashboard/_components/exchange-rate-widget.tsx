@@ -118,6 +118,7 @@ export function ExchangeRateWidget() {
   const { data: rates, isLoading: loadingRates } = useQuery({
     queryKey: ["exchange-rates", "latest"],
     queryFn: fetchLatestRates,
+    staleTime: 0, // Always consider data stale to refetch on navigation
   });
 
   const { data: cooldown, isLoading: loadingCooldown } = useQuery({

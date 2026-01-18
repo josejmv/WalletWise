@@ -58,49 +58,62 @@ export function KPICards() {
     );
   }
 
+  // Reordered: Ingresos → Gastos → Balance → Ahorro (aligned with quick actions)
   const kpis = [
-    {
-      title: "Balance Total",
-      value: formatCurrency(data.totalBalance),
-      description: `${data.activeAccounts} cuentas activas`,
-      icon: Wallet,
-      trend: null,
-    },
     {
       title: "Ingresos del Mes",
       value: formatCurrency(data.totalIncome),
       description: `${data.activeJobs} trabajos activos`,
       icon: TrendingUp,
-      trend: "up",
+      cardClass: "border-green-500/50 bg-green-500/5",
+      iconClass: "text-green-500",
+      valueClass: "text-green-600 dark:text-green-400",
     },
     {
       title: "Gastos del Mes",
       value: formatCurrency(data.totalExpenses),
       description: "Este mes",
       icon: TrendingDown,
-      trend: "down",
+      cardClass: "border-red-500/50 bg-red-500/5",
+      iconClass: "text-red-500",
+      valueClass: "text-red-600 dark:text-red-400",
+    },
+    {
+      title: "Balance Total",
+      value: formatCurrency(data.totalBalance),
+      description: `${data.activeAccounts} cuentas activas`,
+      icon: Wallet,
+      cardClass: "border-blue-500/50 bg-blue-500/5",
+      iconClass: "text-blue-500",
+      valueClass: "text-blue-600 dark:text-blue-400",
     },
     {
       title: "Ahorro Neto",
       value: formatCurrency(data.netSavings),
       description: `${data.savingsRate.toFixed(1)}% tasa de ahorro`,
       icon: PiggyBank,
-      trend: data.netSavings >= 0 ? "up" : "down",
+      cardClass: data.netSavings >= 0
+        ? "border-emerald-500/50 bg-emerald-500/5"
+        : "border-amber-500/50 bg-amber-500/5",
+      iconClass: data.netSavings >= 0 ? "text-emerald-500" : "text-amber-500",
+      valueClass: data.netSavings >= 0
+        ? "text-emerald-600 dark:text-emerald-400"
+        : "text-amber-600 dark:text-amber-400",
     },
   ];
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {kpis.map((kpi) => (
-        <Card key={kpi.title}>
+        <Card key={kpi.title} className={kpi.cardClass}>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {kpi.title}
             </CardTitle>
-            <kpi.icon className="h-4 w-4 text-muted-foreground" />
+            <kpi.icon className={`h-4 w-4 ${kpi.iconClass}`} />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{kpi.value}</div>
+            <div className={`text-2xl font-bold ${kpi.valueClass}`}>{kpi.value}</div>
             <p className="text-xs text-muted-foreground">{kpi.description}</p>
           </CardContent>
         </Card>
