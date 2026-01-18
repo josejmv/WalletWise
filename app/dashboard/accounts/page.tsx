@@ -33,10 +33,24 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AccountForm } from "./_components/account-form";
 import { useToast } from "@/components/ui/use-toast";
 import { useFormatters, useUserConfigContext } from "@/contexts/user-config-context";
 import type { RateResult } from "@/lib/currency-utils";
+
+interface Currency {
+  id: string;
+  code: string;
+  symbol: string;
+  name: string;
+}
 
 interface AccountWithBlocked {
   id: string;
@@ -83,6 +97,13 @@ async function fetchRatesToBase(
   return data.data;
 }
 
+async function fetchCurrencies(): Promise<Currency[]> {
+  const res = await fetch("/api/currencies");
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error);
+  return data.data;
+}
+
 export default function AccountsPage() {
   const { formatCurrency } = useFormatters();
   const { config } = useUserConfigContext();
@@ -90,10 +111,22 @@ export default function AccountsPage() {
   const [editingAccount, setEditingAccount] =
     useState<AccountWithBlocked | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [displayCurrencyId, setDisplayCurrencyId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const baseCurrency = config?.baseCurrency;
+
+  // Fetch all currencies for the selector
+  const { data: currencies } = useQuery({
+    queryKey: ["currencies"],
+    queryFn: fetchCurrencies,
+  });
+
+  // Set default display currency to USD once currencies are loaded
+  const displayCurrency = displayCurrencyId
+    ? currencies?.find((c) => c.id === displayCurrencyId)
+    : currencies?.find((c) => c.code === "USD") || currencies?.[0];
 
   const {
     data: accounts,
@@ -118,6 +151,20 @@ export default function AccountsPage() {
     enabled: !!baseCurrency?.id && uniqueCurrencyIds.length > 0,
   });
 
+  // Get currency IDs that are different from display currency
+  const currencyIdsForDisplay = accounts
+    ? [...new Set(accounts.map((a) => a.currency.id))].filter(
+        (id) => id !== displayCurrency?.id
+      )
+    : [];
+
+  // Fetch rates from each currency to display currency
+  const { data: ratesToDisplay } = useQuery({
+    queryKey: ["rates-to-display", displayCurrency?.id, currencyIdsForDisplay],
+    queryFn: () => fetchRatesToBase(currencyIdsForDisplay, displayCurrency!.id),
+    enabled: !!displayCurrency?.id && currencyIdsForDisplay.length > 0,
+  });
+
   // Helper to convert amount to base currency
   const convertToBase = (amount: number, currencyId: string): number | null => {
     if (!baseCurrency) return null;
@@ -127,6 +174,18 @@ export default function AccountsPage() {
     if (!rateResult?.rate) return null;
 
     // Rate is from base to this currency, so we need to divide
+    return amount / rateResult.rate;
+  };
+
+  // Helper to convert amount to display currency
+  const convertToDisplay = (amount: number, currencyId: string): number | null => {
+    if (!displayCurrency) return null;
+    if (currencyId === displayCurrency.id) return amount;
+
+    const rateResult = ratesToDisplay?.[currencyId];
+    if (!rateResult?.rate) return null;
+
+    // Rate is from display to this currency, so we need to divide
     return amount / rateResult.rate;
   };
 
@@ -184,6 +243,12 @@ export default function AccountsPage() {
   const totalEquivalent = accounts?.reduce((sum, account) => {
     const equivalent = convertToBase(account.totalBalance, account.currency.id);
     return sum + (equivalent ?? 0);
+  }, 0) ?? 0;
+
+  // Calculate total in display currency
+  const totalInDisplayCurrency = accounts?.reduce((sum, account) => {
+    const converted = convertToDisplay(account.totalBalance, account.currency.id);
+    return sum + (converted ?? 0);
   }, 0) ?? 0;
 
   if (isLoading) {
@@ -297,6 +362,44 @@ export default function AccountsPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* Total in selected currency card */}
+      {currencies && currencies.length > 0 && accounts && accounts.length > 0 && (
+        <Card className="border-2 border-dashed">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Total en Cuentas
+              </CardTitle>
+              <Select
+                value={displayCurrency?.id || ""}
+                onValueChange={(value) => setDisplayCurrencyId(value)}
+              >
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue placeholder="Moneda" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currencies.map((currency) => (
+                    <SelectItem key={currency.id} value={currency.id}>
+                      {currency.code}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {displayCurrency
+                ? formatCurrency(totalInDisplayCurrency, displayCurrency.code)
+                : "-"}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Suma de todas las cuentas en {displayCurrency?.code || "..."}
+            </p>
+          </CardContent>
+        </Card>
       )}
 
       {/* Accounts table */}

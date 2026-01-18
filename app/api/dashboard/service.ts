@@ -191,6 +191,7 @@ export async function getExpensesByCategory(
   };
 
   // Include customRate for expense conversion
+  // Also include parent category info to group by parent/singleton categories
   const [expenses, baseCurrencyId] = await Promise.all([
     prisma.expense.findMany({
       where:
@@ -201,7 +202,14 @@ export async function getExpensesByCategory(
         currencyId: true,
         customRate: true,
         categoryId: true,
-        category: { select: { name: true, color: true } },
+        category: {
+          select: {
+            name: true,
+            color: true,
+            parentId: true,
+            parent: { select: { id: true, name: true, color: true } },
+          },
+        },
       },
     }),
     getUserBaseCurrencyId(),
@@ -228,13 +236,25 @@ export async function getExpensesByCategory(
     const amount = expense.convertedAmount;
     totalExpenses += amount;
 
-    const data = byCategory.get(expense.categoryId) || {
-      categoryName: expense.category.name,
-      categoryColor: expense.category.color,
+    // Group by parent category if exists, otherwise use the category itself (singleton)
+    const hasParent = expense.category.parentId && expense.category.parent;
+    const groupCategoryId = hasParent
+      ? expense.category.parent!.id
+      : expense.categoryId;
+    const groupCategoryName = hasParent
+      ? expense.category.parent!.name
+      : expense.category.name;
+    const groupCategoryColor = hasParent
+      ? expense.category.parent!.color
+      : expense.category.color;
+
+    const data = byCategory.get(groupCategoryId) || {
+      categoryName: groupCategoryName,
+      categoryColor: groupCategoryColor,
       total: 0,
     };
     data.total += amount;
-    byCategory.set(expense.categoryId, data);
+    byCategory.set(groupCategoryId, data);
   }
 
   return Array.from(byCategory.entries())

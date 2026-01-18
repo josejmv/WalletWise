@@ -131,6 +131,9 @@ export function ExpensesByCategory() {
               labelStyle={{
                 color: "hsl(var(--foreground))",
               }}
+              itemStyle={{
+                color: "hsl(var(--foreground))",
+              }}
             />
             {/* v1.3.0: Fix legend text color for dark mode */}
             <Legend
