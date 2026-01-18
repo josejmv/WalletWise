@@ -35,7 +35,8 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AccountForm } from "./_components/account-form";
 import { useToast } from "@/components/ui/use-toast";
-import { useFormatters } from "@/contexts/user-config-context";
+import { useFormatters, useUserConfigContext } from "@/contexts/user-config-context";
+import type { RateResult } from "@/lib/currency-utils";
 
 interface AccountWithBlocked {
   id: string;
@@ -63,14 +64,36 @@ async function deleteAccount(id: string): Promise<void> {
   if (!data.success) throw new Error(data.error);
 }
 
+async function fetchRatesToBase(
+  sourceCurrencyIds: string[],
+  baseCurrencyId: string
+): Promise<Record<string, RateResult | null>> {
+  if (sourceCurrencyIds.length === 0) return {};
+
+  const res = await fetch("/api/calculator/rates", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      sourceCurrencyId: baseCurrencyId,
+      targetCurrencyIds: sourceCurrencyIds,
+    }),
+  });
+  const data = await res.json();
+  if (!data.success) return {};
+  return data.data;
+}
+
 export default function AccountsPage() {
   const { formatCurrency } = useFormatters();
+  const { config } = useUserConfigContext();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAccount, setEditingAccount] =
     useState<AccountWithBlocked | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const baseCurrency = config?.baseCurrency;
 
   const {
     data: accounts,
@@ -80,6 +103,32 @@ export default function AccountsPage() {
     queryKey: ["accounts", "withBlocked"],
     queryFn: fetchAccountsWithBlocked,
   });
+
+  // Get unique currency IDs that are different from base currency
+  const uniqueCurrencyIds = accounts
+    ? [...new Set(accounts.map((a) => a.currency.id))].filter(
+        (id) => id !== baseCurrency?.id
+      )
+    : [];
+
+  // Fetch rates from each currency to base currency
+  const { data: ratesToBase } = useQuery({
+    queryKey: ["rates-to-base", baseCurrency?.id, uniqueCurrencyIds],
+    queryFn: () => fetchRatesToBase(uniqueCurrencyIds, baseCurrency!.id),
+    enabled: !!baseCurrency?.id && uniqueCurrencyIds.length > 0,
+  });
+
+  // Helper to convert amount to base currency
+  const convertToBase = (amount: number, currencyId: string): number | null => {
+    if (!baseCurrency) return null;
+    if (currencyId === baseCurrency.id) return amount;
+
+    const rateResult = ratesToBase?.[currencyId];
+    if (!rateResult?.rate) return null;
+
+    // Rate is from base to this currency, so we need to divide
+    return amount / rateResult.rate;
+  };
 
   const deleteMutation = useMutation({
     mutationFn: deleteAccount,
@@ -130,6 +179,12 @@ export default function AccountsPage() {
         { total: number; available: number; blocked: number }
       >,
     ) ?? {};
+
+  // Calculate total equivalent in base currency
+  const totalEquivalent = accounts?.reduce((sum, account) => {
+    const equivalent = convertToBase(account.totalBalance, account.currency.id);
+    return sum + (equivalent ?? 0);
+  }, 0) ?? 0;
 
   if (isLoading) {
     return (
@@ -223,6 +278,24 @@ export default function AccountsPage() {
               </CardContent>
             </Card>
           ))}
+          {/* Total equivalent card - only show if multiple currencies */}
+          {baseCurrency && Object.keys(totalsByCurrency).length > 1 && (
+            <Card className="border-primary/50 bg-primary/5">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-primary">
+                  Total Equivalente en {baseCurrency.code}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">
+                  {formatCurrency(totalEquivalent, baseCurrency.code)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Suma de todas las cuentas convertidas
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -239,6 +312,11 @@ export default function AccountsPage() {
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="text-right">Disponible</TableHead>
                   <TableHead className="text-right">Bloqueado</TableHead>
+                  {baseCurrency && (
+                    <TableHead className="text-right">
+                      Equiv. {baseCurrency.code}
+                    </TableHead>
+                  )}
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -285,6 +363,23 @@ export default function AccountsPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
+                    {baseCurrency && (
+                      <TableCell className="text-right font-mono text-muted-foreground">
+                        {(() => {
+                          const equivalent = convertToBase(
+                            account.totalBalance,
+                            account.currency.id
+                          );
+                          if (equivalent === null) {
+                            return <span>-</span>;
+                          }
+                          if (account.currency.id === baseCurrency.id) {
+                            return <span>-</span>;
+                          }
+                          return formatCurrency(equivalent, baseCurrency.code);
+                        })()}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
