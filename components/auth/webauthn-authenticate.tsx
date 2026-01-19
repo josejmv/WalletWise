@@ -41,12 +41,13 @@ export function WebAuthnAuthenticate({
         body: JSON.stringify({ email }),
       });
 
+      const optionsData = await optionsRes.json();
+
       if (!optionsRes.ok) {
-        const data = await optionsRes.json();
-        throw new Error(data.error || "Error al obtener opciones");
+        throw new Error(optionsData.error || "Error al obtener opciones");
       }
 
-      const { options, challenge, userId } = await optionsRes.json();
+      const { options, challenge, userId } = optionsData;
 
       // Start WebAuthn authentication
       const authResponse = await startAuthentication({ optionsJSON: options });
