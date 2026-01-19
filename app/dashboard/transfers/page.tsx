@@ -71,7 +71,7 @@ interface Transfer {
   currency: { id: string; code: string; symbol: string };
 }
 
-const transferTypeLabels: Record<TransferType, string> = {
+const _transferTypeLabels: Record<TransferType, string> = {
   account_to_account: "Cuenta → Cuenta",
   account_to_budget: "Cuenta → Budget",
   budget_to_account: "Budget → Cuenta",

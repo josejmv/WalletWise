@@ -1,7 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import {
   getUserBaseCurrencyId,
-  getUserBaseCurrency,
   convertManyToBaseCurrency,
 } from "@/lib/currency-utils";
 import type {

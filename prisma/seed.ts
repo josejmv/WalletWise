@@ -55,11 +55,11 @@ async function main() {
   console.log("Currencies seeded (Fiat + Crypto)");
 
   // Seed initial exchange rates for development
-  // Rates updated 2026-01-11 - will be updated by sync in production
-  const USD_COP = 3733.0;
-  const USD_VES = 330.38;
-  const USDT_COP = 3720.0;
-  const USDT_VES = 530.0;
+  // Rates updated 2026-01-18 - will be updated by sync in production
+  const USD_COP = 4150.0;
+  const USD_VES = 58.0;
+  const USDT_COP = 4100.0;
+  const USDT_VES = 57.0;
 
   const initialRates = [
     // USD pairs (official source)
@@ -184,6 +184,157 @@ async function main() {
   }
   console.log("Account types seeded");
 
+  // Seed Expense Categories (hierarchical)
+  // Parent categories with their children
+  const expenseCategories = [
+    // Transporte
+    {
+      name: "Transporte",
+      color: "#00ff00",
+      icon: "🛤",
+      children: ["Autobús", "Taxi"],
+    },
+    // Saldo móvil (no children)
+    {
+      name: "Saldo móvil",
+      color: "#3b82f6",
+      icon: "📲",
+      children: [],
+    },
+    // Entretenimiento
+    {
+      name: "Entretenimiento",
+      color: "#ffff00",
+      icon: "🎬",
+      children: ["Suscripción", "Juego/Pelicula"],
+    },
+    // Ropa/Cosméticos
+    {
+      name: "Ropa/Cosméticos",
+      color: "#00ffff",
+      icon: "👕",
+      children: ["Tops", "Pantalon", "Ropa interior", "Calsados", "Accesorios", "Skincare"],
+    },
+    // Salud
+    {
+      name: "Salud",
+      color: "#ff00ff",
+      icon: "⛑️",
+      children: ["Peluquería", "Remedios/pastillas", "Gimnasio", "Seguro", "Manicura / Pedicura"],
+    },
+    // Mascota
+    {
+      name: "Mascota",
+      color: "#5c5c5c",
+      icon: "🐺",
+      children: ["Guardería", "Comida", "Aseo", "Salud", "Juguetes", "Accesorios", "Parque"],
+    },
+    // Hogar
+    {
+      name: "Hogar",
+      color: "#ffffff",
+      icon: "🏠",
+      children: ["Cocina", "Sala", "Habitación", "Baño", "Oficina"],
+    },
+    // Comida
+    {
+      name: "Comida",
+      color: "#e20303",
+      icon: "🍔",
+      children: ["Desayuno", "Almuerzo", "Merienda", "Bebidas", "Snaks", "Cena"],
+    },
+    // Educación
+    {
+      name: "Educación",
+      color: "#001eff",
+      icon: "📚",
+      children: ["Cursos online", "Universidad"],
+    },
+    // Mantenimiento del Hogar
+    {
+      name: "Mantenimiento del Hogar",
+      color: "#013702",
+      icon: "🏢",
+      children: ["Internet", "Gas", "Reparaciones", "Alquiler", "Aseo y Limpieza", "Condominio", "Mercado"],
+    },
+    // Viajes
+    {
+      name: "Viajes",
+      color: "#5f0066",
+      icon: "🛫",
+      children: ["Vuelos", "Airbnb", "Transporte", "Comida", "Compras", "Entretenimiento", "Salud"],
+    },
+    // Otros (no children)
+    {
+      name: "Otros",
+      color: "#5c2c00",
+      icon: "😶",
+      children: [],
+    },
+    // Comisión (no children)
+    {
+      name: "Comisión",
+      color: "#c2bb00",
+      icon: "💸",
+      children: [],
+    },
+    // Delivery (no children)
+    {
+      name: "Delivery",
+      color: "#ffa333",
+      icon: "🛵",
+      children: [],
+    },
+  ];
+
+  // Create parent categories first
+  const categoryMap: Record<string, string> = {};
+  for (const cat of expenseCategories) {
+    const created = await prisma.category.upsert({
+      where: { id: categoryMap[cat.name] || "non-existent-id" },
+      update: { name: cat.name, color: cat.color, icon: cat.icon },
+      create: { name: cat.name, color: cat.color, icon: cat.icon },
+    });
+    categoryMap[cat.name] = created.id;
+  }
+
+  // Create child categories with parent relationship
+  for (const cat of expenseCategories) {
+    const parentId = categoryMap[cat.name];
+    for (const childName of cat.children) {
+      await prisma.category.create({
+        data: {
+          name: childName,
+          color: cat.color,
+          icon: "",
+          parentId: parentId,
+        },
+      });
+    }
+  }
+  console.log("Expense categories seeded (hierarchical)");
+
+  // Seed Inventory Categories
+  const inventoryCategories = [
+    { name: "Despensa" },
+    { name: "Proteina" },
+    { name: "Charcuteria" },
+    { name: "Aseo Personal" },
+    { name: "Hogar" },
+    { name: "Mascota" },
+    { name: "Frutas/Verduras" },
+    { name: "Chucherias" },
+  ];
+
+  for (const invCat of inventoryCategories) {
+    await prisma.inventoryCategory.upsert({
+      where: { name: invCat.name },
+      update: {},
+      create: invCat,
+    });
+  }
+  console.log("Inventory categories seeded");
+
   // Seed Default UserConfig (single entry for now)
   if (usdCurrency) {
     const existingConfig = await prisma.userConfig.findFirst();
@@ -255,6 +406,7 @@ async function main() {
             ],
           },
           { id: "reports", type: "item", pageId: "reports" },
+          { id: "calculator", type: "item", pageId: "calculator" },
         ],
       };
 

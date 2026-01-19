@@ -185,12 +185,12 @@ export async function importAllData(backup: BackupData): Promise<{
         }
 
         // Helper to translate IDs using maps
-        const mapCurrencyId = (id: string | null) =>
-          id ? currencyIdMap.get(id) || id : null;
-        const mapAccountTypeId = (id: string | null) =>
-          id ? accountTypeIdMap.get(id) || id : null;
-        const mapInvCategoryId = (id: string | null) =>
-          id ? invCategoryIdMap.get(id) || id : null;
+        const mapCurrencyId = (id: string | null): string | undefined =>
+          id ? currencyIdMap.get(id) || id : undefined;
+        const mapAccountTypeId = (id: string | null): string | undefined =>
+          id ? accountTypeIdMap.get(id) || id : undefined;
+        const mapInvCategoryId = (id: string | null): string | undefined =>
+          id ? invCategoryIdMap.get(id) || id : undefined;
 
         // 2. Primary entities (depend on reference data)
         if (backup.data.accounts?.length) {
@@ -295,7 +295,6 @@ export async function importAllData(backup: BackupData): Promise<{
                   : null,
                 date: new Date(expense.date),
                 description: expense.description,
-                isPaid: expense.isPaid,
                 hasChange: expense.hasChange,
                 changeAmount: expense.changeAmount,
                 changeCurrencyId: mappedChangeCurrencyId,
@@ -436,7 +435,9 @@ export async function importAllData(backup: BackupData): Promise<{
 
         if (backup.data.inventoryPriceHistory?.length) {
           for (const history of backup.data.inventoryPriceHistory as any[]) {
-            const mappedCurrencyId = mapCurrencyId(history.currencyId);
+            // currencyId is required, use original as fallback
+            const mappedCurrencyId =
+              mapCurrencyId(history.currencyId) || history.currencyId;
             await tx.inventoryPriceHistory.upsert({
               where: { id: history.id },
               update: {

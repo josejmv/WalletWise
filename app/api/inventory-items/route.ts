@@ -37,7 +37,7 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ success: true, data: items });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener productos de inventario" },
       { status: 500 },

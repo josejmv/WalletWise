@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const currencies = await getCurrencies(filters);
 
     return NextResponse.json({ success: true, data: currencies });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener monedas" },
       { status: 500 },

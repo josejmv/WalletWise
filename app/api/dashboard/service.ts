@@ -5,7 +5,6 @@ import {
   convertManyToBaseCurrency,
   convertManyWithCustomRates,
   calculateSavings,
-  isSavingsRate,
 } from "@/lib/currency-utils";
 import type {
   DashboardKPIs,
@@ -331,7 +330,7 @@ export async function getMonthlyTrend(
 
   return Array.from(monthlyData.entries())
     .map(([key, data]) => {
-      const [year, month] = key.split("-");
+      const [year, _month] = key.split("-");
       return {
         month: key,
         year: parseInt(year),
@@ -479,7 +478,7 @@ export async function getRecentTransactions(
   const transactions: RecentTransaction[] = transactionsWithCreatedAt
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     .slice(0, limit)
-    .map(({ createdAt, ...rest }) => rest);
+    .map(({ createdAt: _createdAt, ...rest }) => rest);
 
   return transactions;
 }
