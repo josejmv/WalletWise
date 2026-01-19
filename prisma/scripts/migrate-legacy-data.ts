@@ -5,6 +5,9 @@
  *   npx tsx prisma/scripts/migrate-legacy-data.ts check
  *     - Muestra datos legacy pendientes de migrar
  *
+ *   npx tsx prisma/scripts/migrate-legacy-data.ts users
+ *     - Lista todos los usuarios registrados con sus IDs
+ *
  *   npx tsx prisma/scripts/migrate-legacy-data.ts migrate <userId>
  *     - Migra todos los datos legacy al usuario especificado
  *
@@ -301,7 +304,9 @@ async function main(): Promise<void> {
       case "migrate":
         if (!userId) {
           console.error("\n❌ Error: Debes especificar el userId\n");
-          console.log("Uso: npx tsx prisma/scripts/migrate-legacy-data.ts migrate <userId>\n");
+          console.log(
+            "Uso: npx tsx prisma/scripts/migrate-legacy-data.ts migrate <userId>\n"
+          );
           console.log("Ejecuta 'users' para ver los IDs disponibles.\n");
           process.exit(1);
         }

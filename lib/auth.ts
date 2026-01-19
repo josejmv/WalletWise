@@ -34,7 +34,7 @@ function customPrismaAdapter() {
       scope?: string;
       id_token?: string;
       session_state?: string;
-    }) => {
+    }): Promise<void> => {
       await prisma.oAuthAccount.create({
         data: {
           userId: account.userId,
@@ -50,7 +50,6 @@ function customPrismaAdapter() {
           session_state: account.session_state,
         },
       });
-      return account;
     },
     unlinkAccount: async ({
       provider,

@@ -28,8 +28,7 @@ export async function GET() {
     }
 
     const userAuthenticators = user.authenticators.map((auth) => ({
-      id: Buffer.from(auth.credentialID, "base64url"),
-      type: "public-key" as const,
+      id: auth.credentialID, // Already stored as base64url string
       transports: auth.transports?.split(",") as AuthenticatorTransport[],
     }));
 

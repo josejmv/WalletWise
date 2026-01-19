@@ -24,7 +24,7 @@ export interface BackupData {
 export async function exportAllData(
   userId: string | null
 ): Promise<BackupData> {
-  // Build user filter for multi-user support
+  // Build user filter for multi-user support (only for tables with userId)
   const userFilter = userId ? { OR: [{ userId }, { userId: null }] } : {};
 
   const [
@@ -43,8 +43,10 @@ export async function exportAllData(
     inventoryPriceHistory,
     exchangeRates,
   ] = await Promise.all([
-    prisma.currency.findMany({ where: userFilter }),
-    prisma.accountType.findMany({ where: userFilter }),
+    // Global tables (no userId)
+    prisma.currency.findMany(),
+    prisma.accountType.findMany(),
+    // User-specific tables
     prisma.category.findMany({ where: userFilter }),
     prisma.inventoryCategory.findMany({ where: userFilter }),
     prisma.account.findMany({ where: userFilter }),
@@ -55,8 +57,9 @@ export async function exportAllData(
     prisma.budget.findMany({ where: userFilter }),
     prisma.budgetContribution.findMany({ where: userFilter }),
     prisma.inventoryItem.findMany({ where: userFilter }),
-    prisma.inventoryPriceHistory.findMany({ where: userFilter }),
-    prisma.exchangeRate.findMany({ where: userFilter }),
+    // Global tables (no userId)
+    prisma.inventoryPriceHistory.findMany(),
+    prisma.exchangeRate.findMany(),
   ]);
 
   return {
@@ -172,21 +175,34 @@ export async function importAllData(
 
         if (backup.data.inventoryCategories?.length) {
           for (const cat of backup.data.inventoryCategories as any[]) {
-            const result = await tx.inventoryCategory.upsert({
-              where: { name: cat.name },
-              update: {
-                icon: cat.icon,
-                color: cat.color,
-                description: cat.description,
-              },
-              create: {
-                id: cat.id,
-                name: cat.name,
-                icon: cat.icon,
-                color: cat.color,
-                description: cat.description,
-              },
+            // Use userId_name compound unique constraint, fallback to id
+            const catUserId = cat.userId || null;
+            const existing = await tx.inventoryCategory.findFirst({
+              where: { name: cat.name, userId: catUserId },
             });
+
+            let result;
+            if (existing) {
+              result = await tx.inventoryCategory.update({
+                where: { id: existing.id },
+                data: {
+                  icon: cat.icon,
+                  color: cat.color,
+                  description: cat.description,
+                },
+              });
+            } else {
+              result = await tx.inventoryCategory.create({
+                data: {
+                  id: cat.id,
+                  name: cat.name,
+                  icon: cat.icon,
+                  color: cat.color,
+                  description: cat.description,
+                  userId: catUserId,
+                },
+              });
+            }
             invCategoryIdMap.set(cat.id, result.id);
           }
           imported.inventoryCategories = backup.data.inventoryCategories.length;

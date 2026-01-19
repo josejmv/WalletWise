@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       expectedOrigin: origin,
       expectedRPID: rpID,
       credential: {
-        id: Buffer.from(authenticator.credentialID, "base64url"),
+        id: authenticator.credentialID, // Already stored as base64url string
         publicKey: Buffer.from(authenticator.credentialPublicKey, "base64url"),
         counter: Number(authenticator.counter),
         transports: authenticator.transports?.split(

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticator } from "otplib";
+import { generateSecret, generateURI } from "otplib";
 import QRCode from "qrcode";
 
 import { auth } from "@/lib/auth";
@@ -31,15 +31,15 @@ export async function GET() {
       );
     }
 
-    // Generate secret
-    const secret = authenticator.generateSecret();
+    // Generate secret (otplib v13 API)
+    const secret = generateSecret();
 
-    // Generate OTP Auth URL
-    const otpauth = authenticator.keyuri(
-      user.email,
-      "WalletWise",
-      secret
-    );
+    // Generate OTP Auth URL (otplib v13 API)
+    const otpauth = generateURI({
+      issuer: "WalletWise",
+      label: user.email,
+      secret,
+    });
 
     // Generate QR code
     const qrCode = await QRCode.toDataURL(otpauth);

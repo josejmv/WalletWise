@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authenticator } from "otplib";
+import { verify } from "otplib";
 import { z } from "zod";
 
 import { auth } from "@/lib/auth";
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     if (!validated.success) {
       return NextResponse.json(
-        { error: validated.error.errors[0].message },
+        { error: validated.error.issues[0].message },
         { status: 400 }
       );
     }
@@ -40,11 +40,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify token
-    const isValid = authenticator.verify({
+    // Verify token (otplib v13 API)
+    const result = await verify({
       token,
       secret: user.totpSecret,
     });
+    const isValid = result.valid;
 
     if (!isValid) {
       return NextResponse.json(
