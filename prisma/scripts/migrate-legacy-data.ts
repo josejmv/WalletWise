@@ -123,11 +123,37 @@ async function migrateLegacyData(targetUserId: string): Promise<void> {
     },
     {
       name: "User Config",
-      migrate: () =>
-        prisma.userConfig.updateMany({
+      migrate: async () => {
+        // UserConfig has unique constraint on userId
+        // Check if user already has a config
+        const existingUserConfig = await prisma.userConfig.findUnique({
+          where: { userId: targetUserId },
+        });
+
+        const legacyConfig = await prisma.userConfig.findFirst({
           where: { userId: null },
-          data: { userId: targetUserId },
-        }),
+        });
+
+        if (!legacyConfig) {
+          // No legacy config to migrate
+          return { count: 0 };
+        }
+
+        if (existingUserConfig) {
+          // User already has config, delete legacy
+          await prisma.userConfig.delete({
+            where: { id: legacyConfig.id },
+          });
+          return { count: 0 }; // Deleted, not migrated
+        } else {
+          // No user config exists, assign legacy to user
+          await prisma.userConfig.update({
+            where: { id: legacyConfig.id },
+            data: { userId: targetUserId },
+          });
+          return { count: 1 };
+        }
+      },
     },
   ];
 
@@ -196,6 +222,7 @@ async function checkLegacyData(): Promise<boolean> {
     prisma.budgetContribution.count({ where: { userId: null } }),
     prisma.inventoryCategory.count({ where: { userId: null } }),
     prisma.inventoryItem.count({ where: { userId: null } }),
+    prisma.userConfig.count({ where: { userId: null } }),
   ]);
 
   const labels = [
@@ -209,6 +236,7 @@ async function checkLegacyData(): Promise<boolean> {
     "Contribuciones",
     "Categorías Inventario",
     "Items Inventario",
+    "User Config",
   ];
 
   let hasLegacy = false;

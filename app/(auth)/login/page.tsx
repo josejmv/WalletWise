@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { AuthCard, LoginForm, SocialButtons } from "@/components/auth";
+import {
+  AuthCard,
+  LoginForm,
+  SocialButtons,
+  WebAuthnAuthenticate,
+} from "@/components/auth";
 import { Separator } from "@/components/ui/separator";
 
 export const metadata = {
@@ -23,6 +28,17 @@ function LoginContent() {
       }
     >
       <SocialButtons />
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <Separator className="w-full" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-2 text-muted-foreground">
+            o usa passkey
+          </span>
+        </div>
+      </div>
+      <WebAuthnAuthenticate />
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
           <Separator className="w-full" />
