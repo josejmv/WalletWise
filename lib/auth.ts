@@ -79,9 +79,19 @@ function customPrismaAdapter() {
 
       if (!account) return null;
 
+      // Return only AdapterAccount fields
       return {
-        ...account,
+        userId: account.userId,
+        type: account.type as "oauth" | "oidc" | "email" | "webauthn",
+        provider: account.provider,
+        providerAccountId: account.providerAccountId,
+        refresh_token: account.refresh_token ?? undefined,
+        access_token: account.access_token ?? undefined,
         expires_at: account.expires_at ?? undefined,
+        token_type: account.token_type ?? undefined,
+        scope: account.scope ?? undefined,
+        id_token: account.id_token ?? undefined,
+        session_state: account.session_state ?? undefined,
       };
     },
     // Override getUserByAccount to use OAuthAccount model
