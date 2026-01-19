@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/josejmv/WalletWise/compare/v1.3.0...v1.3.1) (2026-01-19)
+
+
+### Bug Fixes
+
+* **auth:** allow webauthn authenticate endpoints for unauthenticated users ([a907906](https://github.com/josejmv/WalletWise/commit/a907906a4c0e9c9f510d3c349a54d37cd9dd5045))
+
 # [1.3.0](https://github.com/josejmv/WalletWise/compare/v1.2.1...v1.3.0) (2026-01-19)
 
 
