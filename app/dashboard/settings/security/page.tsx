@@ -83,7 +83,7 @@ export default function SecuritySettingsPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <KeyRound className="h-5 w-5" />
-              Configurar Contrasena
+              Configurar Contraseña
             </CardTitle>
             <CardDescription>
               Tu cuenta fue creada con Google. Configura una contrasena para

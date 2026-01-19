@@ -67,7 +67,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Set password error:", error);
     return NextResponse.json(
-      { error: "Error al configurar contrasena" },
+      { error: "Error al configurar contraseña" },
       { status: 500 }
     );
   }

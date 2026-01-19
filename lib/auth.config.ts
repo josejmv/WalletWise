@@ -24,10 +24,16 @@ export const authConfig: NextAuthConfig = {
       const isOnApi = nextUrl.pathname.startsWith("/api");
       const isOnAuthApi = nextUrl.pathname.startsWith("/api/auth");
       const isOn2FAApi = nextUrl.pathname.startsWith("/api/2fa");
+      const isOnWebAuthnAuthApi = nextUrl.pathname.startsWith("/api/webauthn/authenticate");
       const isOnVerify2FA = nextUrl.pathname === "/verify-2fa";
 
       // Allow auth API endpoints
       if (isOnAuthApi) {
+        return true;
+      }
+
+      // Allow WebAuthn authenticate endpoints (used on login page)
+      if (isOnWebAuthnAuthApi) {
         return true;
       }
 

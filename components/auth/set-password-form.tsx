@@ -55,7 +55,7 @@ export function SetPasswordForm({ onSuccess }: SetPasswordFormProps) {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Error al configurar contrasena");
+        throw new Error(data.error || "Error al configurar contraseña");
       }
 
       setSuccess(true);
@@ -159,7 +159,7 @@ export function SetPasswordForm({ onSuccess }: SetPasswordFormProps) {
         ) : (
           <Lock className="mr-2 h-4 w-4" />
         )}
-        Configurar Contrasena
+        Configurar Contraseña
       </Button>
     </form>
   );
