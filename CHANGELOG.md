@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/josejmv/WalletWise/compare/v1.3.1...v1.4.0) (2026-01-19)
+
+
+### Features
+
+* **auth:** allow cross-device webauthn authentication ([d54a39e](https://github.com/josejmv/WalletWise/commit/d54a39e60c7d1fe9604959fdea1203c7fc8526df))
+
 ## [1.3.1](https://github.com/josejmv/WalletWise/compare/v1.3.0...v1.3.1) (2026-01-19)
 
 
