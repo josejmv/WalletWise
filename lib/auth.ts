@@ -5,6 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { cookies } from "next/headers";
 
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/lib/auth.config";
@@ -90,14 +91,70 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        webauthnToken: { label: "WebAuthn Token", type: "text" },
       },
       async authorize(credentials) {
-        const validated = loginSchema.safeParse(credentials);
-        if (!validated.success) {
+        const email = credentials?.email as string | undefined;
+        const password = credentials?.password as string | undefined;
+        const webauthnToken = credentials?.webauthnToken as string | undefined;
+
+        if (!email) {
           return null;
         }
 
-        const { email, password } = validated.data;
+        // Handle WebAuthn login
+        if (webauthnToken) {
+          try {
+            const cookieStore = await cookies();
+            const webauthnCookie = cookieStore.get("webauthn-verified");
+
+            if (!webauthnCookie?.value) {
+              return null;
+            }
+
+            const cookieData = JSON.parse(webauthnCookie.value);
+
+            // Validate token and expiry
+            if (
+              cookieData.token !== webauthnToken ||
+              Date.now() > cookieData.expiry
+            ) {
+              return null;
+            }
+
+            // Get user by ID from cookie
+            const user = await prisma.user.findUnique({
+              where: { id: cookieData.userId },
+            });
+
+            if (!user || user.email !== email) {
+              return null;
+            }
+
+            // Clear the WebAuthn verification cookie
+            cookieStore.delete("webauthn-verified");
+
+            return {
+              id: user.id,
+              email: user.email,
+              name: user.name,
+              image: user.image,
+              totpEnabled: user.totpEnabled,
+            };
+          } catch {
+            return null;
+          }
+        }
+
+        // Handle regular password login
+        if (!password) {
+          return null;
+        }
+
+        const validated = loginSchema.safeParse({ email, password });
+        if (!validated.success) {
+          return null;
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -118,10 +175,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           email: user.email,
           name: user.name,
           image: user.image,
+          totpEnabled: user.totpEnabled,
         };
       },
     }),
   ],
+  callbacks: {
+    async jwt({ token, user, trigger, account }) {
+      // On initial sign-in
+      if (user && user.id) {
+        token.id = user.id;
+
+        // For credentials login, user.totpEnabled is populated by authorize()
+        // For OAuth login, we need to fetch from database
+        if (account?.provider === "credentials") {
+          token.totpEnabled = user.totpEnabled ?? false;
+        } else {
+          // OAuth login - fetch totpEnabled from database
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { totpEnabled: true },
+          });
+          token.totpEnabled = dbUser?.totpEnabled ?? false;
+        }
+      }
+
+      // Refresh totpEnabled on session update (e.g., after enabling/disabling 2FA)
+      if (trigger === "update" && token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { totpEnabled: true },
+        });
+        if (dbUser) {
+          token.totpEnabled = dbUser.totpEnabled;
+        }
+      }
+
+      return token;
+    },
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id as string;
+        session.user.totpEnabled = token.totpEnabled as boolean;
+      }
+      return session;
+    },
+  },
   events: {
     async createUser({ user }) {
       // When a new user is created via OAuth, we can initialize their config here

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { verifyAuthenticationResponse } from "@simplewebauthn/server";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 
 import { prisma } from "@/lib/prisma";
 
@@ -60,8 +62,31 @@ export async function POST(request: Request) {
       data: { counter: verification.authenticationInfo.newCounter },
     });
 
+    // Generate a short-lived verification token for the credentials provider
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpiry = Date.now() + 60000; // 1 minute expiry
+
+    // Store the token with user ID and expiry
+    const cookieStore = await cookies();
+    cookieStore.set(
+      "webauthn-verified",
+      JSON.stringify({
+        token: verificationToken,
+        userId: authenticator.user.id,
+        expiry: tokenExpiry,
+      }),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        maxAge: 60, // 1 minute
+        path: "/",
+      }
+    );
+
     return NextResponse.json({
       verified: true,
+      verificationToken,
       user: {
         id: authenticator.user.id,
         email: authenticator.user.email,
