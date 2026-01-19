@@ -1,3 +1,13 @@
+# [2.0.0](https://github.com/josejmv/WalletWise/compare/v1.4.0...v2.0.0) (2026-01-19)
+
+
+* feat(auth)!: add multi-user authentication system ([c15180b](https://github.com/josejmv/WalletWise/commit/c15180b7a8e37497492a87988b47bce9f976ca94))
+
+
+### BREAKING CHANGES
+
+* This version introduces a multi-user authentication system. All data is now scoped to authenticated users. Users must create an account to access the application.
+
 # [1.4.0](https://github.com/josejmv/WalletWise/compare/v1.3.1...v1.4.0) (2026-01-19)
 
 
