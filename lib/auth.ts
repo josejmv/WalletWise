@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
+import type { Adapter } from "@auth/core/adapters";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
@@ -15,26 +16,15 @@ const loginSchema = z.object({
 
 /**
  * Custom Prisma Adapter that uses OAuthAccount instead of Account
+ * Only override methods that interact with the Account model
  */
-function customPrismaAdapter() {
+function customPrismaAdapter(): Adapter {
   const adapter = PrismaAdapter(prisma);
 
   return {
     ...adapter,
-    // Override account methods to use OAuthAccount model
-    linkAccount: async (account: {
-      userId: string;
-      type: string;
-      provider: string;
-      providerAccountId: string;
-      refresh_token?: string;
-      access_token?: string;
-      expires_at?: number;
-      token_type?: string;
-      scope?: string;
-      id_token?: string;
-      session_state?: string;
-    }): Promise<void> => {
+    // Override linkAccount to use OAuthAccount model
+    linkAccount: async (account) => {
       await prisma.oAuthAccount.create({
         data: {
           userId: account.userId,
@@ -51,13 +41,8 @@ function customPrismaAdapter() {
         },
       });
     },
-    unlinkAccount: async ({
-      provider,
-      providerAccountId,
-    }: {
-      provider: string;
-      providerAccountId: string;
-    }) => {
+    // Override unlinkAccount to use OAuthAccount model
+    unlinkAccount: async ({ provider, providerAccountId }) => {
       await prisma.oAuthAccount.delete({
         where: {
           provider_providerAccountId: {
@@ -67,41 +52,8 @@ function customPrismaAdapter() {
         },
       });
     },
-    getAccount: async (providerAccountId: string, provider: string) => {
-      const account = await prisma.oAuthAccount.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider,
-            providerAccountId,
-          },
-        },
-      });
-
-      if (!account) return null;
-
-      // Return only AdapterAccount fields
-      return {
-        userId: account.userId,
-        type: account.type as "oauth" | "oidc" | "email" | "webauthn",
-        provider: account.provider,
-        providerAccountId: account.providerAccountId,
-        refresh_token: account.refresh_token ?? undefined,
-        access_token: account.access_token ?? undefined,
-        expires_at: account.expires_at ?? undefined,
-        token_type: account.token_type ?? undefined,
-        scope: account.scope ?? undefined,
-        id_token: account.id_token ?? undefined,
-        session_state: account.session_state ?? undefined,
-      };
-    },
     // Override getUserByAccount to use OAuthAccount model
-    getUserByAccount: async ({
-      provider,
-      providerAccountId,
-    }: {
-      provider: string;
-      providerAccountId: string;
-    }) => {
+    getUserByAccount: async ({ provider, providerAccountId }) => {
       const account = await prisma.oAuthAccount.findUnique({
         where: {
           provider_providerAccountId: {
