@@ -12,7 +12,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { WebAuthnRegister, TotpSetup, SetPasswordForm } from "@/components/auth";
+import { WebAuthnRegister, TotpSetup, SetPasswordForm, PasskeyList } from "@/components/auth";
+import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 
 interface UserSecurityInfo {
@@ -117,13 +118,19 @@ export default function SecuritySettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {securityInfo?.webauthnEnabled && (
-              <p className="text-sm text-muted-foreground">
-                Tienes {securityInfo.authenticatorCount} dispositivo(s)
-                registrado(s).
-              </p>
+            {securityInfo?.webauthnEnabled && securityInfo.authenticatorCount > 0 && (
+              <>
+                <div>
+                  <p className="mb-3 text-sm font-medium">Dispositivos registrados</p>
+                  <PasskeyList onDelete={() => refetch()} />
+                </div>
+                <Separator />
+              </>
             )}
-            <WebAuthnRegister onSuccess={() => refetch()} />
+            <div>
+              <p className="mb-3 text-sm font-medium">Agregar nuevo passkey</p>
+              <WebAuthnRegister onSuccess={() => refetch()} />
+            </div>
           </CardContent>
         </Card>
 

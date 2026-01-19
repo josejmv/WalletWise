@@ -43,9 +43,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Build allowCredentials without transport restrictions
+    // This lets the browser/authenticator decide how to use the credential
     const allowCredentials = user.authenticators.map((auth) => ({
-      id: auth.credentialID, // Already stored as base64url string
-      transports: auth.transports?.split(",") as AuthenticatorTransport[],
+      id: auth.credentialID,
+      // Include all possible transports to maximize compatibility
+      transports: ["internal", "hybrid", "usb", "ble", "nfc"] as AuthenticatorTransport[],
     }));
 
     const options = await generateAuthenticationOptions({
