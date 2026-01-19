@@ -1,3 +1,20 @@
+# [1.1.0](https://github.com/josejmv/WalletWise/compare/v1.0.0...v1.1.0) (2026-01-19)
+
+
+### Bug Fixes
+
+* **auth:** convert session_state JsonValue to string for prisma ([fedb9d2](https://github.com/josejmv/WalletWise/commit/fedb9d288b1ec342b9c58e44ff99a3721655f5a3))
+* **auth:** fix getAccount return type for AdapterAccount compatibility ([35f87b1](https://github.com/josejmv/WalletWise/commit/35f87b1c312f8e05bc7d1dd719f987a2fc656570))
+* **auth:** resolve typescript errors in auth and multi-user modules ([c25fac1](https://github.com/josejmv/WalletWise/commit/c25fac1a011cf5041e61c863f06f454dce3822b0))
+* **auth:** simplify custom adapter with proper Adapter type ([7d86b09](https://github.com/josejmv/WalletWise/commit/7d86b093d477b8b166ff81213725d812131484d4))
+
+
+### Features
+
+* **auth:** add multi-user support with nextauth, 2fa and webauthn ([df21b3e](https://github.com/josejmv/WalletWise/commit/df21b3e41a66bcbabb9fd4f5f33ab6f0c7004d49))
+* **landing:** add landing page with hero, features, security, FAQ, CTA, and footer ([269fa7d](https://github.com/josejmv/WalletWise/commit/269fa7d0178c06d0905daa9e28eb255481e2bb0c))
+* **legal:** add privacy, terms, and confidentiality pages ([1cc0eaf](https://github.com/josejmv/WalletWise/commit/1cc0eaf0e49f6d20650c3ad561f1f4d011030e54))
+
 # 1.0.0 (2026-01-19)
 
 
