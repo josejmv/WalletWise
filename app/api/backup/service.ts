@@ -295,7 +295,6 @@ export async function importAllData(backup: BackupData): Promise<{
                   : null,
                 date: new Date(expense.date),
                 description: expense.description,
-                isPaid: expense.isPaid,
                 hasChange: expense.hasChange,
                 changeAmount: expense.changeAmount,
                 changeCurrencyId: mappedChangeCurrencyId,
@@ -436,7 +435,9 @@ export async function importAllData(backup: BackupData): Promise<{
 
         if (backup.data.inventoryPriceHistory?.length) {
           for (const history of backup.data.inventoryPriceHistory as any[]) {
-            const mappedCurrencyId = mapCurrencyId(history.currencyId);
+            // currencyId is required, use original as fallback
+            const mappedCurrencyId =
+              mapCurrencyId(history.currencyId) || history.currencyId;
             await tx.inventoryPriceHistory.upsert({
               where: { id: history.id },
               update: {
