@@ -18,22 +18,22 @@ export async function getTransfersPaginated(
   return repository.findAllPaginated(filters, pagination);
 }
 
-export async function getTransferById(id: string) {
-  const transfer = await repository.findById(id);
+export async function getTransferById(id: string, userId?: string | null) {
+  const transfer = await repository.findById(id, userId);
   if (!transfer) {
     throw new Error("Transferencia no encontrada");
   }
   return transfer;
 }
 
-export async function getTransfersByAccount(accountId: string) {
+export async function getTransfersByAccount(accountId: string, userId?: string | null) {
   const account = await prisma.account.findUnique({
     where: { id: accountId },
   });
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
-  return repository.findByAccount(accountId);
+  return repository.findByAccount(accountId, userId);
 }
 
 export async function createTransfer(data: CreateTransferInput) {
@@ -70,8 +70,19 @@ export async function createTransfer(data: CreateTransferInput) {
   return prisma.$transaction(async (tx) => {
     const transfer = await tx.transfer.create({
       data: {
-        ...data,
+        userId: data.userId,
+        type: data.type,
+        fromAccountId: data.fromAccountId,
+        toAccountId: data.toAccountId,
+        fromBudgetId: data.fromBudgetId,
+        toBudgetId: data.toBudgetId,
+        amount: data.amount,
+        currencyId: data.currencyId,
+        exchangeRate: data.exchangeRate,
+        officialRate: data.officialRate,
+        customRate: data.customRate,
         date: data.date ?? new Date(),
+        description: data.description,
       },
       include: {
         fromAccount: true,
@@ -100,8 +111,8 @@ export async function createTransfer(data: CreateTransferInput) {
   });
 }
 
-export async function updateTransfer(id: string, data: UpdateTransferInput) {
-  const existingTransfer = await repository.findById(id);
+export async function updateTransfer(id: string, data: UpdateTransferInput, userId?: string | null) {
+  const existingTransfer = await repository.findById(id, userId);
   if (!existingTransfer) {
     throw new Error("Transferencia no encontrada");
   }
@@ -196,8 +207,8 @@ export async function updateTransfer(id: string, data: UpdateTransferInput) {
   });
 }
 
-export async function deleteTransfer(id: string) {
-  const transfer = await repository.findById(id);
+export async function deleteTransfer(id: string, userId?: string | null) {
+  const transfer = await repository.findById(id, userId);
   if (!transfer) {
     throw new Error("Transferencia no encontrada");
   }

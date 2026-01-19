@@ -18,40 +18,40 @@ export async function getExpensesPaginated(
   return repository.findAllPaginated(filters, pagination);
 }
 
-export async function getExpenseById(id: string) {
-  const expense = await repository.findById(id);
+export async function getExpenseById(id: string, userId?: string | null) {
+  const expense = await repository.findById(id, userId);
   if (!expense) {
     throw new Error("Gasto no encontrado");
   }
   return expense;
 }
 
-export async function getExpensesByCategory(categoryId: string) {
+export async function getExpensesByCategory(categoryId: string, userId?: string | null) {
   const category = await prisma.category.findUnique({
     where: { id: categoryId },
   });
   if (!category) {
     throw new Error("Categoría no encontrada");
   }
-  return repository.findByCategory(categoryId);
+  return repository.findByCategory(categoryId, userId);
 }
 
-export async function getExpensesByAccount(accountId: string) {
+export async function getExpensesByAccount(accountId: string, userId?: string | null) {
   const account = await prisma.account.findUnique({
     where: { id: accountId },
   });
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
-  return repository.findByAccount(accountId);
+  return repository.findByAccount(accountId, userId);
 }
 
-export async function getRecurringExpenses() {
-  return repository.findRecurring();
+export async function getRecurringExpenses(userId?: string | null) {
+  return repository.findRecurring(userId);
 }
 
-export async function getDueExpenses() {
-  return repository.findDueExpenses();
+export async function getDueExpenses(userId?: string | null) {
+  return repository.findDueExpenses(userId);
 }
 
 export async function createExpense(data: CreateExpenseInput) {
@@ -187,6 +187,7 @@ export async function createExpense(data: CreateExpenseInput) {
           exchangeRate: accountToChangeRate, // Rate to convert to change currency
           date: data.date ?? new Date(),
           description: `Vuelto de gasto: ${data.description || "Sin descripción"}`,
+          userId: data.userId,
         },
       });
       changeTransferId = transfer.id;
@@ -252,6 +253,7 @@ export async function createExpense(data: CreateExpenseInput) {
         changeCurrencyId: data.hasChange ? changeCurrencyId : null,
         changeAccountId: data.hasChange ? effectiveChangeAccountId : null,
         changeTransferId,
+        userId: data.userId,
       },
       include: {
         category: true,
@@ -271,8 +273,8 @@ export async function createExpense(data: CreateExpenseInput) {
   });
 }
 
-export async function updateExpense(id: string, data: UpdateExpenseInput) {
-  const existingExpense = await repository.findById(id);
+export async function updateExpense(id: string, data: UpdateExpenseInput, userId?: string | null) {
+  const existingExpense = await repository.findById(id, userId);
   if (!existingExpense) {
     throw new Error("Gasto no encontrado");
   }
@@ -328,15 +330,7 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
       },
     });
 
-    const expense = await tx.expense.update({
-      where: { id },
-      data,
-      include: {
-        category: true,
-        account: true,
-        currency: true,
-      },
-    });
+    const expense = await repository.update(id, data, userId);
 
     // Calculate new amount to deduct (with conversion if currencies differ)
     let newAmountToDeduct = Number(expense.amount);
@@ -358,8 +352,8 @@ export async function updateExpense(id: string, data: UpdateExpenseInput) {
   });
 }
 
-export async function deleteExpense(id: string) {
-  const expense = await repository.findById(id);
+export async function deleteExpense(id: string, userId?: string | null) {
+  const expense = await repository.findById(id, userId);
   if (!expense) {
     throw new Error("Gasto no encontrado");
   }
@@ -385,7 +379,7 @@ export async function deleteExpense(id: string) {
       },
     });
 
-    return tx.expense.delete({ where: { id } });
+    return repository.remove(id, userId);
   });
 }
 
@@ -412,8 +406,8 @@ function calculateNextDueDate(
   return next;
 }
 
-export async function processRecurringExpense(id: string) {
-  const expense = await repository.findById(id);
+export async function processRecurringExpense(id: string, userId?: string | null) {
+  const expense = await repository.findById(id, userId);
   if (!expense) {
     throw new Error("Gasto no encontrado");
   }
@@ -448,6 +442,7 @@ export async function processRecurringExpense(id: string) {
         isRecurring: false,
         date: new Date(),
         description: expense.description,
+        userId: userId,
       },
       include: {
         category: true,

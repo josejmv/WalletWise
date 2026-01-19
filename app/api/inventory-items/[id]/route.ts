@@ -6,6 +6,7 @@ import {
   adjustStock,
 } from "../service";
 import { updateInventoryItemSchema, stockAdjustmentSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,8 +14,9 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const item = await getInventoryItemById(id);
+    const item = await getInventoryItemById(id, userId);
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
     const message =
@@ -30,6 +32,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateInventoryItemSchema.safeParse(body);
@@ -41,7 +44,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const item = await updateInventoryItem(id, parsed.data);
+    const item = await updateInventoryItem(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: item });
   } catch (error) {
     const message =
@@ -57,8 +60,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteInventoryItem(id);
+    await deleteInventoryItem(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -74,6 +78,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
 
@@ -85,7 +90,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 400 },
         );
       }
-      const item = await adjustStock(id, parsed.data);
+      const item = await adjustStock(id, parsed.data, userId);
       return NextResponse.json({ success: true, data: item });
     }
 

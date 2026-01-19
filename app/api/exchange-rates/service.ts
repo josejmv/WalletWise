@@ -158,13 +158,14 @@ interface ExchangeAPIResponse {
 
 /**
  * Check if sync is allowed (6 hour cooldown)
+ * Cooldown is user-specific
  */
-export async function checkSyncCooldown(): Promise<{
+export async function checkSyncCooldown(userId: string | null): Promise<{
   canSync: boolean;
   nextSyncAt?: Date;
   lastSyncAt?: Date;
 }> {
-  return canSyncRates();
+  return canSyncRates(userId);
 }
 
 /**
@@ -189,14 +190,15 @@ async function createSyncLog(
 /**
  * Sync rates from official API (er-api.com)
  * Only syncs fiat currencies (USD, COP, VES)
+ * Cooldown is user-specific, but rates are global
  */
-export async function syncFromAPI(): Promise<SyncResult> {
+export async function syncFromAPI(userId: string | null): Promise<SyncResult> {
   const errors: string[] = [];
   let synced = 0;
 
   try {
-    // Check cooldown (separate for official rates)
-    const cooldownCheck = await canSyncOfficialRates();
+    // Check cooldown (separate for official rates, user-specific)
+    const cooldownCheck = await canSyncOfficialRates(userId);
     if (!cooldownCheck.canSync) {
       const nextSync = cooldownCheck.nextSyncAt
         ? cooldownCheck.nextSyncAt.toLocaleString("es-CO")
@@ -312,8 +314,8 @@ export async function syncFromAPI(): Promise<SyncResult> {
       }
     }
 
-    // Update last official sync timestamp
-    await updateLastOfficialSyncAt();
+    // Update last official sync timestamp for this user
+    await updateLastOfficialSyncAt(userId);
 
     // Log sync
     await createSyncLog(
@@ -336,14 +338,15 @@ export async function syncFromAPI(): Promise<SyncResult> {
 /**
  * Sync rates from Binance P2P
  * Syncs crypto/fiat pairs (USDT, BTC, etc. to USD, COP, VES)
+ * Cooldown is user-specific, but rates are global
  */
-export async function syncFromBinance(): Promise<SyncResult> {
+export async function syncFromBinance(userId: string | null): Promise<SyncResult> {
   const errors: string[] = [];
   let synced = 0;
 
   try {
-    // Check cooldown (separate for Binance rates)
-    const cooldownCheck = await canSyncBinanceRates();
+    // Check cooldown (separate for Binance rates, user-specific)
+    const cooldownCheck = await canSyncBinanceRates(userId);
     if (!cooldownCheck.canSync) {
       const nextSync = cooldownCheck.nextSyncAt
         ? cooldownCheck.nextSyncAt.toLocaleString("es-CO")
@@ -435,8 +438,8 @@ export async function syncFromBinance(): Promise<SyncResult> {
       synced++;
     }
 
-    // Update last Binance sync timestamp
-    await updateLastBinanceSyncAt();
+    // Update last Binance sync timestamp for this user
+    await updateLastBinanceSyncAt(userId);
 
     // Log sync
     await createSyncLog(

@@ -17,6 +17,7 @@ export interface TransferWithRelations extends Transfer {
 }
 
 export interface CreateTransferInput {
+  userId?: string | null; // Multi-user support
   type?: TransferType;
   fromAccountId?: string;
   toAccountId?: string;
@@ -47,6 +48,7 @@ export interface UpdateTransferInput {
 }
 
 export interface TransferFilters {
+  userId?: string | null; // Multi-user support
   type?: TransferType;
   fromAccountId?: string;
   toAccountId?: string;

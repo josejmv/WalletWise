@@ -11,6 +11,7 @@ export interface CategoryTree extends Category {
 }
 
 export interface CreateCategoryInput {
+  userId?: string | null; // Multi-user support
   name: string;
   parentId?: string;
   color?: string;
@@ -25,6 +26,7 @@ export interface UpdateCategoryInput {
 }
 
 export interface CategoryFilters {
+  userId?: string | null; // Multi-user support
   parentId?: string | null;
   rootOnly?: boolean;
 }

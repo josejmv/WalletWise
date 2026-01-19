@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 // Schema for bulk consumption
 const consumeSchema = z.object({
@@ -12,8 +13,15 @@ const consumeSchema = z.object({
   ),
 });
 
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) return {};
+  if (userId === null) return { userId: null };
+  return { OR: [{ userId }, { userId: null }] };
+}
+
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const parsed = consumeSchema.safeParse(body);
 
@@ -33,10 +41,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate all items exist and have sufficient stock
+    // Validate all items exist, belong to user, and have sufficient stock
     const itemIds = items.map((i) => i.id);
     const existingItems = await prisma.inventoryItem.findMany({
-      where: { id: { in: itemIds } },
+      where: {
+        id: { in: itemIds },
+        ...buildUserFilter(userId),
+      },
     });
 
     if (existingItems.length !== items.length) {

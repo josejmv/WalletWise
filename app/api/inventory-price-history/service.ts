@@ -6,28 +6,47 @@ export async function getPriceHistory(filters?: PriceHistoryFilters) {
   return repository.findAll(filters);
 }
 
-export async function getPriceHistoryById(id: string) {
-  const entry = await repository.findById(id);
+export async function getPriceHistoryById(id: string, userId?: string | null) {
+  const entry = await repository.findById(id, userId);
   if (!entry) {
     throw new Error("Registro de precio no encontrado");
   }
   return entry;
 }
 
-export async function getPriceHistoryByItem(itemId: string, limit?: number) {
-  const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+export async function getPriceHistoryByItem(
+  itemId: string,
+  limit?: number,
+  userId?: string | null,
+) {
+  // Multi-user: verify item ownership
+  const itemWhere: Record<string, unknown> = { id: itemId };
+  if (userId !== undefined) {
+    itemWhere.OR = [{ userId }, { userId: null }];
+  }
+
+  const item = await prisma.inventoryItem.findFirst({
+    where: itemWhere,
   });
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
 
-  return repository.findByItemId(itemId, limit);
+  return repository.findByItemId(itemId, limit, userId);
 }
 
-export async function createPriceHistory(data: CreatePriceHistoryInput) {
-  const item = await prisma.inventoryItem.findUnique({
-    where: { id: data.itemId },
+export async function createPriceHistory(
+  data: CreatePriceHistoryInput,
+  userId?: string | null,
+) {
+  // Multi-user: verify item ownership
+  const itemWhere: Record<string, unknown> = { id: data.itemId };
+  if (userId !== undefined) {
+    itemWhere.OR = [{ userId }, { userId: null }];
+  }
+
+  const item = await prisma.inventoryItem.findFirst({
+    where: itemWhere,
   });
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
@@ -55,10 +74,17 @@ export async function createPriceHistory(data: CreatePriceHistoryInput) {
 
 export async function createManyPriceHistory(
   entries: CreatePriceHistoryInput[],
+  userId?: string | null,
 ) {
   for (const entry of entries) {
-    const item = await prisma.inventoryItem.findUnique({
-      where: { id: entry.itemId },
+    // Multi-user: verify item ownership
+    const itemWhere: Record<string, unknown> = { id: entry.itemId };
+    if (userId !== undefined) {
+      itemWhere.OR = [{ userId }, { userId: null }];
+    }
+
+    const item = await prisma.inventoryItem.findFirst({
+      where: itemWhere,
     });
     if (!item) {
       throw new Error(`Producto de inventario no encontrado: ${entry.itemId}`);
@@ -87,35 +113,47 @@ export async function createManyPriceHistory(
   return results;
 }
 
-export async function deletePriceHistory(id: string) {
-  const entry = await repository.findById(id);
+export async function deletePriceHistory(id: string, userId?: string | null) {
+  const entry = await repository.findById(id, userId);
   if (!entry) {
     throw new Error("Registro de precio no encontrado");
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }
 
-export async function getLatestPrice(itemId: string) {
-  const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+export async function getLatestPrice(itemId: string, userId?: string | null) {
+  // Multi-user: verify item ownership
+  const itemWhere: Record<string, unknown> = { id: itemId };
+  if (userId !== undefined) {
+    itemWhere.OR = [{ userId }, { userId: null }];
+  }
+
+  const item = await prisma.inventoryItem.findFirst({
+    where: itemWhere,
   });
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
 
-  return repository.getLatestPriceForItem(itemId);
+  return repository.getLatestPriceForItem(itemId, userId);
 }
 
-export async function getPriceStats(itemId: string) {
-  const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+export async function getPriceStats(itemId: string, userId?: string | null) {
+  // Multi-user: verify item ownership
+  const itemWhere: Record<string, unknown> = { id: itemId };
+  if (userId !== undefined) {
+    itemWhere.OR = [{ userId }, { userId: null }];
+  }
+
+  const item = await prisma.inventoryItem.findFirst({
+    where: itemWhere,
   });
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
 
-  const stats = await repository.getPriceStatsForItem(itemId);
+  const stats = await repository.getPriceStatsForItem(itemId, userId);
   if (!stats) {
     return {
       itemId,

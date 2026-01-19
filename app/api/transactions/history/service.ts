@@ -62,6 +62,7 @@ export interface TransactionHistoryFilters {
 }
 
 export async function getTransactionHistory(
+  userId: string | null,
   filters: TransactionHistoryFilters,
 ) {
   const {
@@ -86,10 +87,14 @@ export async function getTransactionHistory(
         }
       : undefined;
 
+  // Build user filter
+  const userFilter = userId ? { OR: [{ userId }, { userId: null }] } : {};
+
   // Fetch incomes
   if (!type || type === "income") {
     const incomes = await prisma.income.findMany({
       where: {
+        ...userFilter,
         ...(accountId && { accountId }),
         ...(currencyId && { currencyId }),
         ...(dateFilter && { date: dateFilter }),
@@ -123,6 +128,7 @@ export async function getTransactionHistory(
   if (!type || type === "expense") {
     const expenses = await prisma.expense.findMany({
       where: {
+        ...userFilter,
         ...(accountId && { accountId }),
         ...(categoryId && { categoryId }),
         ...(currencyId && { currencyId }),
@@ -167,6 +173,7 @@ export async function getTransactionHistory(
   if (!type || type === "transfer") {
     const transferWhereBase = {
       type: "account_to_account" as const,
+      ...userFilter,
       ...(dateFilter && { date: dateFilter }),
     };
 
@@ -213,6 +220,7 @@ export async function getTransactionHistory(
   if (!type || type === "contribution") {
     const contributionWhere = {
       amount: { gt: 0 },
+      ...userFilter,
       ...(dateFilter && { date: dateFilter }),
       ...(accountId && { fromAccountId: accountId }),
     };
@@ -252,6 +260,7 @@ export async function getTransactionHistory(
   if (!type || type === "withdrawal") {
     const withdrawalWhere = {
       amount: { lt: 0 },
+      ...userFilter,
       ...(dateFilter && { date: dateFilter }),
       ...(accountId && { toAccountId: accountId }),
     };

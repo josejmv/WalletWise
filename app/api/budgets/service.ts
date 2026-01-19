@@ -12,12 +12,12 @@ export async function getBudgets(filters?: BudgetFilters) {
   return repository.findAll(filters);
 }
 
-export async function getActiveBudgets() {
-  return repository.findActive();
+export async function getActiveBudgets(userId?: string | null) {
+  return repository.findActive(userId);
 }
 
-export async function getBudgetById(id: string) {
-  const budget = await repository.findById(id);
+export async function getBudgetById(id: string, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -50,8 +50,8 @@ export async function createBudget(data: CreateBudgetInput) {
   return repository.create(data);
 }
 
-export async function updateBudget(id: string, data: UpdateBudgetInput) {
-  const budget = await repository.findById(id);
+export async function updateBudget(id: string, data: UpdateBudgetInput, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -82,20 +82,20 @@ export async function updateBudget(id: string, data: UpdateBudgetInput) {
     }
   }
 
-  return repository.update(id, data);
+  return repository.update(id, data, userId);
 }
 
-export async function deleteBudget(id: string) {
-  const budget = await repository.findById(id);
+export async function deleteBudget(id: string, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }
 
-export async function contributeToBudget(id: string, data: ContributeInput) {
-  const budget = await repository.findById(id);
+export async function contributeToBudget(id: string, data: ContributeInput, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -128,11 +128,12 @@ export async function contributeToBudget(id: string, data: ContributeInput) {
     data.amount,
     data.fromAccountId,
     data.description,
+    userId,
   );
 }
 
-export async function withdrawFromBudget(id: string, data: WithdrawInput) {
-  const budget = await repository.findById(id);
+export async function withdrawFromBudget(id: string, data: WithdrawInput, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -168,11 +169,12 @@ export async function withdrawFromBudget(id: string, data: WithdrawInput) {
     data.amount,
     data.toAccountId,
     data.description,
+    userId,
   );
 }
 
-export async function cancelBudget(id: string) {
-  const budget = await repository.findById(id);
+export async function cancelBudget(id: string, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -181,11 +183,11 @@ export async function cancelBudget(id: string) {
     throw new Error("El presupuesto ya esta cancelado");
   }
 
-  return repository.update(id, { status: "cancelled" });
+  return repository.update(id, { status: "cancelled" }, userId);
 }
 
-export async function reactivateBudget(id: string) {
-  const budget = await repository.findById(id);
+export async function reactivateBudget(id: string, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
@@ -194,14 +196,14 @@ export async function reactivateBudget(id: string) {
     throw new Error("El presupuesto ya esta activo");
   }
 
-  return repository.update(id, { status: "active" });
+  return repository.update(id, { status: "active" }, userId);
 }
 
-export async function getContributions(id: string) {
-  const budget = await repository.findById(id);
+export async function getContributions(id: string, userId?: string | null) {
+  const budget = await repository.findById(id, userId);
   if (!budget) {
     throw new Error("Presupuesto no encontrado");
   }
 
-  return repository.getContributions(id);
+  return repository.getContributions(id, userId);
 }

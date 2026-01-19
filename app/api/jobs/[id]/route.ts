@@ -7,6 +7,7 @@ import {
   activateJob,
 } from "../service";
 import { updateJobSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,8 +15,10 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const job = await getJobById(id);
+    const job = await getJobById(id, userId);
     return NextResponse.json({ success: true, data: job });
   } catch (error) {
     const message =
@@ -29,6 +32,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateJobSchema.safeParse(body);
@@ -40,7 +45,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const job = await updateJob(id, parsed.data);
+    const job = await updateJob(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: job });
   } catch (error) {
     const message =
@@ -54,8 +59,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteJob(id);
+    await deleteJob(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -69,16 +76,18 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
 
     if (body.action === "archive") {
-      const job = await archiveJob(id);
+      const job = await archiveJob(id, userId);
       return NextResponse.json({ success: true, data: job });
     }
 
     if (body.action === "activate") {
-      const job = await activateJob(id);
+      const job = await activateJob(id, userId);
       return NextResponse.json({ success: true, data: job });
     }
 

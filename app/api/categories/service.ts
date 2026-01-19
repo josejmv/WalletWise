@@ -9,27 +9,27 @@ export async function getCategories(filters?: CategoryFilters) {
   return repository.findAll(filters);
 }
 
-export async function getCategoryById(id: string) {
-  const category = await repository.findById(id);
+export async function getCategoryById(id: string, userId?: string | null) {
+  const category = await repository.findById(id, userId);
   if (!category) {
     throw new Error("Categoria no encontrada");
   }
   return category;
 }
 
-export async function getCategoryTree() {
-  return repository.getTree();
+export async function getCategoryTree(userId?: string | null) {
+  return repository.getTree(userId);
 }
 
 export async function createCategory(data: CreateCategoryInput) {
   if (data.parentId) {
-    const parent = await repository.findById(data.parentId);
+    const parent = await repository.findById(data.parentId, data.userId);
     if (!parent) {
       throw new Error("Categoria padre no encontrada");
     }
   }
 
-  const existing = await repository.findByName(data.name, data.parentId);
+  const existing = await repository.findByName(data.name, data.parentId, data.userId);
   if (existing) {
     throw new Error(
       `Ya existe una categoria con el nombre "${data.name}" en este nivel`,
@@ -39,8 +39,8 @@ export async function createCategory(data: CreateCategoryInput) {
   return repository.create(data);
 }
 
-export async function updateCategory(id: string, data: UpdateCategoryInput) {
-  const category = await repository.findById(id);
+export async function updateCategory(id: string, data: UpdateCategoryInput, userId?: string | null) {
+  const category = await repository.findById(id, userId);
   if (!category) {
     throw new Error("Categoria no encontrada");
   }
@@ -50,7 +50,7 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
   }
 
   if (data.parentId) {
-    const parent = await repository.findById(data.parentId);
+    const parent = await repository.findById(data.parentId, userId);
     if (!parent) {
       throw new Error("Categoria padre no encontrada");
     }
@@ -59,7 +59,7 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
   if (data.name && data.name !== category.name) {
     const parentId =
       data.parentId !== undefined ? data.parentId : category.parentId;
-    const existing = await repository.findByName(data.name, parentId);
+    const existing = await repository.findByName(data.name, parentId, userId);
     if (existing && existing.id !== id) {
       throw new Error(
         `Ya existe una categoria con el nombre "${data.name}" en este nivel`,
@@ -67,11 +67,11 @@ export async function updateCategory(id: string, data: UpdateCategoryInput) {
     }
   }
 
-  return repository.update(id, data);
+  return repository.update(id, data, userId);
 }
 
-export async function deleteCategory(id: string) {
-  const category = await repository.findById(id);
+export async function deleteCategory(id: string, userId?: string | null) {
+  const category = await repository.findById(id, userId);
   if (!category) {
     throw new Error("Categoria no encontrada");
   }
@@ -82,5 +82,5 @@ export async function deleteCategory(id: string) {
     );
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }

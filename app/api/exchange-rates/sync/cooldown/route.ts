@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { checkSyncCooldown } from "../../service";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
-    const status = await checkSyncCooldown();
+    const userId = await getUserIdForApi();
+    const status = await checkSyncCooldown(userId);
     return NextResponse.json({ success: true, data: status });
   } catch (error) {
     const message =

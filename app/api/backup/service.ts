@@ -21,7 +21,12 @@ export interface BackupData {
   };
 }
 
-export async function exportAllData(): Promise<BackupData> {
+export async function exportAllData(
+  userId: string | null
+): Promise<BackupData> {
+  // Build user filter for multi-user support
+  const userFilter = userId ? { OR: [{ userId }, { userId: null }] } : {};
+
   const [
     currencies,
     accountTypes,
@@ -38,20 +43,20 @@ export async function exportAllData(): Promise<BackupData> {
     inventoryPriceHistory,
     exchangeRates,
   ] = await Promise.all([
-    prisma.currency.findMany(),
-    prisma.accountType.findMany(),
-    prisma.category.findMany(),
-    prisma.inventoryCategory.findMany(),
-    prisma.account.findMany(),
-    prisma.job.findMany(),
-    prisma.income.findMany(),
-    prisma.expense.findMany(),
-    prisma.transfer.findMany(),
-    prisma.budget.findMany(),
-    prisma.budgetContribution.findMany(),
-    prisma.inventoryItem.findMany(),
-    prisma.inventoryPriceHistory.findMany(),
-    prisma.exchangeRate.findMany(),
+    prisma.currency.findMany({ where: userFilter }),
+    prisma.accountType.findMany({ where: userFilter }),
+    prisma.category.findMany({ where: userFilter }),
+    prisma.inventoryCategory.findMany({ where: userFilter }),
+    prisma.account.findMany({ where: userFilter }),
+    prisma.job.findMany({ where: userFilter }),
+    prisma.income.findMany({ where: userFilter }),
+    prisma.expense.findMany({ where: userFilter }),
+    prisma.transfer.findMany({ where: userFilter }),
+    prisma.budget.findMany({ where: userFilter }),
+    prisma.budgetContribution.findMany({ where: userFilter }),
+    prisma.inventoryItem.findMany({ where: userFilter }),
+    prisma.inventoryPriceHistory.findMany({ where: userFilter }),
+    prisma.exchangeRate.findMany({ where: userFilter }),
   ]);
 
   return {
@@ -76,7 +81,10 @@ export async function exportAllData(): Promise<BackupData> {
   };
 }
 
-export async function importAllData(backup: BackupData): Promise<{
+export async function importAllData(
+  backup: BackupData,
+  userId: string | null
+): Promise<{
   imported: Record<string, number>;
   errors: string[];
 }> {

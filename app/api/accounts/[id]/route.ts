@@ -7,6 +7,7 @@ import {
   getAccountWithBlockedBalance,
 } from "../service";
 import { updateAccountSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -14,16 +15,18 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const withBlocked = searchParams.get("withBlocked");
 
     if (withBlocked === "true") {
-      const account = await getAccountWithBlockedBalance(id);
+      const account = await getAccountWithBlockedBalance(id, userId);
       return NextResponse.json({ success: true, data: account });
     }
 
-    const account = await getAccountById(id);
+    const account = await getAccountById(id, userId);
     return NextResponse.json({ success: true, data: account });
   } catch (error) {
     const message =
@@ -37,6 +40,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateAccountSchema.safeParse(body);
@@ -48,7 +53,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const account = await updateAccount(id, parsed.data);
+    const account = await updateAccount(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: account });
   } catch (error) {
     const message =
@@ -62,8 +67,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteAccount(id);
+    await deleteAccount(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -77,11 +84,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
 
     if (body.adjustBalance !== undefined) {
-      const account = await adjustBalance(id, body.adjustBalance);
+      const account = await adjustBalance(id, body.adjustBalance, userId);
       return NextResponse.json({ success: true, data: account });
     }
 

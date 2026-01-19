@@ -6,9 +6,13 @@ import {
   getTotalMonthlyIncome,
 } from "./service";
 import { createJobSchema } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const status = searchParams.get("status");
@@ -18,25 +22,24 @@ export async function GET(request: Request) {
     const monthlyTotal = searchParams.get("monthlyTotal");
 
     if (monthlyTotal === "true") {
-      const total = await getTotalMonthlyIncome();
+      const total = await getTotalMonthlyIncome(userId);
       return NextResponse.json({ success: true, data: { total } });
     }
 
     if (activeOnly === "true") {
-      const jobs = await getActiveJobs();
+      const jobs = await getActiveJobs(userId);
       return NextResponse.json({ success: true, data: jobs });
     }
 
     const filters = {
+      userId, // Multi-user: filter by userId
       ...(type && { type: type as "fixed" | "freelance" }),
       ...(status && { status: status as "active" | "archived" | "pending" }),
       ...(currencyId && { currencyId }),
       ...(accountId && { accountId }),
     };
 
-    const jobs = await getJobs(
-      Object.keys(filters).length > 0 ? filters : undefined,
-    );
+    const jobs = await getJobs(filters);
 
     return NextResponse.json({ success: true, data: jobs });
   } catch {
@@ -49,6 +52,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const body = await request.json();
     const parsed = createJobSchema.safeParse(body);
 
@@ -59,7 +65,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const job = await createJob(parsed.data);
+    // Multi-user: add userId to create data
+    const job = await createJob({
+      ...parsed.data,
+      userId,
+    });
     return NextResponse.json({ success: true, data: job }, { status: 201 });
   } catch (error) {
     const message =

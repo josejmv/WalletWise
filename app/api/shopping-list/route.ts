@@ -7,9 +7,11 @@ import {
   markItemPurchased,
 } from "./service";
 import { generateShoppingListSchema } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view");
     const categoryIds = searchParams.get("categoryIds");
@@ -18,15 +20,15 @@ export async function GET(request: Request) {
 
     switch (view) {
       case "low-stock":
-        const lowStock = await getLowStockItems();
+        const lowStock = await getLowStockItems(userId);
         return NextResponse.json({ success: true, data: lowStock });
 
       case "by-category":
-        const byCategory = await getShoppingListByCategory();
+        const byCategory = await getShoppingListByCategory(userId);
         return NextResponse.json({ success: true, data: byCategory });
 
       case "summary":
-        const summary = await getShoppingListSummary();
+        const summary = await getShoppingListSummary(userId);
         return NextResponse.json({ success: true, data: summary });
 
       default:
@@ -39,6 +41,7 @@ export async function GET(request: Request) {
         };
 
         const list = await generateShoppingList(
+          userId,
           Object.keys(input).length > 0 ? input : undefined,
         );
         return NextResponse.json({ success: true, data: list });
@@ -57,6 +60,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
 
     // Check if it's a mark-purchased action
@@ -68,7 +72,7 @@ export async function POST(request: Request) {
         );
       }
 
-      await markItemPurchased(body.itemId, body.quantity);
+      await markItemPurchased(userId, body.itemId, body.quantity);
       return NextResponse.json({
         success: true,
         data: { message: "Producto marcado como comprado" },
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const list = await generateShoppingList(parsed.data);
+    const list = await generateShoppingList(userId, parsed.data);
     return NextResponse.json({ success: true, data: list }, { status: 201 });
   } catch (error) {
     const message =

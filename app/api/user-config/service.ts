@@ -1,9 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { buildUserFilter } from "@/lib/auth-helpers";
 import type { UpdateUserConfigInput } from "./schema";
 
-export async function getUserConfig() {
-  // Get the first (and only) config entry
+export async function getUserConfig(userId: string | null) {
+  // Get the config entry for this user
   let config = await prisma.userConfig.findFirst({
+    where: buildUserFilter(userId),
     include: {
       baseCurrency: true,
     },
@@ -21,6 +23,7 @@ export async function getUserConfig() {
 
     config = await prisma.userConfig.create({
       data: {
+        ...(userId && { userId }),
         baseCurrencyId: usdCurrency.id,
         dateFormat: "DD/MM/YYYY",
         numberFormat: "es-CO",
@@ -36,8 +39,8 @@ export async function getUserConfig() {
   return config;
 }
 
-export async function updateUserConfig(data: UpdateUserConfigInput) {
-  const config = await getUserConfig();
+export async function updateUserConfig(userId: string | null, data: UpdateUserConfigInput) {
+  const config = await getUserConfig(userId);
 
   // Validate baseCurrencyId if provided
   if (data.baseCurrencyId) {
@@ -67,8 +70,8 @@ export async function updateUserConfig(data: UpdateUserConfigInput) {
 }
 
 // Legacy function - updates both timestamps for backwards compatibility
-export async function updateLastRateSyncAt() {
-  const config = await getUserConfig();
+export async function updateLastRateSyncAt(userId: string | null) {
+  const config = await getUserConfig(userId);
 
   return prisma.userConfig.update({
     where: { id: config.id },
@@ -79,8 +82,8 @@ export async function updateLastRateSyncAt() {
 }
 
 // Update official API sync timestamp
-export async function updateLastOfficialSyncAt() {
-  const config = await getUserConfig();
+export async function updateLastOfficialSyncAt(userId: string | null) {
+  const config = await getUserConfig(userId);
 
   return prisma.userConfig.update({
     where: { id: config.id },
@@ -92,8 +95,8 @@ export async function updateLastOfficialSyncAt() {
 }
 
 // Update Binance P2P sync timestamp
-export async function updateLastBinanceSyncAt() {
-  const config = await getUserConfig();
+export async function updateLastBinanceSyncAt(userId: string | null) {
+  const config = await getUserConfig(userId);
 
   return prisma.userConfig.update({
     where: { id: config.id },
@@ -105,12 +108,12 @@ export async function updateLastBinanceSyncAt() {
 }
 
 // Legacy function - checks general cooldown (uses most recent sync)
-export async function canSyncRates(): Promise<{
+export async function canSyncRates(userId: string | null): Promise<{
   canSync: boolean;
   nextSyncAt?: Date;
   lastSyncAt?: Date;
 }> {
-  const config = await getUserConfig();
+  const config = await getUserConfig(userId);
 
   if (!config.lastRateSyncAt) {
     return { canSync: true };
@@ -134,12 +137,12 @@ export async function canSyncRates(): Promise<{
 }
 
 // Check if official API sync is allowed (separate 6h cooldown)
-export async function canSyncOfficialRates(): Promise<{
+export async function canSyncOfficialRates(userId: string | null): Promise<{
   canSync: boolean;
   nextSyncAt?: Date;
   lastSyncAt?: Date;
 }> {
-  const config = await getUserConfig();
+  const config = await getUserConfig(userId);
 
   if (!config.lastOfficialSyncAt) {
     return { canSync: true };
@@ -163,12 +166,12 @@ export async function canSyncOfficialRates(): Promise<{
 }
 
 // Check if Binance P2P sync is allowed (separate 6h cooldown)
-export async function canSyncBinanceRates(): Promise<{
+export async function canSyncBinanceRates(userId: string | null): Promise<{
   canSync: boolean;
   nextSyncAt?: Date;
   lastSyncAt?: Date;
 }> {
-  const config = await getUserConfig();
+  const config = await getUserConfig(userId);
 
   if (!config.lastBinanceSyncAt) {
     return { canSync: true };

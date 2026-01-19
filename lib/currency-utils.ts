@@ -367,10 +367,18 @@ export async function convertAmountByCode(
 
 /**
  * Get user's base currency ID
+ * @param userId - Optional user ID for multi-user support
  */
-export async function getUserBaseCurrencyId(): Promise<string> {
+export async function getUserBaseCurrencyId(userId?: string | null): Promise<string> {
+  // Build user filter for multi-user support
+  const userFilter = userId
+    ? { OR: [{ userId }, { userId: null }] }
+    : {};
+
   const config = await prisma.userConfig.findFirst({
+    where: userFilter,
     select: { baseCurrencyId: true },
+    orderBy: { userId: "desc" }, // Prefer user-specific config
   });
 
   if (config) {
@@ -402,10 +410,18 @@ export async function getUserBaseCurrencyId(): Promise<string> {
 
 /**
  * Get user's base currency with full info
+ * @param userId - Optional user ID for multi-user support
  */
-export async function getUserBaseCurrency() {
+export async function getUserBaseCurrency(userId?: string | null) {
+  // Build user filter for multi-user support
+  const userFilter = userId
+    ? { OR: [{ userId }, { userId: null }] }
+    : {};
+
   const config = await prisma.userConfig.findFirst({
+    where: userFilter,
     include: { baseCurrency: true },
+    orderBy: { userId: "desc" }, // Prefer user-specific config
   });
 
   if (config) {

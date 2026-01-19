@@ -6,9 +6,11 @@ import {
   getShoppingList,
 } from "./service";
 import { createInventoryItemSchema } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
     const currencyId = searchParams.get("currencyId");
@@ -17,12 +19,12 @@ export async function GET(request: Request) {
     const shoppingList = searchParams.get("shoppingList");
 
     if (shoppingList === "true") {
-      const list = await getShoppingList();
+      const list = await getShoppingList(userId);
       return NextResponse.json({ success: true, data: list });
     }
 
     if (lowStock === "true") {
-      const items = await getLowStockItems();
+      const items = await getLowStockItems(userId);
       return NextResponse.json({ success: true, data: items });
     }
 
@@ -34,6 +36,7 @@ export async function GET(request: Request) {
 
     const items = await getInventoryItems(
       Object.keys(filters).length > 0 ? filters : undefined,
+      userId,
     );
 
     return NextResponse.json({ success: true, data: items });
@@ -47,6 +50,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const parsed = createInventoryItemSchema.safeParse(body);
 
@@ -57,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const item = await createInventoryItem(parsed.data);
+    const item = await createInventoryItem(parsed.data, userId);
     return NextResponse.json({ success: true, data: item }, { status: 201 });
   } catch (error) {
     const message =

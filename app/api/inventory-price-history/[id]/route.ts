@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPriceHistoryById, deletePriceHistory } from "../service";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -7,8 +8,10 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const entry = await getPriceHistoryById(id);
+    const entry = await getPriceHistoryById(id, userId);
     return NextResponse.json({ success: true, data: entry });
   } catch (error) {
     const message =
@@ -24,8 +27,10 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deletePriceHistory(id);
+    await deletePriceHistory(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =

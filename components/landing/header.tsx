@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Wallet } from "lucide-react";
 
 export function Header() {
+  const { data: session, status } = useSession();
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -34,9 +37,24 @@ export function Header() {
           </Link>
         </nav>
 
-        <Button asChild>
-          <Link href="/login">Iniciar Sesion</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {status === "loading" ? (
+            <div className="h-9 w-20 animate-pulse rounded-md bg-muted" />
+          ) : session ? (
+            <Button asChild>
+              <Link href="/dashboard">Ir al Dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost">
+                <Link href="/login">Iniciar Sesion</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/register">Registrarse</Link>
+              </Button>
+            </>
+          )}
+        </div>
       </div>
     </header>
   );

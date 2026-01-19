@@ -6,6 +6,7 @@ import {
   generateIncomeFromJob,
 } from "../service";
 import { updateIncomeSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,8 +14,10 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const income = await getIncomeById(id);
+    const income = await getIncomeById(id, userId);
     return NextResponse.json({ success: true, data: income });
   } catch (error) {
     const message =
@@ -28,6 +31,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateIncomeSchema.safeParse(body);
@@ -39,7 +44,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const income = await updateIncome(id, parsed.data);
+    const income = await updateIncome(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: income });
   } catch (error) {
     const message =
@@ -53,8 +58,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteIncome(id);
+    await deleteIncome(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -68,12 +75,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
 
     if (action === "generate-from-job") {
-      const income = await generateIncomeFromJob(id);
+      const income = await generateIncomeFromJob(id, userId);
       return NextResponse.json(
         { success: true, data: income },
         { status: 201 },

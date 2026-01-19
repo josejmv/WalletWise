@@ -11,6 +11,7 @@ export interface IncomeWithRelations extends Income {
 
 // jobId is optional for extra incomes
 export interface CreateIncomeInput {
+  userId?: string | null; // Multi-user support
   jobId?: string | null;
   accountId: string;
   amount: number;
@@ -43,6 +44,7 @@ export interface UpdateIncomeInput {
 }
 
 export interface IncomeFilters {
+  userId?: string | null; // Multi-user support
   jobId?: string;
   accountId?: string;
   currencyId?: string;

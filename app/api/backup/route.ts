@@ -5,13 +5,15 @@ import {
   convertToCSV,
   type BackupData,
 } from "./service";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "json";
 
-    const backup = await exportAllData();
+    const backup = await exportAllData(userId);
 
     if (format === "csv") {
       const csv = convertToCSV(backup);
@@ -46,6 +48,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
 
     // Validate backup structure
@@ -60,7 +63,7 @@ export async function POST(request: Request) {
     }
 
     const backup = body as BackupData;
-    const result = await importAllData(backup);
+    const result = await importAllData(backup, userId);
 
     if (result.errors.length > 0) {
       return NextResponse.json(

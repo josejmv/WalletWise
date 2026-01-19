@@ -7,19 +7,28 @@ import type {
   StockAdjustment,
 } from "./types";
 
-export async function getInventoryItems(filters?: InventoryItemFilters) {
-  return repository.findAll(filters);
+export async function getInventoryItems(
+  filters?: InventoryItemFilters,
+  userId?: string | null,
+) {
+  return repository.findAll({ ...filters, userId });
 }
 
-export async function getInventoryItemById(id: string) {
-  const item = await repository.findById(id);
+export async function getInventoryItemById(
+  id: string,
+  userId?: string | null,
+) {
+  const item = await repository.findById(id, userId);
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
   return item;
 }
 
-export async function createInventoryItem(data: CreateInventoryItemInput) {
+export async function createInventoryItem(
+  data: CreateInventoryItemInput,
+  userId?: string | null,
+) {
   // Only validate categoryId if it's provided (not null/undefined)
   if (data.categoryId) {
     const category = await prisma.inventoryCategory.findUnique({
@@ -43,14 +52,15 @@ export async function createInventoryItem(data: CreateInventoryItemInput) {
     );
   }
 
-  return repository.create(data);
+  return repository.create({ ...data, userId });
 }
 
 export async function updateInventoryItem(
   id: string,
   data: UpdateInventoryItemInput,
+  userId?: string | null,
 ) {
-  const item = await repository.findById(id);
+  const item = await repository.findById(id, userId);
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
@@ -82,20 +92,27 @@ export async function updateInventoryItem(
     );
   }
 
-  return repository.update(id, data);
+  return repository.update(id, data, userId);
 }
 
-export async function deleteInventoryItem(id: string) {
-  const item = await repository.findById(id);
+export async function deleteInventoryItem(
+  id: string,
+  userId?: string | null,
+) {
+  const item = await repository.findById(id, userId);
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }
 
-export async function adjustStock(id: string, adjustment: StockAdjustment) {
-  const item = await repository.findById(id);
+export async function adjustStock(
+  id: string,
+  adjustment: StockAdjustment,
+  userId?: string | null,
+) {
+  const item = await repository.findById(id, userId);
   if (!item) {
     throw new Error("Producto de inventario no encontrado");
   }
@@ -109,13 +126,18 @@ export async function adjustStock(id: string, adjustment: StockAdjustment) {
     }
   }
 
-  return repository.adjustStock(id, adjustment.quantity, adjustment.operation);
+  return repository.adjustStock(
+    id,
+    adjustment.quantity,
+    adjustment.operation,
+    userId,
+  );
 }
 
-export async function getLowStockItems() {
-  return repository.getLowStockItems();
+export async function getLowStockItems(userId?: string | null) {
+  return repository.getLowStockItems(userId);
 }
 
-export async function getShoppingList() {
-  return repository.getShoppingList();
+export async function getShoppingList(userId?: string | null) {
+  return repository.getShoppingList(userId);
 }

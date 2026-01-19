@@ -16,6 +16,7 @@ export interface BudgetWithRelations extends Budget {
 }
 
 export interface CreateBudgetInput {
+  userId?: string | null; // Multi-user support
   name: string;
   type: BudgetType;
   // targetAmount is optional (budgets without goal)
@@ -40,6 +41,7 @@ export interface UpdateBudgetInput {
 }
 
 export interface BudgetFilters {
+  userId?: string | null; // Multi-user support
   type?: BudgetType;
   status?: BudgetStatus;
   currencyId?: string;

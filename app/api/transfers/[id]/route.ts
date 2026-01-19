@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTransferById, updateTransfer, deleteTransfer } from "../service";
 import { updateTransferSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -8,8 +9,10 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const transfer = await getTransferById(id);
+    const transfer = await getTransferById(id, userId);
     return NextResponse.json({ success: true, data: transfer });
   } catch (error) {
     const message =
@@ -23,6 +26,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateTransferSchema.safeParse(body);
@@ -34,7 +39,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const transfer = await updateTransfer(id, parsed.data);
+    const transfer = await updateTransfer(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: transfer });
   } catch (error) {
     const message =
@@ -50,8 +55,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteTransfer(id);
+    await deleteTransfer(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =

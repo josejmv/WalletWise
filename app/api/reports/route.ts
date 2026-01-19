@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 import {
   getMonthlyReport,
   getCategoryReport,
@@ -10,6 +11,8 @@ import {
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
+
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type");
     const year = searchParams.get("year");
@@ -27,28 +30,31 @@ export async function GET(request: Request) {
       case "monthly":
         const reportYear = year ? parseInt(year) : new Date().getFullYear();
         const reportMonth = month ? parseInt(month) : new Date().getMonth() + 1;
-        const monthlyReport = await getMonthlyReport(reportYear, reportMonth);
+        const monthlyReport = await getMonthlyReport(userId, reportYear, reportMonth);
         return NextResponse.json({ success: true, data: monthlyReport });
 
       case "category":
         const categoryReport = await getCategoryReport(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: categoryReport });
 
       case "account":
         const accountReport = await getAccountReport(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: accountReport });
 
       case "budget":
-        const budgetReport = await getBudgetReport();
+        const budgetReport = await getBudgetReport(userId);
         return NextResponse.json({ success: true, data: budgetReport });
 
       case "export":
         const exportFormat = format || "json";
         const exportData = await exportTransactions(
+          userId,
           exportFormat,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
@@ -71,6 +77,7 @@ export async function GET(request: Request) {
 
       default:
         const summary = await getFinancialSummary(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: summary });

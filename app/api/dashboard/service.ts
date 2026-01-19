@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
+import { buildUserFilter } from "@/lib/auth-helpers";
 import {
-  getUserBaseCurrencyId,
-  getUserBaseCurrency,
   convertManyToBaseCurrency,
   convertManyWithCustomRates,
   calculateSavings,
 } from "@/lib/currency-utils";
+import { getUserConfig } from "@/app/api/user-config/service";
 import type {
   DashboardKPIs,
   BalanceByAccount,
@@ -19,7 +19,20 @@ import type {
   SavingsData,
 } from "./types";
 
+// Helper to get user's base currency ID
+async function getUserBaseCurrencyId(userId: string | null): Promise<string> {
+  const config = await getUserConfig(userId);
+  return config.baseCurrencyId;
+}
+
+// Helper to get user's base currency with full info
+async function getUserBaseCurrency(userId: string | null) {
+  const config = await getUserConfig(userId);
+  return config.baseCurrency;
+}
+
 export async function getKPIs(
+  userId: string | null,
   filters?: DashboardFilters,
 ): Promise<DashboardKPIs> {
   const dateFilter = {
@@ -28,27 +41,34 @@ export async function getKPIs(
   };
 
   // Get user's base currency for conversions
-  const baseCurrencyId = await getUserBaseCurrencyId();
+  const baseCurrencyId = await getUserBaseCurrencyId(userId);
+
+  // Build user filter for multi-user support
+  const userFilter = buildUserFilter(userId);
 
   const [accounts, incomes, expenses, activeJobs, activeBudgets] =
     await Promise.all([
       prisma.account.findMany({
-        where: { isActive: true },
+        where: { ...userFilter, isActive: true },
         select: { id: true, balance: true, currencyId: true },
       }),
       prisma.income.findMany({
-        where:
-          Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+        where: {
+          ...userFilter,
+          ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+        },
         select: { id: true, amount: true, currencyId: true },
       }),
       // Include customRate for expense conversion
       prisma.expense.findMany({
-        where:
-          Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+        where: {
+          ...userFilter,
+          ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+        },
         select: { id: true, amount: true, currencyId: true, customRate: true },
       }),
-      prisma.job.count({ where: { status: "active" } }),
-      prisma.budget.count({ where: { status: "active" } }),
+      prisma.job.count({ where: { ...userFilter, status: "active" } }),
+      prisma.budget.count({ where: { ...userFilter, status: "active" } }),
     ]);
 
   // Convert all amounts to base currency
@@ -97,18 +117,18 @@ export async function getKPIs(
   };
 }
 
-export async function getBalanceByAccount(): Promise<BalanceByAccount[]> {
+export async function getBalanceByAccount(userId: string | null): Promise<BalanceByAccount[]> {
   // Include conversion to USD for proper comparison
   const [accounts, baseCurrencyId] = await Promise.all([
     prisma.account.findMany({
-      where: { isActive: true },
+      where: { ...buildUserFilter(userId), isActive: true },
       include: {
         accountType: true,
         currency: true,
       },
       orderBy: { balance: "desc" },
     }),
-    getUserBaseCurrencyId(),
+    getUserBaseCurrencyId(userId),
   ]);
 
   // Convert all balances to base currency (USD)
@@ -138,13 +158,13 @@ export async function getBalanceByAccount(): Promise<BalanceByAccount[]> {
   return sortedAccounts;
 }
 
-export async function getBalanceByCurrency(): Promise<BalanceByCurrency[]> {
+export async function getBalanceByCurrency(userId: string | null): Promise<BalanceByCurrency[]> {
   const [accounts, baseCurrencyId] = await Promise.all([
     prisma.account.findMany({
-      where: { isActive: true },
+      where: { ...buildUserFilter(userId), isActive: true },
       include: { currency: true },
     }),
-    getUserBaseCurrencyId(),
+    getUserBaseCurrencyId(userId),
   ]);
 
   const byCurrency = new Map<
@@ -182,6 +202,7 @@ export async function getBalanceByCurrency(): Promise<BalanceByCurrency[]> {
 }
 
 export async function getExpensesByCategory(
+  userId: string | null,
   filters?: DashboardFilters,
 ): Promise<ExpensesByCategory[]> {
   const dateFilter = {
@@ -193,8 +214,10 @@ export async function getExpensesByCategory(
   // Also include parent category info to group by parent/singleton categories
   const [expenses, baseCurrencyId] = await Promise.all([
     prisma.expense.findMany({
-      where:
-        Object.keys(dateFilter).length > 0 ? { date: dateFilter } : undefined,
+      where: {
+        ...buildUserFilter(userId),
+        ...(Object.keys(dateFilter).length > 0 ? { date: dateFilter } : {}),
+      },
       select: {
         id: true,
         amount: true,
@@ -211,7 +234,7 @@ export async function getExpensesByCategory(
         },
       },
     }),
-    getUserBaseCurrencyId(),
+    getUserBaseCurrencyId(userId),
   ]);
 
   // Use custom rates for expense conversion when available
@@ -268,21 +291,24 @@ export async function getExpensesByCategory(
 }
 
 export async function getMonthlyTrend(
+  userId: string | null,
   months: number = 6,
 ): Promise<MonthlyTrend[]> {
   const now = new Date();
   const startDate = new Date(now.getFullYear(), now.getMonth() - months + 1, 1);
 
+  const userFilter = buildUserFilter(userId);
+
   const [incomes, expenses, baseCurrencyId] = await Promise.all([
     prisma.income.findMany({
-      where: { date: { gte: startDate } },
+      where: { ...userFilter, date: { gte: startDate } },
       select: { id: true, date: true, amount: true, currencyId: true },
     }),
     prisma.expense.findMany({
-      where: { date: { gte: startDate } },
+      where: { ...userFilter, date: { gte: startDate } },
       select: { id: true, date: true, amount: true, currencyId: true },
     }),
-    getUserBaseCurrencyId(),
+    getUserBaseCurrencyId(userId),
   ]);
 
   // Convert all amounts to base currency
@@ -342,9 +368,9 @@ export async function getMonthlyTrend(
     .sort((a, b) => a.month.localeCompare(b.month));
 }
 
-export async function getBudgetProgress(): Promise<BudgetProgress[]> {
+export async function getBudgetProgress(userId: string | null): Promise<BudgetProgress[]> {
   const budgets = await prisma.budget.findMany({
-    where: { status: "active" },
+    where: { ...buildUserFilter(userId), status: "active" },
     orderBy: { createdAt: "desc" },
   });
 
@@ -364,6 +390,7 @@ export async function getBudgetProgress(): Promise<BudgetProgress[]> {
 }
 
 export async function getRecentTransactions(
+  userId: string | null,
   limit: number = 10,
 ): Promise<RecentTransaction[]> {
   // Get transactions created today or yesterday (based on createdAt, not date)
@@ -374,15 +401,17 @@ export async function getRecentTransactions(
     now.getDate() - 1,
   );
 
+  const userFilter = buildUserFilter(userId);
+
   const [incomes, expenses, transfers, contributions] = await Promise.all([
     prisma.income.findMany({
-      where: { createdAt: { gte: startOfYesterday } },
+      where: { ...userFilter, createdAt: { gte: startOfYesterday } },
       take: limit,
       orderBy: { createdAt: "desc" },
       include: { currency: true, account: true },
     }),
     prisma.expense.findMany({
-      where: { createdAt: { gte: startOfYesterday } },
+      where: { ...userFilter, createdAt: { gte: startOfYesterday } },
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
@@ -392,13 +421,13 @@ export async function getRecentTransactions(
       },
     }),
     prisma.transfer.findMany({
-      where: { createdAt: { gte: startOfYesterday } },
+      where: { ...userFilter, createdAt: { gte: startOfYesterday } },
       take: limit,
       orderBy: { createdAt: "desc" },
       include: { currency: true, fromAccount: true },
     }),
     prisma.budgetContribution.findMany({
-      where: { createdAt: { gte: startOfYesterday } },
+      where: { ...userFilter, createdAt: { gte: startOfYesterday } },
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
@@ -484,6 +513,7 @@ export async function getRecentTransactions(
 }
 
 export async function getDashboardSummary(
+  userId: string | null,
   filters?: DashboardFilters,
 ): Promise<DashboardSummary> {
   const [
@@ -495,13 +525,13 @@ export async function getDashboardSummary(
     budgetProgress,
     recentTransactions,
   ] = await Promise.all([
-    getKPIs(filters),
-    getBalanceByAccount(),
-    getBalanceByCurrency(),
-    getExpensesByCategory(filters),
-    getMonthlyTrend(),
-    getBudgetProgress(),
-    getRecentTransactions(),
+    getKPIs(userId, filters),
+    getBalanceByAccount(userId),
+    getBalanceByCurrency(userId),
+    getExpensesByCategory(userId, filters),
+    getMonthlyTrend(userId),
+    getBudgetProgress(userId),
+    getRecentTransactions(userId),
   ]);
 
   return {
@@ -536,7 +566,7 @@ export async function getDashboardSummary(
  *
  * PERIODO: Solo mes actual
  */
-export async function getSavingsData(): Promise<SavingsData> {
+export async function getSavingsData(userId: string | null): Promise<SavingsData> {
   // Filter by current month
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -547,10 +577,13 @@ export async function getSavingsData(): Promise<SavingsData> {
     lte: endOfMonth,
   };
 
+  const userFilter = buildUserFilter(userId);
+
   // Include incomes, expenses, and transfers with custom rates
   const [incomes, expenses, transfers, baseCurrency] = await Promise.all([
     prisma.income.findMany({
       where: {
+        ...userFilter,
         date: dateFilter,
         AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
@@ -563,6 +596,7 @@ export async function getSavingsData(): Promise<SavingsData> {
     }),
     prisma.expense.findMany({
       where: {
+        ...userFilter,
         date: dateFilter,
         AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
@@ -575,6 +609,7 @@ export async function getSavingsData(): Promise<SavingsData> {
     }),
     prisma.transfer.findMany({
       where: {
+        ...userFilter,
         date: dateFilter,
         AND: [{ officialRate: { not: null } }, { customRate: { not: null } }],
       },
@@ -585,7 +620,7 @@ export async function getSavingsData(): Promise<SavingsData> {
         customRate: true,
       },
     }),
-    getUserBaseCurrency(),
+    getUserBaseCurrency(userId),
   ]);
 
   // Calculate savings for EXPENSES

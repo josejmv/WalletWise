@@ -6,12 +6,12 @@ export async function getJobs(filters?: JobFilters) {
   return repository.findAll(filters);
 }
 
-export async function getActiveJobs() {
-  return repository.findActive();
+export async function getActiveJobs(userId?: string | null) {
+  return repository.findActive(userId);
 }
 
-export async function getJobById(id: string) {
-  const job = await repository.findById(id);
+export async function getJobById(id: string, userId?: string | null) {
+  const job = await repository.findById(id, userId);
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
@@ -44,8 +44,8 @@ export async function createJob(data: CreateJobInput) {
   return repository.create(data);
 }
 
-export async function updateJob(id: string, data: UpdateJobInput) {
-  const job = await repository.findById(id);
+export async function updateJob(id: string, data: UpdateJobInput, userId?: string | null) {
+  const job = await repository.findById(id, userId);
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
@@ -75,11 +75,11 @@ export async function updateJob(id: string, data: UpdateJobInput) {
     throw new Error("El dia de pago es requerido para trabajos recurrentes");
   }
 
-  return repository.update(id, data);
+  return repository.update(id, data, userId);
 }
 
-export async function deleteJob(id: string) {
-  const job = await repository.findById(id);
+export async function deleteJob(id: string, userId?: string | null) {
+  const job = await repository.findById(id, userId);
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
@@ -90,11 +90,11 @@ export async function deleteJob(id: string) {
     );
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }
 
-export async function archiveJob(id: string) {
-  const job = await repository.findById(id);
+export async function archiveJob(id: string, userId?: string | null) {
+  const job = await repository.findById(id, userId);
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
@@ -103,11 +103,11 @@ export async function archiveJob(id: string) {
     throw new Error("El trabajo ya esta archivado");
   }
 
-  return repository.archive(id);
+  return repository.archive(id, userId);
 }
 
-export async function activateJob(id: string) {
-  const job = await repository.findById(id);
+export async function activateJob(id: string, userId?: string | null) {
+  const job = await repository.findById(id, userId);
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
@@ -116,9 +116,9 @@ export async function activateJob(id: string) {
     throw new Error("El trabajo ya esta activo");
   }
 
-  return repository.activate(id);
+  return repository.activate(id, userId);
 }
 
-export async function getTotalMonthlyIncome() {
-  return repository.getTotalMonthlyIncome();
+export async function getTotalMonthlyIncome(userId?: string | null) {
+  return repository.getTotalMonthlyIncome(userId);
 }

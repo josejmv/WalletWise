@@ -21,10 +21,12 @@ function calculatePriority(
 }
 
 export async function generateShoppingList(
+  userId: string | null,
   input?: GenerateShoppingListInput,
 ): Promise<ShoppingList> {
   const where: Record<string, unknown> = {
     isActive: true,
+    ...(userId ? { OR: [{ userId }, { userId: null }] } : {}),
   };
 
   if (input?.categoryIds && input.categoryIds.length > 0) {
@@ -114,10 +116,13 @@ export async function generateShoppingList(
   };
 }
 
-export async function getLowStockItems(): Promise<ShoppingListItem[]> {
+export async function getLowStockItems(
+  userId: string | null,
+): Promise<ShoppingListItem[]> {
   const items = await prisma.inventoryItem.findMany({
     where: {
       isActive: true,
+      ...(userId ? { OR: [{ userId }, { userId: null }] } : {}),
     },
     include: {
       category: true,
@@ -168,14 +173,16 @@ export async function getLowStockItems(): Promise<ShoppingListItem[]> {
 }
 
 // categoryId can be null for items without category
-export async function getShoppingListByCategory(): Promise<
+export async function getShoppingListByCategory(
+  userId: string | null,
+): Promise<
   {
     categoryId: string | null;
     categoryName: string;
     items: ShoppingListItem[];
   }[]
 > {
-  const list = await generateShoppingList();
+  const list = await generateShoppingList(userId);
 
   const byCategory = new Map<
     string | null,
@@ -200,11 +207,15 @@ export async function getShoppingListByCategory(): Promise<
 }
 
 export async function markItemPurchased(
+  userId: string | null,
   itemId: string,
   quantity: number,
 ): Promise<void> {
-  const item = await prisma.inventoryItem.findUnique({
-    where: { id: itemId },
+  const item = await prisma.inventoryItem.findFirst({
+    where: {
+      id: itemId,
+      ...(userId ? { OR: [{ userId }, { userId: null }] } : {}),
+    },
   });
 
   if (!item) {
@@ -219,14 +230,14 @@ export async function markItemPurchased(
   });
 }
 
-export async function getShoppingListSummary(): Promise<{
+export async function getShoppingListSummary(userId: string | null): Promise<{
   totalItems: number;
   lowStockCount: number;
   estimatedTotal: number;
   byCategory: { categoryName: string; count: number; total: number }[];
 }> {
-  const list = await generateShoppingList();
-  const lowStock = await getLowStockItems();
+  const list = await generateShoppingList(userId);
+  const lowStock = await getLowStockItems(userId);
 
   const byCategory = new Map<string, { count: number; total: number }>();
 
