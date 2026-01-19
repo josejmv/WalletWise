@@ -185,12 +185,12 @@ export async function importAllData(backup: BackupData): Promise<{
         }
 
         // Helper to translate IDs using maps
-        const mapCurrencyId = (id: string | null) =>
-          id ? currencyIdMap.get(id) || id : null;
-        const mapAccountTypeId = (id: string | null) =>
-          id ? accountTypeIdMap.get(id) || id : null;
-        const mapInvCategoryId = (id: string | null) =>
-          id ? invCategoryIdMap.get(id) || id : null;
+        const mapCurrencyId = (id: string | null): string | undefined =>
+          id ? currencyIdMap.get(id) || id : undefined;
+        const mapAccountTypeId = (id: string | null): string | undefined =>
+          id ? accountTypeIdMap.get(id) || id : undefined;
+        const mapInvCategoryId = (id: string | null): string | undefined =>
+          id ? invCategoryIdMap.get(id) || id : undefined;
 
         // 2. Primary entities (depend on reference data)
         if (backup.data.accounts?.length) {
