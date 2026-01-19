@@ -1,3 +1,16 @@
+# [1.3.0](https://github.com/josejmv/WalletWise/compare/v1.2.1...v1.3.0) (2026-01-19)
+
+
+### Bug Fixes
+
+* **auth:** redirect to login when session expires on back navigation ([8fe5f6f](https://github.com/josejmv/WalletWise/commit/8fe5f6ff2ef6eb117c1bf7be5b0ca0380e621fcd))
+* **auth:** require 2fa verification on every login ([93e681a](https://github.com/josejmv/WalletWise/commit/93e681a0e8270a662b88f713a54922f0ac54acd3))
+
+
+### Features
+
+* **auth:** add set password for oauth accounts and improve webauthn errors ([43a6495](https://github.com/josejmv/WalletWise/commit/43a6495532b7d428675f152cbb1aaefdee285180))
+
 ## [1.2.1](https://github.com/josejmv/WalletWise/compare/v1.2.0...v1.2.1) (2026-01-19)
 
 
