@@ -13,7 +13,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
-import { formatCurrency } from "@/lib/formatters";
 
 interface ExchangeRate {
   id: string;
@@ -121,7 +120,7 @@ export function ExchangeRateWidget() {
     staleTime: 0, // Always consider data stale to refetch on navigation
   });
 
-  const { data: cooldown, isLoading: loadingCooldown } = useQuery({
+  const { data: cooldown } = useQuery({
     queryKey: ["exchange-rates", "cooldown"],
     queryFn: fetchSyncCooldown,
     refetchInterval: 60000, // Check every minute

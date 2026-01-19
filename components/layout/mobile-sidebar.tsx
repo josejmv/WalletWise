@@ -14,7 +14,6 @@ import {
 import { BackupModal } from "@/components/backup-modal";
 import { SidebarItem } from "./sidebar-item";
 import { SidebarGroup } from "./sidebar-group";
-import { useUserConfigContext } from "@/contexts/user-config-context";
 
 // Import the same configuration from sidebar
 import {

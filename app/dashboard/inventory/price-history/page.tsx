@@ -110,7 +110,7 @@ export default function PriceHistoryPage() {
   const chartData = useMemo(() => {
     if (!history || history.length === 0) return [];
 
-    const itemsToShow =
+    const _itemsToShow =
       selectedItemId === "all"
         ? uniqueItems.slice(0, 5) // Show first 5 items when "all" is selected
         : uniqueItems.filter((i) => i.id === selectedItemId);

@@ -11,7 +11,6 @@ import {
   canSyncRates,
   canSyncOfficialRates,
   canSyncBinanceRates,
-  updateLastRateSyncAt,
   updateLastOfficialSyncAt,
   updateLastBinanceSyncAt,
 } from "@/app/api/user-config/service";

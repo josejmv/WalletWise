@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const accountTypes = await getAccountTypes();
     return NextResponse.json({ success: true, data: accountTypes });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener tipos de cuenta" },
       { status: 500 },

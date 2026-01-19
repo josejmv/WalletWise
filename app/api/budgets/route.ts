@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ success: true, data: budgets });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener presupuestos" },
       { status: 500 },

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getRateViaIntermediate, type RateResult } from "@/lib/currency-utils";
+import { getRateViaIntermediate } from "@/lib/currency-utils";
 
 interface CalculatedRate {
   fromCurrency: { id: string; code: string };
@@ -48,7 +48,7 @@ export async function GET() {
         if (from.id === to.id) continue;
 
         // Check if direct rate exists
-        const hasDirectRate =
+        const _hasDirectRate =
           existingPairs.has(`${from.id}-${to.id}`) ||
           existingPairs.has(`${to.id}-${from.id}`);
 

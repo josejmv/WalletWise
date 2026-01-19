@@ -6,7 +6,7 @@ export async function GET() {
   try {
     const categories = await getInventoryCategories();
     return NextResponse.json({ success: true, data: categories });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener categorias de inventario" },
       { status: 500 },

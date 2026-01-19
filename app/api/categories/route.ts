@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     );
 
     return NextResponse.json({ success: true, data: categories });
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { success: false, error: "Error al obtener categorias" },
       { status: 500 },
