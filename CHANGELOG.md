@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/josejmv/WalletWise/compare/v2.0.0...v2.0.1) (2026-01-19)
+
+
+### Bug Fixes
+
+* **auth:** wrap lucide icon in span for title attribute ([8765b51](https://github.com/josejmv/WalletWise/commit/8765b51612b7a5ac95f9d4b6d4c022a42e884ea3))
+
 # [2.0.0](https://github.com/josejmv/WalletWise/compare/v1.4.0...v2.0.0) (2026-01-19)
 
 
