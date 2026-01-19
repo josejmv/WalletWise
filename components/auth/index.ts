@@ -6,3 +6,4 @@ export { WebAuthnRegister } from "./webauthn-register";
 export { WebAuthnAuthenticate } from "./webauthn-authenticate";
 export { TotpSetup } from "./totp-setup";
 export { TotpVerifyLogin } from "./totp-verify-login";
+export { SetPasswordForm } from "./set-password-form";

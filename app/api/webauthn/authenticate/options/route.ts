@@ -22,9 +22,23 @@ export async function POST(request: Request) {
       include: { authenticators: true },
     });
 
-    if (!user || !user.webauthnEnabled || user.authenticators.length === 0) {
+    if (!user) {
       return NextResponse.json(
-        { error: "WebAuthn no habilitado para este usuario" },
+        { error: "No existe una cuenta con este email" },
+        { status: 400 }
+      );
+    }
+
+    if (!user.webauthnEnabled) {
+      return NextResponse.json(
+        { error: "WebAuthn no esta habilitado. Registra un passkey en Configuracion > Seguridad primero." },
+        { status: 400 }
+      );
+    }
+
+    if (user.authenticators.length === 0) {
+      return NextResponse.json(
+        { error: "No tienes passkeys registrados. Ve a Configuracion > Seguridad para registrar uno." },
         { status: 400 }
       );
     }

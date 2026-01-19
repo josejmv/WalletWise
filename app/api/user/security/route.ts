@@ -16,6 +16,7 @@ export async function GET() {
       select: {
         totpEnabled: true,
         webauthnEnabled: true,
+        password: true,
         _count: {
           select: { authenticators: true },
         },
@@ -32,6 +33,7 @@ export async function GET() {
     return NextResponse.json({
       totpEnabled: user.totpEnabled,
       webauthnEnabled: user.webauthnEnabled,
+      hasPassword: !!user.password,
       authenticatorCount: user._count.authenticators,
     });
   } catch (error) {

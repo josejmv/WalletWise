@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useQuery } from "@tanstack/react-query";
-import { Shield, Fingerprint, Smartphone, AlertTriangle } from "lucide-react";
+import { Shield, Fingerprint, Smartphone, AlertTriangle, KeyRound } from "lucide-react";
 
 import {
   Card,
@@ -12,12 +12,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { WebAuthnRegister, TotpSetup } from "@/components/auth";
+import { WebAuthnRegister, TotpSetup, SetPasswordForm } from "@/components/auth";
 import { Badge } from "@/components/ui/badge";
 
 interface UserSecurityInfo {
   totpEnabled: boolean;
   webauthnEnabled: boolean;
+  hasPassword: boolean;
   authenticatorCount: number;
 }
 
@@ -72,6 +73,25 @@ export default function SecuritySettingsPage() {
               Tu cuenta no tiene autenticacion de dos factores. Te recomendamos
               habilitar al menos un metodo para mayor seguridad.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Password Section - Show only if user doesn't have a password */}
+      {!securityInfo?.hasPassword && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" />
+              Configurar Contrasena
+            </CardTitle>
+            <CardDescription>
+              Tu cuenta fue creada con Google. Configura una contrasena para
+              poder iniciar sesion tambien con email y contrasena.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SetPasswordForm onSuccess={() => refetch()} />
           </CardContent>
         </Card>
       )}
