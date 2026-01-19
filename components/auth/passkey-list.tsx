@@ -131,7 +131,9 @@ export function PasskeyList({ onDelete }: PasskeyListProps) {
                 <div className="flex items-center gap-2">
                   <p className="font-medium">Passkey {index + 1}</p>
                   {auth.backedUp && (
-                    <Cloud className="h-3 w-3 text-muted-foreground" title="Respaldado en la nube" />
+                    <span title="Respaldado en la nube">
+                      <Cloud className="h-3 w-3 text-muted-foreground" />
+                    </span>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground">
