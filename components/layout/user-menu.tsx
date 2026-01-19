@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { LogOut, Settings, User } from "lucide-react";
+import { LogOut, Settings, User, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +17,19 @@ import {
 
 export function UserMenu() {
   const { data: session, status } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      // Clear 2FA cookie before signing out
+      await fetch("/api/auth/logout", { method: "POST" });
+      await signOut({ callbackUrl: "/" });
+    } catch {
+      // Even if logout endpoint fails, still sign out
+      await signOut({ callbackUrl: "/" });
+    }
+  };
 
   if (status === "loading") {
     return (
@@ -87,10 +101,15 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => signOut({ callbackUrl: "/" })}
+          onClick={handleLogout}
+          disabled={isLoggingOut}
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          <span>Cerrar Sesion</span>
+          {isLoggingOut ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <LogOut className="mr-2 h-4 w-4" />
+          )}
+          <span>{isLoggingOut ? "Cerrando..." : "Cerrar Sesion"}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -54,6 +54,8 @@ export function Verify2FAForm({ userId, callbackUrl }: Verify2FAFormProps) {
   };
 
   const handleCancel = async () => {
+    // Clear 2FA cookie before signing out
+    await fetch("/api/auth/logout", { method: "POST" });
     await signOut({ callbackUrl: "/login" });
   };
 
