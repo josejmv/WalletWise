@@ -1,3 +1,15 @@
+# [1.2.0](https://github.com/josejmv/WalletWise/compare/v1.1.0...v1.2.0) (2026-01-19)
+
+
+### Bug Fixes
+
+* **scripts:** handle UserConfig unique constraint in migration ([08bcaf7](https://github.com/josejmv/WalletWise/commit/08bcaf70451d7d401139fb0f6d98f8e7fc83b4f6))
+
+
+### Features
+
+* **auth:** add webauthn login and 2fa verification flow ([36c0a78](https://github.com/josejmv/WalletWise/commit/36c0a7801787c99ba89983d5fd53f5e713dcea8e))
+
 # [1.1.0](https://github.com/josejmv/WalletWise/compare/v1.0.0...v1.1.0) (2026-01-19)
 
 
