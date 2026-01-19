@@ -43,7 +43,9 @@ export async function GET() {
       authenticatorSelection: {
         residentKey: "preferred",
         userVerification: "preferred",
-        authenticatorAttachment: "platform",
+        // No authenticatorAttachment restriction - allows both:
+        // - "platform": built-in (fingerprint readers, Windows Hello, Touch ID)
+        // - "cross-platform": external (phones via QR, security keys)
       },
     });
 
