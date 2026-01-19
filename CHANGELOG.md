@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/josejmv/WalletWise/compare/v1.2.0...v1.2.1) (2026-01-19)
+
+
+### Bug Fixes
+
+* **auth:** fix double json parse in webauthn authenticate ([dd48afb](https://github.com/josejmv/WalletWise/commit/dd48afb5a3f4958c960761e7de21977cc32c3bb5))
+
 # [1.2.0](https://github.com/josejmv/WalletWise/compare/v1.1.0...v1.2.0) (2026-01-19)
 
 
