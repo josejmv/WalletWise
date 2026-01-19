@@ -6,6 +6,7 @@ import {
   processRecurringExpense,
 } from "../service";
 import { updateExpenseSchema } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -13,8 +14,9 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const expense = await getExpenseById(id);
+    const expense = await getExpenseById(id, userId);
     return NextResponse.json({ success: true, data: expense });
   } catch (error) {
     const message =
@@ -28,6 +30,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateExpenseSchema.safeParse(body);
@@ -39,7 +42,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const expense = await updateExpense(id, parsed.data);
+    const expense = await updateExpense(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: expense });
   } catch (error) {
     const message =
@@ -53,8 +56,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteExpense(id);
+    await deleteExpense(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -68,12 +72,13 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function POST(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const action = searchParams.get("action");
 
     if (action === "process-recurring") {
-      const expense = await processRecurringExpense(id);
+      const expense = await processRecurringExpense(id, userId);
       return NextResponse.json(
         { success: true, data: expense },
         { status: 201 },

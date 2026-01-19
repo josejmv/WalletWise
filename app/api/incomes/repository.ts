@@ -10,8 +10,27 @@ import type {
 } from "./types";
 import type { PaginationParams } from "@/lib/pagination";
 
+// Helper to build userId filter for transition period
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) {
+    return {}; // No filter - return all (legacy mode)
+  }
+  if (userId === null) {
+    return { userId: null }; // Only legacy data
+  }
+  // Include both user's data and legacy data (userId = null)
+  return {
+    OR: [{ userId }, { userId: null }],
+  };
+}
+
 function buildWhereClause(filters?: IncomeFilters) {
   const where: Record<string, unknown> = {};
+
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
 
   if (filters?.jobId) {
     where.jobId = filters.jobId;
@@ -84,9 +103,15 @@ export async function findAllPaginated(
   };
 }
 
-export async function findById(id: string) {
-  return prisma.income.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  const where: Record<string, unknown> = { id };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
+  return prisma.income.findFirst({
+    where,
     include: {
       job: true,
       account: true,
@@ -95,9 +120,15 @@ export async function findById(id: string) {
   });
 }
 
-export async function findByJob(jobId: string) {
+export async function findByJob(jobId: string, userId?: string | null) {
+  const where: Record<string, unknown> = { jobId };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.income.findMany({
-    where: { jobId },
+    where,
     include: {
       job: true,
       account: true,
@@ -107,9 +138,15 @@ export async function findByJob(jobId: string) {
   });
 }
 
-export async function findByAccount(accountId: string) {
+export async function findByAccount(accountId: string, userId?: string | null) {
+  const where: Record<string, unknown> = { accountId };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.income.findMany({
-    where: { accountId },
+    where,
     include: {
       job: true,
       account: true,
@@ -122,8 +159,19 @@ export async function findByAccount(accountId: string) {
 export async function create(data: CreateIncomeInput) {
   return prisma.income.create({
     data: {
-      ...data,
+      userId: data.userId,
+      jobId: data.jobId,
+      accountId: data.accountId,
+      amount: data.amount,
+      currencyId: data.currencyId,
+      officialRate: data.officialRate,
+      customRate: data.customRate,
       date: data.date ?? new Date(),
+      description: data.description,
+      hasChange: data.hasChange,
+      changeAmount: data.changeAmount,
+      changeAccountId: data.changeAccountId,
+      changeCurrencyId: data.changeCurrencyId,
     },
     include: {
       job: true,
@@ -133,7 +181,13 @@ export async function create(data: CreateIncomeInput) {
   });
 }
 
-export async function update(id: string, data: UpdateIncomeInput) {
+export async function update(id: string, data: UpdateIncomeInput, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Ingreso no encontrado o no tienes permiso");
+  }
+
   return prisma.income.update({
     where: { id },
     data,
@@ -145,7 +199,13 @@ export async function update(id: string, data: UpdateIncomeInput) {
   });
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Ingreso no encontrado o no tienes permiso");
+  }
+
   return prisma.income.delete({
     where: { id },
   });
@@ -153,6 +213,11 @@ export async function remove(id: string) {
 
 export async function getSummary(filters?: IncomeFilters) {
   const where: Record<string, unknown> = {};
+
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
 
   if (filters?.startDate || filters?.endDate) {
     where.date = {
@@ -162,7 +227,7 @@ export async function getSummary(filters?: IncomeFilters) {
   }
 
   // Get user's base currency for conversion
-  const baseCurrencyId = await getUserBaseCurrencyId();
+  const baseCurrencyId = await getUserBaseCurrencyId(filters?.userId);
 
   const incomes = await prisma.income.findMany({
     where,

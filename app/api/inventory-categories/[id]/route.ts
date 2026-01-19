@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 import {
   getInventoryCategoryById,
   updateInventoryCategory,
@@ -12,8 +13,9 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    const category = await getInventoryCategoryById(id);
+    const category = await getInventoryCategoryById(id, userId);
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
     const message =
@@ -29,6 +31,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateInventoryCategorySchema.safeParse(body);
@@ -40,7 +43,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const category = await updateInventoryCategory(id, parsed.data);
+    const category = await updateInventoryCategory(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: category });
   } catch (error) {
     const message =
@@ -56,8 +59,9 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteInventoryCategory(id);
+    await deleteInventoryCategory(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =

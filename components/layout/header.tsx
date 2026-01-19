@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUserConfigContext } from "@/contexts/user-config-context";
+import { UserMenu } from "@/components/layout/user-menu";
 
 interface HeaderProps {
   title?: string;
@@ -146,6 +147,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
             <Moon className="h-5 w-5" />
           )}
         </Button>
+
+        <UserMenu />
       </div>
     </header>
   );

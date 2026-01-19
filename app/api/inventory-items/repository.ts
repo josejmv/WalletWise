@@ -5,8 +5,16 @@ import type {
   InventoryItemFilters,
 } from "./types";
 
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) return {};
+  if (userId === null) return { userId: null };
+  return { OR: [{ userId }, { userId: null }] };
+}
+
 export async function findAll(filters?: InventoryItemFilters) {
-  const where: Record<string, unknown> = {};
+  const where: Record<string, unknown> = {
+    ...buildUserFilter(filters?.userId),
+  };
 
   if (filters?.categoryId) {
     where.categoryId = filters.categoryId;
@@ -36,9 +44,12 @@ export async function findAll(filters?: InventoryItemFilters) {
   return items;
 }
 
-export async function findById(id: string) {
-  return prisma.inventoryItem.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  return prisma.inventoryItem.findFirst({
+    where: {
+      id,
+      ...buildUserFilter(userId),
+    },
     include: {
       category: true,
       currency: true,
@@ -60,7 +71,14 @@ export async function create(data: CreateInventoryItemInput) {
   });
 }
 
-export async function update(id: string, data: UpdateInventoryItemInput) {
+export async function update(
+  id: string,
+  data: UpdateInventoryItemInput,
+  userId?: string | null,
+) {
+  const item = await findById(id, userId);
+  if (!item) return null;
+
   return prisma.inventoryItem.update({
     where: { id },
     data,
@@ -71,7 +89,10 @@ export async function update(id: string, data: UpdateInventoryItemInput) {
   });
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  const item = await findById(id, userId);
+  if (!item) return null;
+
   return prisma.inventoryItem.delete({
     where: { id },
   });
@@ -81,7 +102,11 @@ export async function adjustStock(
   id: string,
   quantity: number,
   operation: "add" | "subtract" | "set",
+  userId?: string | null,
 ) {
+  const item = await findById(id, userId);
+  if (!item) return null;
+
   if (operation === "set") {
     return prisma.inventoryItem.update({
       where: { id },
@@ -107,9 +132,12 @@ export async function adjustStock(
   });
 }
 
-export async function getLowStockItems() {
+export async function getLowStockItems(userId?: string | null) {
   const items = await prisma.inventoryItem.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...buildUserFilter(userId),
+    },
     include: {
       category: true,
       currency: true,
@@ -121,9 +149,12 @@ export async function getLowStockItems() {
   );
 }
 
-export async function getShoppingList() {
+export async function getShoppingList(userId?: string | null) {
   const items = await prisma.inventoryItem.findMany({
-    where: { isActive: true },
+    where: {
+      isActive: true,
+      ...buildUserFilter(userId),
+    },
     include: {
       category: true,
       currency: true,

@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { syncFromAPI } from "../service";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function POST() {
   try {
-    const result = await syncFromAPI();
+    const userId = await getUserIdForApi();
+    const result = await syncFromAPI(userId);
 
     if (result.errors.length > 0 && result.synced === 0) {
       return NextResponse.json({ success: false, ...result }, { status: 400 });

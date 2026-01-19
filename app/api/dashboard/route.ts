@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 import {
   getDashboardSummary,
   getKPIs,
@@ -13,6 +14,8 @@ import {
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
+
     const { searchParams } = new URL(request.url);
     const section = searchParams.get("section");
     const startDate = searchParams.get("startDate");
@@ -28,46 +31,51 @@ export async function GET(request: Request) {
     switch (section) {
       case "kpis":
         const kpis = await getKPIs(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: kpis });
 
       case "balance-by-account":
-        const balanceByAccount = await getBalanceByAccount();
+        const balanceByAccount = await getBalanceByAccount(userId);
         return NextResponse.json({ success: true, data: balanceByAccount });
 
       case "balance-by-currency":
-        const balanceByCurrency = await getBalanceByCurrency();
+        const balanceByCurrency = await getBalanceByCurrency(userId);
         return NextResponse.json({ success: true, data: balanceByCurrency });
 
       case "expenses-by-category":
         const expensesByCategory = await getExpensesByCategory(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: expensesByCategory });
 
       case "monthly-trend":
         const monthlyTrend = await getMonthlyTrend(
+          userId,
           months ? parseInt(months) : 6,
         );
         return NextResponse.json({ success: true, data: monthlyTrend });
 
       case "budget-progress":
-        const budgetProgress = await getBudgetProgress();
+        const budgetProgress = await getBudgetProgress(userId);
         return NextResponse.json({ success: true, data: budgetProgress });
 
       case "recent-transactions":
         const recentTransactions = await getRecentTransactions(
+          userId,
           limit ? parseInt(limit) : 10,
         );
         return NextResponse.json({ success: true, data: recentTransactions });
 
       case "savings":
-        const savings = await getSavingsData();
+        const savings = await getSavingsData(userId);
         return NextResponse.json({ success: true, data: savings });
 
       default:
         const summary = await getDashboardSummary(
+          userId,
           Object.keys(filters).length > 0 ? filters : undefined,
         );
         return NextResponse.json({ success: true, data: summary });

@@ -9,9 +9,11 @@ import {
 } from "./service";
 import { createExpenseSchema } from "./schema";
 import { parsePaginationParams } from "@/lib/pagination";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
     const categoryId = searchParams.get("categoryId");
     const accountId = searchParams.get("accountId");
@@ -25,16 +27,17 @@ export async function GET(request: Request) {
     const paginated = searchParams.get("paginated");
 
     if (recurring === "true") {
-      const expenses = await getRecurringExpenses();
+      const expenses = await getRecurringExpenses(userId);
       return NextResponse.json({ success: true, data: expenses });
     }
 
     if (due === "true") {
-      const expenses = await getDueExpenses();
+      const expenses = await getDueExpenses(userId);
       return NextResponse.json({ success: true, data: expenses });
     }
 
     const filters = {
+      userId,
       ...(categoryId && { categoryId }),
       ...(accountId && { accountId }),
       ...(currencyId && { currencyId }),
@@ -44,25 +47,18 @@ export async function GET(request: Request) {
     };
 
     if (summary === "true") {
-      const result = await getExpenseSummary(
-        Object.keys(filters).length > 0 ? filters : undefined,
-      );
+      const result = await getExpenseSummary(filters);
       return NextResponse.json({ success: true, data: result });
     }
 
     // Use pagination if requested
     if (paginated === "true") {
       const pagination = parsePaginationParams(searchParams);
-      const result = await getExpensesPaginated(
-        Object.keys(filters).length > 0 ? filters : undefined,
-        pagination,
-      );
+      const result = await getExpensesPaginated(filters, pagination);
       return NextResponse.json({ success: true, ...result });
     }
 
-    const expenses = await getExpenses(
-      Object.keys(filters).length > 0 ? filters : undefined,
-    );
+    const expenses = await getExpenses(filters);
 
     return NextResponse.json({ success: true, data: expenses });
   } catch (error) {
@@ -77,6 +73,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const parsed = createExpenseSchema.safeParse(body);
 
@@ -87,7 +84,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const expense = await createExpense(parsed.data);
+    const expense = await createExpense({ ...parsed.data, userId });
     return NextResponse.json({ success: true, data: expense }, { status: 201 });
   } catch (error) {
     const message =

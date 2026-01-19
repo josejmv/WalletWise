@@ -21,7 +21,12 @@ export interface BackupData {
   };
 }
 
-export async function exportAllData(): Promise<BackupData> {
+export async function exportAllData(
+  userId: string | null
+): Promise<BackupData> {
+  // Build user filter for multi-user support (only for tables with userId)
+  const userFilter = userId ? { OR: [{ userId }, { userId: null }] } : {};
+
   const [
     currencies,
     accountTypes,
@@ -38,18 +43,21 @@ export async function exportAllData(): Promise<BackupData> {
     inventoryPriceHistory,
     exchangeRates,
   ] = await Promise.all([
+    // Global tables (no userId)
     prisma.currency.findMany(),
     prisma.accountType.findMany(),
-    prisma.category.findMany(),
-    prisma.inventoryCategory.findMany(),
-    prisma.account.findMany(),
-    prisma.job.findMany(),
-    prisma.income.findMany(),
-    prisma.expense.findMany(),
-    prisma.transfer.findMany(),
-    prisma.budget.findMany(),
-    prisma.budgetContribution.findMany(),
-    prisma.inventoryItem.findMany(),
+    // User-specific tables
+    prisma.category.findMany({ where: userFilter }),
+    prisma.inventoryCategory.findMany({ where: userFilter }),
+    prisma.account.findMany({ where: userFilter }),
+    prisma.job.findMany({ where: userFilter }),
+    prisma.income.findMany({ where: userFilter }),
+    prisma.expense.findMany({ where: userFilter }),
+    prisma.transfer.findMany({ where: userFilter }),
+    prisma.budget.findMany({ where: userFilter }),
+    prisma.budgetContribution.findMany({ where: userFilter }),
+    prisma.inventoryItem.findMany({ where: userFilter }),
+    // Global tables (no userId)
     prisma.inventoryPriceHistory.findMany(),
     prisma.exchangeRate.findMany(),
   ]);
@@ -76,7 +84,10 @@ export async function exportAllData(): Promise<BackupData> {
   };
 }
 
-export async function importAllData(backup: BackupData): Promise<{
+export async function importAllData(
+  backup: BackupData,
+  userId: string | null
+): Promise<{
   imported: Record<string, number>;
   errors: string[];
 }> {
@@ -164,21 +175,34 @@ export async function importAllData(backup: BackupData): Promise<{
 
         if (backup.data.inventoryCategories?.length) {
           for (const cat of backup.data.inventoryCategories as any[]) {
-            const result = await tx.inventoryCategory.upsert({
-              where: { name: cat.name },
-              update: {
-                icon: cat.icon,
-                color: cat.color,
-                description: cat.description,
-              },
-              create: {
-                id: cat.id,
-                name: cat.name,
-                icon: cat.icon,
-                color: cat.color,
-                description: cat.description,
-              },
+            // Use userId_name compound unique constraint, fallback to id
+            const catUserId = cat.userId || null;
+            const existing = await tx.inventoryCategory.findFirst({
+              where: { name: cat.name, userId: catUserId },
             });
+
+            let result;
+            if (existing) {
+              result = await tx.inventoryCategory.update({
+                where: { id: existing.id },
+                data: {
+                  icon: cat.icon,
+                  color: cat.color,
+                  description: cat.description,
+                },
+              });
+            } else {
+              result = await tx.inventoryCategory.create({
+                data: {
+                  id: cat.id,
+                  name: cat.name,
+                  icon: cat.icon,
+                  color: cat.color,
+                  description: cat.description,
+                  userId: catUserId,
+                },
+              });
+            }
             invCategoryIdMap.set(cat.id, result.id);
           }
           imported.inventoryCategories = backup.data.inventoryCategories.length;

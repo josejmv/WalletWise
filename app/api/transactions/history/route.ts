@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { getTransactionHistory, type TransactionType } from "./service";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
 
     // Parse filters from query params
@@ -26,7 +28,7 @@ export async function GET(request: Request) {
       ...(pageSize && { pageSize: parseInt(pageSize, 10) }),
     };
 
-    const result = await getTransactionHistory(filters);
+    const result = await getTransactionHistory(userId, filters);
 
     return NextResponse.json({ success: true, data: result });
   } catch (error) {

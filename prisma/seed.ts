@@ -327,11 +327,15 @@ async function main() {
   ];
 
   for (const invCat of inventoryCategories) {
-    await prisma.inventoryCategory.upsert({
-      where: { name: invCat.name },
-      update: {},
-      create: invCat,
+    // Use findFirst + create because unique constraint is now (userId, name)
+    const existing = await prisma.inventoryCategory.findFirst({
+      where: { name: invCat.name, userId: null },
     });
+    if (!existing) {
+      await prisma.inventoryCategory.create({
+        data: { ...invCat, userId: null },
+      });
+    }
   }
   console.log("Inventory categories seeded");
 

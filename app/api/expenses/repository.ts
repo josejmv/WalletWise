@@ -10,8 +10,27 @@ import type {
 } from "./types";
 import type { PaginationParams } from "@/lib/pagination";
 
+// Helper to build userId filter for transition period
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) {
+    return {}; // No filter - return all (legacy mode)
+  }
+  if (userId === null) {
+    return { userId: null }; // Only legacy data
+  }
+  // Include both user's data and legacy data (userId = null)
+  return {
+    OR: [{ userId }, { userId: null }],
+  };
+}
+
 function buildWhereClause(filters?: ExpenseFilters) {
   const where: Record<string, unknown> = {};
+
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
 
   if (filters?.categoryId) {
     where.categoryId = filters.categoryId;
@@ -87,9 +106,15 @@ export async function findAllPaginated(
   };
 }
 
-export async function findById(id: string) {
-  return prisma.expense.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  const where: Record<string, unknown> = { id };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
+  return prisma.expense.findFirst({
+    where,
     include: {
       category: { include: { parent: true } },
       account: { include: { currency: true } },
@@ -98,9 +123,15 @@ export async function findById(id: string) {
   });
 }
 
-export async function findByCategory(categoryId: string) {
+export async function findByCategory(categoryId: string, userId?: string | null) {
+  const where: Record<string, unknown> = { categoryId };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.expense.findMany({
-    where: { categoryId },
+    where,
     include: {
       category: { include: { parent: true } },
       account: { include: { currency: true } },
@@ -110,9 +141,15 @@ export async function findByCategory(categoryId: string) {
   });
 }
 
-export async function findByAccount(accountId: string) {
+export async function findByAccount(accountId: string, userId?: string | null) {
+  const where: Record<string, unknown> = { accountId };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.expense.findMany({
-    where: { accountId },
+    where,
     include: {
       category: { include: { parent: true } },
       account: { include: { currency: true } },
@@ -122,9 +159,15 @@ export async function findByAccount(accountId: string) {
   });
 }
 
-export async function findRecurring() {
+export async function findRecurring(userId?: string | null) {
+  const where: Record<string, unknown> = { isRecurring: true };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.expense.findMany({
-    where: { isRecurring: true },
+    where,
     include: {
       category: { include: { parent: true } },
       account: { include: { currency: true } },
@@ -134,21 +177,26 @@ export async function findRecurring() {
   });
 }
 
-export async function findDueExpenses() {
+export async function findDueExpenses(userId?: string | null) {
   // Show recurring expenses due in the current month
-  // This allows users to pay them before the exact due date
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-  return prisma.expense.findMany({
-    where: {
-      isRecurring: true,
-      nextDueDate: {
-        gte: startOfMonth,
-        lte: endOfMonth,
-      },
+  const where: Record<string, unknown> = {
+    isRecurring: true,
+    nextDueDate: {
+      gte: startOfMonth,
+      lte: endOfMonth,
     },
+  };
+
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
+  return prisma.expense.findMany({
+    where,
     include: {
       category: { include: { parent: true } },
       account: { include: { currency: true } },
@@ -161,8 +209,22 @@ export async function findDueExpenses() {
 export async function create(data: CreateExpenseInput) {
   return prisma.expense.create({
     data: {
-      ...data,
+      userId: data.userId,
+      categoryId: data.categoryId,
+      accountId: data.accountId,
+      amount: data.amount,
+      currencyId: data.currencyId,
+      officialRate: data.officialRate,
+      customRate: data.customRate,
+      isRecurring: data.isRecurring,
+      periodicity: data.periodicity,
+      nextDueDate: data.nextDueDate,
       date: data.date ?? new Date(),
+      description: data.description,
+      hasChange: data.hasChange,
+      changeAmount: data.changeAmount,
+      changeAccountId: data.changeAccountId,
+      changeCurrencyId: data.changeCurrencyId,
     },
     include: {
       category: { include: { parent: true } },
@@ -172,7 +234,13 @@ export async function create(data: CreateExpenseInput) {
   });
 }
 
-export async function update(id: string, data: UpdateExpenseInput) {
+export async function update(id: string, data: UpdateExpenseInput, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Gasto no encontrado o no tienes permiso");
+  }
+
   return prisma.expense.update({
     where: { id },
     data,
@@ -184,7 +252,13 @@ export async function update(id: string, data: UpdateExpenseInput) {
   });
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Gasto no encontrado o no tienes permiso");
+  }
+
   return prisma.expense.delete({
     where: { id },
   });
@@ -192,6 +266,11 @@ export async function remove(id: string) {
 
 export async function getSummary(filters?: ExpenseFilters) {
   const where: Record<string, unknown> = {};
+
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
 
   if (filters?.startDate || filters?.endDate) {
     where.date = {
@@ -201,7 +280,7 @@ export async function getSummary(filters?: ExpenseFilters) {
   }
 
   // Get user's base currency for conversion
-  const baseCurrencyId = await getUserBaseCurrencyId();
+  const baseCurrencyId = await getUserBaseCurrencyId(filters?.userId);
 
   const expenses = await prisma.expense.findMany({
     where,

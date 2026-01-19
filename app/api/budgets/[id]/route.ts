@@ -14,6 +14,7 @@ import {
   contributeSchema,
   withdrawSchema,
 } from "../schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,16 +22,18 @@ interface RouteParams {
 
 export async function GET(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const { searchParams } = new URL(request.url);
     const contributions = searchParams.get("contributions");
 
     if (contributions === "true") {
-      const list = await getContributions(id);
+      const list = await getContributions(id, userId);
       return NextResponse.json({ success: true, data: list });
     }
 
-    const budget = await getBudgetById(id);
+    const budget = await getBudgetById(id, userId);
     return NextResponse.json({ success: true, data: budget });
   } catch (error) {
     const message =
@@ -44,6 +47,8 @@ export async function GET(request: Request, { params }: RouteParams) {
 
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
     const parsed = updateBudgetSchema.safeParse(body);
@@ -55,7 +60,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
       );
     }
 
-    const budget = await updateBudget(id, parsed.data);
+    const budget = await updateBudget(id, parsed.data, userId);
     return NextResponse.json({ success: true, data: budget });
   } catch (error) {
     const message =
@@ -71,8 +76,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
-    await deleteBudget(id);
+    await deleteBudget(id, userId);
     return NextResponse.json({ success: true, data: null });
   } catch (error) {
     const message =
@@ -86,6 +93,8 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
 export async function PATCH(request: Request, { params }: RouteParams) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
     const { id } = await params;
     const body = await request.json();
 
@@ -97,7 +106,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 400 },
         );
       }
-      const budget = await contributeToBudget(id, parsed.data);
+      const budget = await contributeToBudget(id, parsed.data, userId);
       return NextResponse.json({ success: true, data: budget });
     }
 
@@ -109,17 +118,17 @@ export async function PATCH(request: Request, { params }: RouteParams) {
           { status: 400 },
         );
       }
-      const budget = await withdrawFromBudget(id, parsed.data);
+      const budget = await withdrawFromBudget(id, parsed.data, userId);
       return NextResponse.json({ success: true, data: budget });
     }
 
     if (body.action === "cancel") {
-      const budget = await cancelBudget(id);
+      const budget = await cancelBudget(id, userId);
       return NextResponse.json({ success: true, data: budget });
     }
 
     if (body.action === "reactivate") {
-      const budget = await reactivateBudget(id);
+      const budget = await reactivateBudget(id, userId);
       return NextResponse.json({ success: true, data: budget });
     }
 

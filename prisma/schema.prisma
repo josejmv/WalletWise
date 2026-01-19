@@ -74,7 +74,117 @@ enum TransferType {
 }
 
 // ============================================
-// MODELS
+// AUTH MODELS (Auth.js v5)
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  emailVerified DateTime?
+  password      String? // Hashed con bcryptjs (credentials provider)
+  name          String?
+  image         String?
+
+  // 2FA TOTP
+  totpSecret  String? // Encrypted TOTP secret
+  totpEnabled Boolean @default(false)
+
+  // WebAuthn
+  webauthnEnabled Boolean @default(false)
+
+  // Relations
+  oauthAccounts  OAuthAccount[]
+  sessions       Session[]
+  authenticators Authenticator[]
+  userConfig     UserConfig? // Link opcional a configuracion
+
+  // Financial relations (multi-user)
+  accounts            Account[]
+  jobs                Job[]
+  incomes             Income[]
+  expenses            Expense[]
+  transfers           Transfer[]
+  budgets             Budget[]
+  budgetContributions BudgetContribution[]
+  categories          Category[]
+  inventoryCategories InventoryCategory[]
+  inventoryItems      InventoryItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model OAuthAccount {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String // "oauth" | "oidc" | "email"
+  provider          String // "google", "github", etc.
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Authenticator {
+  id                   String  @id @default(uuid())
+  credentialID         String  @unique
+  userId               String
+  credentialPublicKey  String  @db.Text
+  counter              BigInt
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String? // Comma-separated list: usb,ble,nfc,internal
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@map("authenticators")
+}
+
+// ============================================
+// FINANCIAL MODELS
 // ============================================
 
 model Currency {
@@ -155,6 +265,7 @@ model AccountType {
 
 model Account {
   id            String  @id @default(uuid())
+  userId        String? // Multi-user: owner of this account
   name          String
   accountTypeId String
   currencyId    String
@@ -162,6 +273,7 @@ model Account {
   isActive      Boolean @default(true)
 
   // Relations
+  user                User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   accountType         AccountType          @relation(fields: [accountTypeId], references: [id])
   currency            Currency             @relation(fields: [currencyId], references: [id])
   jobs                Job[]
@@ -176,6 +288,7 @@ model Account {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([accountTypeId])
   @@index([currencyId])
   @@map("accounts")
@@ -183,6 +296,7 @@ model Account {
 
 model Job {
   id          String          @id @default(uuid())
+  userId      String?         // Multi-user: owner of this job
   name        String
   type        JobType
   salary      Decimal         @db.Decimal(18, 2)
@@ -195,6 +309,7 @@ model Job {
   endDate     DateTime?
 
   // Relations
+  user     User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   currency Currency @relation(fields: [currencyId], references: [id])
   account  Account  @relation(fields: [accountId], references: [id])
   incomes  Income[]
@@ -202,6 +317,7 @@ model Job {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([currencyId])
   @@index([accountId])
   @@index([status])
@@ -210,12 +326,14 @@ model Job {
 
 model Category {
   id       String  @id @default(uuid())
+  userId   String? // Multi-user: owner of this category
   name     String
   parentId String?
   color    String? // Hex color for UI
   icon     String? // Icon identifier
 
   // Relations
+  user        User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
   parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   expenses    Expense[]
@@ -223,12 +341,14 @@ model Category {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([parentId])
   @@map("categories")
 }
 
 model Income {
   id           String   @id @default(uuid())
+  userId       String?  // Multi-user: owner of this income
   jobId        String?  // Optional - null means "Ingreso Extra"
   accountId    String
   amount       Decimal  @db.Decimal(18, 2)
@@ -245,6 +365,7 @@ model Income {
   changeTransferId  String?  @unique // Reference to auto-created transfer
 
   // Relations
+  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   job            Job?      @relation(fields: [jobId], references: [id]) // v1.4.0: Optional
   account        Account   @relation(fields: [accountId], references: [id])
   currency       Currency  @relation(fields: [currencyId], references: [id])
@@ -253,6 +374,7 @@ model Income {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([jobId])
   @@index([accountId])
   @@index([currencyId])
@@ -262,6 +384,7 @@ model Income {
 
 model Expense {
   id           String              @id @default(uuid())
+  userId       String?             // Multi-user: owner of this expense
   categoryId   String
   accountId    String
   amount       Decimal             @db.Decimal(18, 2)
@@ -281,6 +404,7 @@ model Expense {
   changeTransferId  String?  @unique // Reference to auto-created transfer
 
   // Relations
+  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   category       Category  @relation(fields: [categoryId], references: [id])
   account        Account   @relation(fields: [accountId], references: [id])
   currency       Currency  @relation(fields: [currencyId], references: [id])
@@ -289,6 +413,7 @@ model Expense {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([categoryId])
   @@index([accountId])
   @@index([currencyId])
@@ -299,6 +424,7 @@ model Expense {
 
 model Transfer {
   id            String       @id @default(uuid())
+  userId        String?      // Multi-user: owner of this transfer
   type          TransferType @default(account_to_account)
   fromAccountId String? // null si es budget_to_account
   toAccountId   String? // null si es account_to_budget
@@ -313,6 +439,7 @@ model Transfer {
   description   String?
 
   // Relations
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
   fromAccount   Account?  @relation("FromAccount", fields: [fromAccountId], references: [id])
   toAccount     Account?  @relation("ToAccount", fields: [toAccountId], references: [id])
   fromBudget    Budget?   @relation("FromBudget", fields: [fromBudgetId], references: [id])
@@ -325,6 +452,7 @@ model Transfer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([fromAccountId])
   @@index([toAccountId])
   @@index([fromBudgetId])
@@ -336,6 +464,7 @@ model Transfer {
 
 model Budget {
   id            String       @id @default(uuid())
+  userId        String?      // Multi-user: owner of this budget
   name          String
   type          BudgetType
   // v1.3.0: targetAmount is optional (budgets without goal)
@@ -347,6 +476,7 @@ model Budget {
   status        BudgetStatus @default(active)
 
   // Relations
+  user          User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   currency      Currency             @relation(fields: [currencyId], references: [id])
   account       Account              @relation(fields: [accountId], references: [id])
   contributions BudgetContribution[]
@@ -356,6 +486,7 @@ model Budget {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([currencyId])
   @@index([accountId])
   @@index([status])
@@ -364,6 +495,7 @@ model Budget {
 
 model BudgetContribution {
   id              String   @id @default(uuid())
+  userId          String?  // Multi-user: owner of this contribution
   budgetId        String
   fromAccountId   String? // Cuenta de donde vino la contribucion (null para retiros)
   toAccountId     String? // Cuenta a donde fue el retiro (null para contribuciones)
@@ -372,12 +504,14 @@ model BudgetContribution {
   description     String?
 
   // Relations
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   budget      Budget   @relation(fields: [budgetId], references: [id], onDelete: Cascade)
   fromAccount Account? @relation("ContributionFrom", fields: [fromAccountId], references: [id])
   toAccount   Account? @relation("ContributionTo", fields: [toAccountId], references: [id])
 
   createdAt DateTime @default(now())
 
+  @@index([userId])
   @@index([budgetId])
   @@index([fromAccountId])
   @@index([toAccountId])
@@ -391,6 +525,7 @@ model BudgetContribution {
 
 model UserConfig {
   id                 String    @id @default(uuid())
+  userId             String?   @unique // Link a auth user (opcional para migracion)
   baseCurrencyId     String
   dateFormat         String    @default("DD/MM/YYYY") // DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD
   numberFormat       String    @default("es-CO") // es-CO, en-US
@@ -401,6 +536,7 @@ model UserConfig {
   lastBinanceSyncAt  DateTime? // Cooldown for Binance P2P sync
 
   // Relations
+  user         User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   baseCurrency Currency @relation(fields: [baseCurrencyId], references: [id])
 
   createdAt DateTime @default(now())
@@ -415,22 +551,27 @@ model UserConfig {
 
 model InventoryCategory {
   id          String  @id @default(uuid())
-  name        String  @unique
+  userId      String? // Multi-user: owner of this category
+  name        String
   icon        String?
   color       String?
   description String?
 
   // Relations
+  user  User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   items InventoryItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([userId, name]) // Unique name per user
+  @@index([userId])
   @@map("inventory_categories")
 }
 
 model InventoryItem {
   id              String        @id @default(uuid())
+  userId          String?       // Multi-user: owner of this item
   name            String
   categoryId      String?
   currentQuantity Decimal       @default(0) @db.Decimal(10, 2)
@@ -443,6 +584,7 @@ model InventoryItem {
   notes           String?
 
   // Relations
+  user         User?                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   category     InventoryCategory?      @relation(fields: [categoryId], references: [id])
   currency     Currency                @relation(fields: [currencyId], references: [id])
   priceHistory InventoryPriceHistory[]
@@ -450,6 +592,7 @@ model InventoryItem {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([userId])
   @@index([categoryId])
   @@index([currencyId])
   @@index([isActive])

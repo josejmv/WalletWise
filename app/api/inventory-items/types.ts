@@ -25,6 +25,7 @@ export interface CreateInventoryItemInput {
   currencyId: string;
   isActive?: boolean;
   notes?: string;
+  userId?: string | null;
 }
 
 export interface UpdateInventoryItemInput {
@@ -46,6 +47,7 @@ export interface InventoryItemFilters {
   currencyId?: string;
   isActive?: boolean;
   lowStock?: boolean;
+  userId?: string | null;
 }
 
 export interface StockAdjustment {

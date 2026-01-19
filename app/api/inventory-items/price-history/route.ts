@@ -1,15 +1,25 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getUserIdForApi } from "@/lib/auth-helpers";
+
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) return {};
+  if (userId === null) return { userId: null };
+  return { OR: [{ userId }, { userId: null }] };
+}
 
 export async function GET(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const { searchParams } = new URL(request.url);
     const itemId = searchParams.get("itemId");
     const limit = parseInt(searchParams.get("limit") ?? "100");
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = {
+      item: buildUserFilter(userId),
+    };
 
     if (itemId) {
       where.itemId = itemId;
@@ -76,6 +86,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const { itemId, price, currencyId, source } = body;
 
@@ -86,6 +97,21 @@ export async function POST(request: Request) {
           error: "itemId, price y currencyId son requeridos",
         },
         { status: 400 },
+      );
+    }
+
+    // Verify item exists and belongs to user
+    const item = await prisma.inventoryItem.findFirst({
+      where: {
+        id: itemId,
+        ...buildUserFilter(userId),
+      },
+    });
+
+    if (!item) {
+      return NextResponse.json(
+        { success: false, error: "Producto no encontrado" },
+        { status: 404 },
       );
     }
 

@@ -5,9 +5,27 @@ import type {
   BudgetFilters,
 } from "./types";
 
+// Helper to build userId filter for transition period
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) {
+    return {}; // No filter - return all (legacy mode)
+  }
+  if (userId === null) {
+    return { userId: null }; // Only legacy data
+  }
+  // Include both user's data and legacy data (userId = null)
+  return {
+    OR: [{ userId }, { userId: null }],
+  };
+}
+
 export async function findAll(filters?: BudgetFilters) {
   const where: Record<string, unknown> = {};
 
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
   if (filters?.type) {
     where.type = filters.type;
   }
@@ -35,9 +53,16 @@ export async function findAll(filters?: BudgetFilters) {
   });
 }
 
-export async function findById(id: string) {
-  return prisma.budget.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  const where: Record<string, unknown> = { id };
+
+  // If userId provided, ensure user owns this budget
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
+  return prisma.budget.findFirst({
+    where,
     include: {
       currency: true,
       account: true,
@@ -48,9 +73,16 @@ export async function findById(id: string) {
   });
 }
 
-export async function findActive() {
+export async function findActive(userId?: string | null) {
+  const where: Record<string, unknown> = { status: "active" };
+
+  // Multi-user: filter by userId
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
   return prisma.budget.findMany({
-    where: { status: "active" },
+    where,
     include: {
       currency: true,
       account: true,
@@ -65,7 +97,17 @@ export async function findActive() {
 
 export async function create(data: CreateBudgetInput) {
   return prisma.budget.create({
-    data,
+    data: {
+      userId: data.userId,
+      name: data.name,
+      type: data.type,
+      targetAmount: data.targetAmount,
+      currentAmount: data.currentAmount,
+      currencyId: data.currencyId,
+      accountId: data.accountId,
+      deadline: data.deadline,
+      status: data.status,
+    },
     include: {
       currency: true,
       account: true,
@@ -74,7 +116,13 @@ export async function create(data: CreateBudgetInput) {
   });
 }
 
-export async function update(id: string, data: UpdateBudgetInput) {
+export async function update(id: string, data: UpdateBudgetInput, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Presupuesto no encontrado o no tienes permiso");
+  }
+
   return prisma.budget.update({
     where: { id },
     data,
@@ -86,7 +134,13 @@ export async function update(id: string, data: UpdateBudgetInput) {
   });
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Presupuesto no encontrado o no tienes permiso");
+  }
+
   return prisma.budget.delete({
     where: { id },
   });
@@ -99,7 +153,14 @@ export async function contribute(
   amount: number,
   fromAccountId: string,
   description?: string,
+  userId?: string | null,
 ) {
+  // First verify ownership
+  const budget = await findById(budgetId, userId);
+  if (!budget) {
+    throw new Error("Presupuesto no encontrado o no tienes permiso");
+  }
+
   return prisma.$transaction(async (tx) => {
     // Verificar que la cuenta existe
     const account = await tx.account.findUnique({
@@ -145,7 +206,7 @@ export async function contribute(
     // El dinero permanece en la cuenta pero queda bloqueado
 
     // Incrementar el monto actual del budget (bloqueado)
-    const budget = await tx.budget.update({
+    const updatedBudget = await tx.budget.update({
       where: { id: budgetId },
       data: {
         currentAmount: { increment: amount },
@@ -161,8 +222,8 @@ export async function contribute(
 
     // Si se alcanzo la meta, marcar como completado (solo si hay meta)
     if (
-      budget.targetAmount &&
-      Number(budget.currentAmount) >= Number(budget.targetAmount)
+      updatedBudget.targetAmount &&
+      Number(updatedBudget.currentAmount) >= Number(updatedBudget.targetAmount)
     ) {
       return tx.budget.update({
         where: { id: budgetId },
@@ -177,7 +238,7 @@ export async function contribute(
       });
     }
 
-    return budget;
+    return updatedBudget;
   });
 }
 
@@ -188,7 +249,14 @@ export async function withdraw(
   amount: number,
   toAccountId: string,
   description?: string,
+  userId?: string | null,
 ) {
+  // First verify ownership
+  const existingBudget = await findById(budgetId, userId);
+  if (!existingBudget) {
+    throw new Error("Presupuesto no encontrado o no tienes permiso");
+  }
+
   return prisma.$transaction(async (tx) => {
     // Verificar que el budget tiene saldo suficiente
     const budget = await tx.budget.findUnique({
@@ -236,7 +304,13 @@ export async function withdraw(
   });
 }
 
-export async function getContributions(budgetId: string) {
+export async function getContributions(budgetId: string, userId?: string | null) {
+  // First verify ownership
+  const budget = await findById(budgetId, userId);
+  if (!budget) {
+    throw new Error("Presupuesto no encontrado o no tienes permiso");
+  }
+
   return prisma.budgetContribution.findMany({
     where: { budgetId },
     orderBy: { date: "desc" },

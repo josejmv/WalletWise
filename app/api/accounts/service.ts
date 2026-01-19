@@ -10,8 +10,8 @@ export async function getAccounts(filters?: AccountFilters) {
   return repository.findAll(filters);
 }
 
-export async function getAccountById(id: string) {
-  const account = await repository.findById(id);
+export async function getAccountById(id: string, userId?: string | null) {
+  const account = await repository.findById(id, userId);
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
@@ -36,8 +36,8 @@ export async function createAccount(data: CreateAccountInput) {
   return repository.create(data);
 }
 
-export async function updateAccount(id: string, data: UpdateAccountInput) {
-  const account = await repository.findById(id);
+export async function updateAccount(id: string, data: UpdateAccountInput, userId?: string | null) {
+  const account = await repository.findById(id, userId);
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
@@ -60,33 +60,33 @@ export async function updateAccount(id: string, data: UpdateAccountInput) {
     }
   }
 
-  return repository.update(id, data);
+  return repository.update(id, data, userId);
 }
 
-export async function deleteAccount(id: string) {
-  const account = await repository.findById(id);
+export async function deleteAccount(id: string, userId?: string | null) {
+  const account = await repository.findById(id, userId);
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
 
-  return repository.remove(id);
+  return repository.remove(id, userId);
 }
 
-export async function adjustBalance(id: string, amount: number) {
-  const account = await repository.findById(id);
+export async function adjustBalance(id: string, amount: number, userId?: string | null) {
+  const account = await repository.findById(id, userId);
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
 
-  return repository.updateBalance(id, amount);
+  return repository.updateBalance(id, amount, userId);
 }
 
-export async function getTotalBalance(currencyId?: string) {
-  return repository.getTotalBalance(currencyId);
+export async function getTotalBalance(currencyId?: string, userId?: string | null) {
+  return repository.getTotalBalance(currencyId, userId);
 }
 
-export async function getAccountWithBlockedBalance(id: string) {
-  const account = await repository.findById(id);
+export async function getAccountWithBlockedBalance(id: string, userId?: string | null) {
+  const account = await repository.findById(id, userId);
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
@@ -96,6 +96,8 @@ export async function getAccountWithBlockedBalance(id: string) {
     where: {
       accountId: id,
       status: { in: ["active", "completed"] },
+      // Multi-user: also filter budgets by user
+      ...(userId && { OR: [{ userId }, { userId: null }] }),
     },
     select: {
       id: true,
@@ -125,14 +127,19 @@ export async function getAccountWithBlockedBalance(id: string) {
   };
 }
 
-export async function getAccountsWithBlockedBalances() {
-  const accounts = await repository.findAll();
+export async function getAccountsWithBlockedBalances(userId?: string | null) {
+  const accounts = await repository.findAll(userId !== undefined ? { userId } : undefined);
 
   // Get all active budgets grouped by account
+  const budgetWhere: Record<string, unknown> = {
+    status: { in: ["active", "completed"] },
+  };
+  if (userId) {
+    budgetWhere.OR = [{ userId }, { userId: null }];
+  }
+
   const budgets = await prisma.budget.findMany({
-    where: {
-      status: { in: ["active", "completed"] },
-    },
+    where: budgetWhere,
     select: {
       id: true,
       name: true,

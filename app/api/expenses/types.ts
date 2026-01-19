@@ -15,6 +15,7 @@ export interface ExpenseWithRelations extends Expense {
 }
 
 export interface CreateExpenseInput {
+  userId?: string | null; // Multi-user support
   categoryId: string;
   accountId: string;
   amount: number;
@@ -53,6 +54,7 @@ export interface UpdateExpenseInput {
 }
 
 export interface ExpenseFilters {
+  userId?: string | null; // Multi-user support
   categoryId?: string;
   accountId?: string;
   currencyId?: string;

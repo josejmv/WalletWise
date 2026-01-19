@@ -8,6 +8,7 @@ export interface AccountWithRelations extends Account {
 }
 
 export interface CreateAccountInput {
+  userId?: string | null; // Multi-user support
   name: string;
   accountTypeId: string;
   currencyId: string;
@@ -24,6 +25,7 @@ export interface UpdateAccountInput {
 }
 
 export interface AccountFilters {
+  userId?: string | null; // Multi-user support
   accountTypeId?: string;
   currencyId?: string;
   isActive?: boolean;

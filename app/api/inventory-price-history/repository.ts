@@ -16,6 +16,12 @@ export async function findAll(filters?: PriceHistoryFilters) {
       ...(filters?.endDate && { lte: filters.endDate }),
     };
   }
+  // Multi-user: filter by item owner
+  if (filters?.userId !== undefined) {
+    where.item = {
+      OR: [{ userId: filters.userId }, { userId: null }],
+    };
+  }
 
   return prisma.inventoryPriceHistory.findMany({
     where,
@@ -27,9 +33,18 @@ export async function findAll(filters?: PriceHistoryFilters) {
   });
 }
 
-export async function findById(id: string) {
-  return prisma.inventoryPriceHistory.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  const where: Record<string, unknown> = { id };
+
+  // Multi-user: filter by item owner
+  if (userId !== undefined) {
+    where.item = {
+      OR: [{ userId }, { userId: null }],
+    };
+  }
+
+  return prisma.inventoryPriceHistory.findFirst({
+    where,
     include: {
       item: true,
       currency: true,
@@ -37,9 +52,22 @@ export async function findById(id: string) {
   });
 }
 
-export async function findByItemId(itemId: string, limit?: number) {
+export async function findByItemId(
+  itemId: string,
+  limit?: number,
+  userId?: string | null,
+) {
+  const where: Record<string, unknown> = { itemId };
+
+  // Multi-user: filter by item owner
+  if (userId !== undefined) {
+    where.item = {
+      OR: [{ userId }, { userId: null }],
+    };
+  }
+
   return prisma.inventoryPriceHistory.findMany({
-    where: { itemId },
+    where,
     include: {
       item: true,
       currency: true,
@@ -80,15 +108,35 @@ export async function createMany(entries: CreatePriceHistoryInput[]) {
   return results;
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  // Multi-user: verify ownership through item before delete
+  if (userId !== undefined) {
+    const entry = await findById(id, userId);
+    if (!entry) {
+      return null;
+    }
+  }
+
   return prisma.inventoryPriceHistory.delete({
     where: { id },
   });
 }
 
-export async function getLatestPriceForItem(itemId: string) {
+export async function getLatestPriceForItem(
+  itemId: string,
+  userId?: string | null,
+) {
+  const where: Record<string, unknown> = { itemId };
+
+  // Multi-user: filter by item owner
+  if (userId !== undefined) {
+    where.item = {
+      OR: [{ userId }, { userId: null }],
+    };
+  }
+
   return prisma.inventoryPriceHistory.findFirst({
-    where: { itemId },
+    where,
     include: {
       item: true,
       currency: true,
@@ -97,9 +145,21 @@ export async function getLatestPriceForItem(itemId: string) {
   });
 }
 
-export async function getPriceStatsForItem(itemId: string) {
+export async function getPriceStatsForItem(
+  itemId: string,
+  userId?: string | null,
+) {
+  const where: Record<string, unknown> = { itemId };
+
+  // Multi-user: filter by item owner
+  if (userId !== undefined) {
+    where.item = {
+      OR: [{ userId }, { userId: null }],
+    };
+  }
+
   const history = await prisma.inventoryPriceHistory.findMany({
-    where: { itemId },
+    where,
     orderBy: { date: "desc" },
   });
 

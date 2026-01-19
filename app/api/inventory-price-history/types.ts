@@ -24,6 +24,7 @@ export interface PriceHistoryFilters {
   currencyId?: string;
   startDate?: Date;
   endDate?: Date;
+  userId?: string | null; // Multi-user: filter by item owner
 }
 
 export interface PriceStats {

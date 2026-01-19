@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 import { getInventoryCategories, createInventoryCategory } from "./service";
 import { createInventoryCategorySchema } from "./schema";
 
 export async function GET() {
   try {
-    const categories = await getInventoryCategories();
+    const userId = await getUserIdForApi();
+    const categories = await getInventoryCategories(userId);
     return NextResponse.json({ success: true, data: categories });
   } catch {
     return NextResponse.json(
@@ -16,6 +18,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const parsed = createInventoryCategorySchema.safeParse(body);
 
@@ -26,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const category = await createInventoryCategory(parsed.data);
+    const category = await createInventoryCategory(parsed.data, userId);
     return NextResponse.json(
       { success: true, data: category },
       { status: 201 },

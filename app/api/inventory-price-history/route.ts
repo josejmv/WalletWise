@@ -11,9 +11,13 @@ import {
   createPriceHistorySchema,
   batchCreatePriceHistorySchema,
 } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const { searchParams } = new URL(request.url);
     const itemId = searchParams.get("itemId");
     const currencyId = searchParams.get("currencyId");
@@ -24,12 +28,12 @@ export async function GET(request: Request) {
     const limit = searchParams.get("limit");
 
     if (stats === "true" && itemId) {
-      const result = await getPriceStats(itemId);
+      const result = await getPriceStats(itemId, userId);
       return NextResponse.json({ success: true, data: result });
     }
 
     if (latest === "true" && itemId) {
-      const result = await getLatestPrice(itemId);
+      const result = await getLatestPrice(itemId, userId);
       return NextResponse.json({ success: true, data: result });
     }
 
@@ -37,19 +41,19 @@ export async function GET(request: Request) {
       const history = await getPriceHistoryByItem(
         itemId,
         limit ? parseInt(limit) : undefined,
+        userId,
       );
       return NextResponse.json({ success: true, data: history });
     }
 
     const filters = {
+      userId, // Multi-user: filter by userId
       ...(currencyId && { currencyId }),
       ...(startDate && { startDate: new Date(startDate) }),
       ...(endDate && { endDate: new Date(endDate) }),
     };
 
-    const history = await getPriceHistory(
-      Object.keys(filters).length > 0 ? filters : undefined,
-    );
+    const history = await getPriceHistory(filters);
 
     return NextResponse.json({ success: true, data: history });
   } catch (error) {
@@ -66,6 +70,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const body = await request.json();
 
     if (body.entries) {
@@ -76,7 +83,7 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
-      const entries = await createManyPriceHistory(parsed.data.entries);
+      const entries = await createManyPriceHistory(parsed.data.entries, userId);
       return NextResponse.json(
         { success: true, data: entries },
         { status: 201 },
@@ -92,7 +99,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const entry = await createPriceHistory(parsed.data);
+    const entry = await createPriceHistory(parsed.data, userId);
     return NextResponse.json({ success: true, data: entry }, { status: 201 });
   } catch (error) {
     const message =

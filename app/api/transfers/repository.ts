@@ -6,9 +6,27 @@ import type {
 } from "./types";
 import type { PaginationParams } from "@/lib/pagination";
 
+// Helper to build userId filter for transition period
+function buildUserFilter(userId: string | null | undefined) {
+  if (userId === undefined) {
+    return {}; // No filter - return all (legacy mode)
+  }
+  if (userId === null) {
+    return { userId: null }; // Only legacy data
+  }
+  // Include both user's data and legacy data (userId = null)
+  return {
+    OR: [{ userId }, { userId: null }],
+  };
+}
+
 function buildWhereClause(filters?: TransferFilters) {
   const where: Record<string, unknown> = {};
 
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
   if (filters?.fromAccountId) {
     where.fromAccountId = filters.fromAccountId;
   }
@@ -84,9 +102,16 @@ export async function findAllPaginated(
   };
 }
 
-export async function findById(id: string) {
-  return prisma.transfer.findUnique({
-    where: { id },
+export async function findById(id: string, userId?: string | null) {
+  const where: Record<string, unknown> = { id };
+
+  // If userId provided, ensure user owns this transfer
+  if (userId !== undefined) {
+    Object.assign(where, buildUserFilter(userId));
+  }
+
+  return prisma.transfer.findFirst({
+    where,
     include: {
       fromAccount: true,
       toAccount: true,
@@ -95,11 +120,18 @@ export async function findById(id: string) {
   });
 }
 
-export async function findByAccount(accountId: string) {
+export async function findByAccount(accountId: string, userId?: string | null) {
+  const where: Record<string, unknown> = {
+    OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
+  };
+
+  // Multi-user: filter by userId
+  if (userId !== undefined) {
+    Object.assign(where, { AND: [buildUserFilter(userId)] });
+  }
+
   return prisma.transfer.findMany({
-    where: {
-      OR: [{ fromAccountId: accountId }, { toAccountId: accountId }],
-    },
+    where,
     include: {
       fromAccount: true,
       toAccount: true,
@@ -112,8 +144,19 @@ export async function findByAccount(accountId: string) {
 export async function create(data: CreateTransferInput) {
   return prisma.transfer.create({
     data: {
-      ...data,
+      userId: data.userId,
+      type: data.type,
+      fromAccountId: data.fromAccountId,
+      toAccountId: data.toAccountId,
+      fromBudgetId: data.fromBudgetId,
+      toBudgetId: data.toBudgetId,
+      amount: data.amount,
+      currencyId: data.currencyId,
+      exchangeRate: data.exchangeRate,
+      officialRate: data.officialRate,
+      customRate: data.customRate,
       date: data.date ?? new Date(),
+      description: data.description,
     },
     include: {
       fromAccount: true,
@@ -123,7 +166,13 @@ export async function create(data: CreateTransferInput) {
   });
 }
 
-export async function update(id: string, data: UpdateTransferInput) {
+export async function update(id: string, data: UpdateTransferInput, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Transferencia no encontrada o no tienes permiso");
+  }
+
   return prisma.transfer.update({
     where: { id },
     data,
@@ -135,7 +184,13 @@ export async function update(id: string, data: UpdateTransferInput) {
   });
 }
 
-export async function remove(id: string) {
+export async function remove(id: string, userId?: string | null) {
+  // First verify ownership
+  const existing = await findById(id, userId);
+  if (!existing) {
+    throw new Error("Transferencia no encontrada o no tienes permiso");
+  }
+
   return prisma.transfer.delete({
     where: { id },
   });
@@ -144,6 +199,10 @@ export async function remove(id: string) {
 export async function getSummary(filters?: TransferFilters) {
   const where: Record<string, unknown> = {};
 
+  // Multi-user: filter by userId
+  if (filters?.userId !== undefined) {
+    Object.assign(where, buildUserFilter(filters.userId));
+  }
   if (filters?.startDate || filters?.endDate) {
     where.date = {
       ...(filters?.startDate && { gte: filters.startDate }),

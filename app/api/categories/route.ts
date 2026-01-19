@@ -1,27 +1,30 @@
 import { NextResponse } from "next/server";
 import { getCategories, createCategory, getCategoryTree } from "./service";
 import { createCategorySchema } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const { searchParams } = new URL(request.url);
     const parentId = searchParams.get("parentId");
     const rootOnly = searchParams.get("rootOnly");
     const tree = searchParams.get("tree");
 
     if (tree === "true") {
-      const categories = await getCategoryTree();
+      const categories = await getCategoryTree(userId);
       return NextResponse.json({ success: true, data: categories });
     }
 
     const filters = {
+      userId, // Multi-user: filter by userId
       ...(parentId && { parentId }),
       ...(rootOnly === "true" && { rootOnly: true }),
     };
 
-    const categories = await getCategories(
-      Object.keys(filters).length > 0 ? filters : undefined,
-    );
+    const categories = await getCategories(filters);
 
     return NextResponse.json({ success: true, data: categories });
   } catch {
@@ -34,6 +37,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Multi-user: get userId from auth
+    const userId = await getUserIdForApi();
+
     const body = await request.json();
     const parsed = createCategorySchema.safeParse(body);
 
@@ -44,7 +50,11 @@ export async function POST(request: Request) {
       );
     }
 
-    const category = await createCategory(parsed.data);
+    // Multi-user: add userId to create data
+    const category = await createCategory({
+      ...parsed.data,
+      userId,
+    });
     return NextResponse.json(
       { success: true, data: category },
       { status: 201 },

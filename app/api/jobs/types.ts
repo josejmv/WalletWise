@@ -15,6 +15,7 @@ export interface JobWithRelations extends Job {
 }
 
 export interface CreateJobInput {
+  userId?: string | null; // Multi-user support
   name: string;
   type: JobType;
   salary: number;
@@ -41,6 +42,7 @@ export interface UpdateJobInput {
 }
 
 export interface JobFilters {
+  userId?: string | null; // Multi-user support
   type?: JobType;
   status?: JobStatus;
   currencyId?: string;

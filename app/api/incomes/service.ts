@@ -18,28 +18,28 @@ export async function getIncomesPaginated(
   return repository.findAllPaginated(filters, pagination);
 }
 
-export async function getIncomeById(id: string) {
-  const income = await repository.findById(id);
+export async function getIncomeById(id: string, userId?: string | null) {
+  const income = await repository.findById(id, userId);
   if (!income) {
     throw new Error("Ingreso no encontrado");
   }
   return income;
 }
 
-export async function getIncomesByJob(jobId: string) {
+export async function getIncomesByJob(jobId: string, userId?: string | null) {
   const job = await prisma.job.findUnique({ where: { id: jobId } });
   if (!job) {
     throw new Error("Trabajo no encontrado");
   }
-  return repository.findByJob(jobId);
+  return repository.findByJob(jobId, userId);
 }
 
-export async function getIncomesByAccount(accountId: string) {
+export async function getIncomesByAccount(accountId: string, userId?: string | null) {
   const account = await prisma.account.findUnique({ where: { id: accountId } });
   if (!account) {
     throw new Error("Cuenta no encontrada");
   }
-  return repository.findByAccount(accountId);
+  return repository.findByAccount(accountId, userId);
 }
 
 export async function createIncome(data: CreateIncomeInput) {
@@ -169,6 +169,7 @@ export async function createIncome(data: CreateIncomeInput) {
       // exchangeRate = converts to change currency for reversal
       const transfer = await tx.transfer.create({
         data: {
+          userId: data.userId,
           type: "account_to_account",
           fromAccountId: effectiveChangeAccountId,
           toAccountId: data.accountId,
@@ -222,6 +223,7 @@ export async function createIncome(data: CreateIncomeInput) {
 
     const income = await tx.income.create({
       data: {
+        userId: data.userId,
         jobId: data.jobId,
         accountId: data.accountId,
         amount: netAmountInIncomeCurrency,
@@ -254,8 +256,8 @@ export async function createIncome(data: CreateIncomeInput) {
   });
 }
 
-export async function updateIncome(id: string, data: UpdateIncomeInput) {
-  const existingIncome = await repository.findById(id);
+export async function updateIncome(id: string, data: UpdateIncomeInput, userId?: string | null) {
+  const existingIncome = await repository.findById(id, userId);
   if (!existingIncome) {
     throw new Error("Ingreso no encontrado");
   }
@@ -339,8 +341,8 @@ export async function updateIncome(id: string, data: UpdateIncomeInput) {
   });
 }
 
-export async function deleteIncome(id: string) {
-  const income = await repository.findById(id);
+export async function deleteIncome(id: string, userId?: string | null) {
+  const income = await repository.findById(id, userId);
   if (!income) {
     throw new Error("Ingreso no encontrado");
   }
@@ -373,7 +375,7 @@ export async function getIncomeSummary(filters?: IncomeFilters) {
   return repository.getSummary(filters);
 }
 
-export async function generateIncomeFromJob(jobId: string) {
+export async function generateIncomeFromJob(jobId: string, userId?: string | null) {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
     include: { account: true, currency: true },
@@ -388,6 +390,7 @@ export async function generateIncomeFromJob(jobId: string) {
   }
 
   return createIncome({
+    userId,
     jobId: job.id,
     accountId: job.accountId,
     amount: Number(job.salary),

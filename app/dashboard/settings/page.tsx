@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import {
   Settings,
   Palette,
@@ -35,6 +36,8 @@ import {
   FileText,
   ArrowRight,
   CornerDownRight,
+  Shield,
+  ChevronRight,
 } from "lucide-react";
 
 // Sidebar item structure
@@ -245,6 +248,27 @@ export default function SettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* Security Settings Link */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex items-center justify-between py-4">
+          <div className="flex items-center gap-3">
+            <Shield className="h-8 w-8 text-primary" />
+            <div>
+              <h3 className="font-semibold">Seguridad de la Cuenta</h3>
+              <p className="text-sm text-muted-foreground">
+                Configura autenticacion de dos factores, passkeys y mas
+              </p>
+            </div>
+          </div>
+          <Button asChild variant="outline">
+            <Link href="/dashboard/settings/security">
+              Configurar
+              <ChevronRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Moneda Base */}

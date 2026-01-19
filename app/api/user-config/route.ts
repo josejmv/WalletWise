@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getUserConfig, updateUserConfig } from "./service";
 import { updateUserConfigSchema } from "./schema";
+import { getUserIdForApi } from "@/lib/auth-helpers";
 
 export async function GET() {
   try {
-    const config = await getUserConfig();
+    const userId = await getUserIdForApi();
+    const config = await getUserConfig(userId);
     return NextResponse.json({ success: true, data: config });
   } catch (error) {
     const message =
@@ -18,6 +20,7 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    const userId = await getUserIdForApi();
     const body = await request.json();
     const parsed = updateUserConfigSchema.safeParse(body);
 
@@ -28,7 +31,7 @@ export async function PUT(request: Request) {
       );
     }
 
-    const config = await updateUserConfig(parsed.data);
+    const config = await updateUserConfig(userId, parsed.data);
     return NextResponse.json({ success: true, data: config });
   } catch (error) {
     const message =
