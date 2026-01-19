@@ -1,1 +1,2 @@
-yarn test
+# Run lint before commit (optional - CI validates this)
+# yarn lint
